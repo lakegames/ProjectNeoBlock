@@ -1,0 +1,502 @@
+{
+  "profiles": {},
+  "invites": {},
+  "friends": {},
+  "rooms": {
+    "UV7XEY": {
+      "code": "UV7XEY",
+      "roomId": "room:UV7XEY",
+      "status": "lobby",
+      "hostPlayerId": "guest:99400451-81ce-473c-a2df-8673dc45df95",
+      "createdAtMs": 1779286438381,
+      "config": {
+        "maxPlayers": 4,
+        "turnTimeSec": 60,
+        "enableAuto": true,
+        "enableAI": true,
+        "rulesetVersionId": "v1779275289236_06966527",
+        "boardVersionId": "v1779275289236_d0a29ffb",
+        "cardsVersionId": "v1779275289236_620b07a6"
+      },
+      "members": [
+        {
+          "playerId": "guest:7cb26c92-ba9c-4b82-8f49-f2fa464d19cd",
+          "displayName": "AAA",
+          "isSpectator": false,
+          "ready": false,
+          "joinedAtMs": 1779286494335
+        },
+        {
+          "playerId": "guest:99400451-81ce-473c-a2df-8673dc45df95",
+          "displayName": "Ac",
+          "isSpectator": false,
+          "ready": false,
+          "joinedAtMs": 1779286438381
+        }
+      ]
+    },
+    "QRYNY4": {
+      "code": "QRYNY4",
+      "roomId": "room:QRYNY4",
+      "status": "lobby",
+      "hostPlayerId": "guest:a526abcc-ed7d-4455-8fcd-37db181cd813",
+      "createdAtMs": 1779287437260,
+      "config": {
+        "maxPlayers": 4,
+        "turnTimeSec": 60,
+        "enableAuto": false,
+        "enableAI": false,
+        "rulesetVersionId": "v1779275289236_06966527",
+        "boardVersionId": "v1779275289236_d0a29ffb",
+        "cardsVersionId": "v1779275289236_620b07a6"
+      },
+      "members": [
+        {
+          "playerId": "guest:b63d3f60-866f-4eac-b9a1-980386903287",
+          "displayName": "QRYNY4",
+          "isSpectator": false,
+          "ready": false,
+          "joinedAtMs": 1779287553574
+        },
+        {
+          "playerId": "guest:a526abcc-ed7d-4455-8fcd-37db181cd813",
+          "displayName": "Host",
+          "isSpectator": false,
+          "ready": false,
+          "joinedAtMs": 1779287437260
+        }
+      ]
+    },
+    "SHWCVT": {
+      "code": "SHWCVT",
+      "roomId": "room:SHWCVT",
+      "status": "lobby",
+      "hostPlayerId": "guest:1fc4c2bb-865e-4357-8c1d-cff22d224e7d",
+      "createdAtMs": 1779287789754,
+      "config": {
+        "maxPlayers": 4,
+        "turnTimeSec": 60,
+        "enableAuto": false,
+        "enableAI": false,
+        "rulesetVersionId": "v1779275289236_06966527",
+        "boardVersionId": "v1779275289236_d0a29ffb",
+        "cardsVersionId": "v1779275289236_620b07a6"
+      },
+      "members": [
+        {
+          "playerId": "guest:1fc4c2bb-865e-4357-8c1d-cff22d224e7d",
+          "displayName": "Host",
+          "isSpectator": false,
+          "ready": false,
+          "joinedAtMs": 1779287789754
+        }
+      ]
+    },
+    "F9YABZ": {
+      "code": "F9YABZ",
+      "roomId": "room:F9YABZ",
+      "status": "lobby",
+      "hostPlayerId": "guest:30e692d0-c81a-4545-8cd7-27f582cf5a2d",
+      "createdAtMs": 1779288657245,
+      "config": {
+        "maxPlayers": 4,
+        "turnTimeSec": 60,
+        "enableAuto": false,
+        "enableAI": false,
+        "rulesetVersionId": "v1779275289236_06966527",
+        "boardVersionId": "v1779275289236_d0a29ffb",
+        "cardsVersionId": "v1779275289236_620b07a6"
+      },
+      "members": [
+        {
+          "playerId": "guest:30e692d0-c81a-4545-8cd7-27f582cf5a2d",
+          "displayName": "Host",
+          "isSpectator": false,
+          "ready": false,
+          "joinedAtMs": 1779288657245
+        }
+      ]
+    }
+  },
+  "configDocs": {
+    "builtin:rules": {
+      "docId": "builtin:rules",
+      "kind": "rules",
+      "name": "默认规则",
+      "createdAtMs": 1779275289236,
+      "updatedAtMs": 1779275289236,
+      "publishedVersionId": "v1779275289236_06966527",
+      "draftVersionId": "v1779275289236",
+      "versionIds": [
+        "v1779275289236",
+        "v1779275289236_06966527"
+      ],
+      "versions": {
+        "v1779275289236": {
+          "versionId": "v1779275289236",
+          "status": "draft",
+          "createdAtMs": 1779275289236,
+          "updatedAtMs": 1779275289236,
+          "data": {
+            "initialCash": 1500,
+            "startSalary": 200,
+            "jailFine": 50,
+            "mortgageInterestRate": 0.1,
+            "bankHouses": 32,
+            "bankHotels": 12
+          }
+        },
+        "v1779275289236_06966527": {
+          "versionId": "v1779275289236_06966527",
+          "status": "published",
+          "createdAtMs": 1779275289236,
+          "updatedAtMs": 1779275289236,
+          "data": {
+            "initialCash": 1500,
+            "startSalary": 200,
+            "jailFine": 50,
+            "mortgageInterestRate": 0.1,
+            "bankHouses": 32,
+            "bankHotels": 12
+          },
+          "baseVersionId": "v1779275289236",
+          "note": "seed"
+        }
+      }
+    },
+    "builtin:board": {
+      "docId": "builtin:board",
+      "kind": "board",
+      "name": "默认棋盘",
+      "createdAtMs": 1779275289236,
+      "updatedAtMs": 1779275289236,
+      "publishedVersionId": "v1779275289236_d0a29ffb",
+      "draftVersionId": "v1779275289236",
+      "versionIds": [
+        "v1779275289236",
+        "v1779275289236_d0a29ffb"
+      ],
+      "versions": {
+        "v1779275289236": {
+          "versionId": "v1779275289236",
+          "status": "draft",
+          "createdAtMs": 1779275289236,
+          "updatedAtMs": 1779275289236,
+          "data": {
+            "jailIndex": 6,
+            "tiles": [
+              {
+                "kind": "start"
+              },
+              {
+                "kind": "property",
+                "propertyId": "p1",
+                "groupId": "g1",
+                "price": 60,
+                "houseCost": 50,
+                "rents": [
+                  2,
+                  10,
+                  30,
+                  90,
+                  160,
+                  250
+                ]
+              },
+              {
+                "kind": "chance"
+              },
+              {
+                "kind": "property",
+                "propertyId": "p2",
+                "groupId": "g1",
+                "price": 60,
+                "houseCost": 50,
+                "rents": [
+                  4,
+                  20,
+                  60,
+                  180,
+                  320,
+                  450
+                ]
+              },
+              {
+                "kind": "tax",
+                "amount": 200
+              },
+              {
+                "kind": "property",
+                "propertyId": "p3",
+                "groupId": "g2",
+                "price": 100,
+                "houseCost": 50,
+                "rents": [
+                  6,
+                  30,
+                  90,
+                  270,
+                  400,
+                  550
+                ]
+              },
+              {
+                "kind": "jail"
+              },
+              {
+                "kind": "communityChest"
+              },
+              {
+                "kind": "property",
+                "propertyId": "p4",
+                "groupId": "g2",
+                "price": 120,
+                "houseCost": 50,
+                "rents": [
+                  8,
+                  40,
+                  100,
+                  300,
+                  450,
+                  600
+                ]
+              },
+              {
+                "kind": "goToJail"
+              },
+              {
+                "kind": "property",
+                "propertyId": "p5",
+                "groupId": "g3",
+                "price": 140,
+                "houseCost": 100,
+                "rents": [
+                  10,
+                  50,
+                  150,
+                  450,
+                  625,
+                  750
+                ]
+              }
+            ]
+          }
+        },
+        "v1779275289236_d0a29ffb": {
+          "versionId": "v1779275289236_d0a29ffb",
+          "status": "published",
+          "createdAtMs": 1779275289236,
+          "updatedAtMs": 1779275289236,
+          "data": {
+            "tiles": [
+              {
+                "kind": "start"
+              },
+              {
+                "kind": "property",
+                "propertyId": "p1",
+                "groupId": "g1",
+                "price": 60,
+                "houseCost": 50,
+                "rents": [
+                  2,
+                  10,
+                  30,
+                  90,
+                  160,
+                  250
+                ]
+              },
+              {
+                "kind": "chance"
+              },
+              {
+                "kind": "property",
+                "propertyId": "p2",
+                "groupId": "g1",
+                "price": 60,
+                "houseCost": 50,
+                "rents": [
+                  4,
+                  20,
+                  60,
+                  180,
+                  320,
+                  450
+                ]
+              },
+              {
+                "kind": "tax",
+                "amount": 200
+              },
+              {
+                "kind": "property",
+                "propertyId": "p3",
+                "groupId": "g2",
+                "price": 100,
+                "houseCost": 50,
+                "rents": [
+                  6,
+                  30,
+                  90,
+                  270,
+                  400,
+                  550
+                ]
+              },
+              {
+                "kind": "jail"
+              },
+              {
+                "kind": "communityChest"
+              },
+              {
+                "kind": "property",
+                "propertyId": "p4",
+                "groupId": "g2",
+                "price": 120,
+                "houseCost": 50,
+                "rents": [
+                  8,
+                  40,
+                  100,
+                  300,
+                  450,
+                  600
+                ]
+              },
+              {
+                "kind": "goToJail"
+              },
+              {
+                "kind": "property",
+                "propertyId": "p5",
+                "groupId": "g3",
+                "price": 140,
+                "houseCost": 100,
+                "rents": [
+                  10,
+                  50,
+                  150,
+                  450,
+                  625,
+                  750
+                ]
+              }
+            ],
+            "jailIndex": 6
+          },
+          "baseVersionId": "v1779275289236",
+          "note": "seed"
+        }
+      }
+    },
+    "builtin:cards": {
+      "docId": "builtin:cards",
+      "kind": "cards",
+      "name": "默认卡牌",
+      "createdAtMs": 1779275289236,
+      "updatedAtMs": 1779275289236,
+      "publishedVersionId": "v1779275289236_620b07a6",
+      "draftVersionId": "v1779275289236",
+      "versionIds": [
+        "v1779275289236",
+        "v1779275289236_620b07a6"
+      ],
+      "versions": {
+        "v1779275289236": {
+          "versionId": "v1779275289236",
+          "status": "draft",
+          "createdAtMs": 1779275289236,
+          "updatedAtMs": 1779275289236,
+          "data": {
+            "cards": [
+              {
+                "cardId": "c1",
+                "deck": "chance",
+                "text": "前往起点，领取工资",
+                "effect": {
+                  "kind": "moveTo",
+                  "index": 0,
+                  "passStart": true
+                }
+              },
+              {
+                "cardId": "c2",
+                "deck": "chance",
+                "text": "入狱",
+                "effect": {
+                  "kind": "goToJail"
+                }
+              },
+              {
+                "cardId": "cc1",
+                "deck": "communityChest",
+                "text": "银行分红 +200",
+                "effect": {
+                  "kind": "money",
+                  "delta": 200
+                }
+              },
+              {
+                "cardId": "cc2",
+                "deck": "communityChest",
+                "text": "出狱卡",
+                "effect": {
+                  "kind": "getOutOfJail"
+                }
+              }
+            ]
+          }
+        },
+        "v1779275289236_620b07a6": {
+          "versionId": "v1779275289236_620b07a6",
+          "status": "published",
+          "createdAtMs": 1779275289236,
+          "updatedAtMs": 1779275289236,
+          "data": {
+            "cards": [
+              {
+                "cardId": "c1",
+                "deck": "chance",
+                "text": "前往起点，领取工资",
+                "effect": {
+                  "kind": "moveTo",
+                  "index": 0,
+                  "passStart": true
+                }
+              },
+              {
+                "cardId": "c2",
+                "deck": "chance",
+                "text": "入狱",
+                "effect": {
+                  "kind": "goToJail"
+                }
+              },
+              {
+                "cardId": "cc1",
+                "deck": "communityChest",
+                "text": "银行分红 +200",
+                "effect": {
+                  "kind": "money",
+                  "delta": 200
+                }
+              },
+              {
+                "cardId": "cc2",
+                "deck": "communityChest",
+                "text": "出狱卡",
+                "effect": {
+                  "kind": "getOutOfJail"
+                }
+              }
+            ]
+          },
+          "baseVersionId": "v1779275289236",
+          "note": "seed"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,299 @@
+"use client";
+
+import * as React from 'react';
+
+import {
+  type ClientMessage,
+  type Command,
+  type Event,
+  type MatchSnapshot,
+  type ProtocolError,
+  type ServerMessage,
+} from '@neoblock/shared';
+
+type CommandInput = Command extends infer C ? (C extends unknown ? Omit<C, 'commandId' | 'clientSeq'> : never) : never;
+
+type Actor =
+  | { kind: 'user'; playerId: string; userId: string; displayName: string }
+  | { kind: 'guest'; playerId: string; displayName: string };
+
+type CardDrawn = {
+  eventId: string;
+  createdAtMs: number;
+  deck: 'chance' | 'communityChest';
+  cardId: string;
+  playerId: string;
+};
+
+function uuid() {
+  if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) return crypto.randomUUID();
+  return `c_${Math.random().toString(16).slice(2)}_${Date.now()}`;
+}
+
+function getWsUrl() {
+  const env = process.env.NEXT_PUBLIC_SERVER_WS_URL;
+  if (env) return env;
+  if (typeof window === 'undefined') return 'ws://localhost:3001/ws';
+  const proto = window.location.protocol === 'https:' ? 'wss' : 'ws';
+  return `${proto}://${window.location.hostname}:3001/ws`;
+}
+
+async function fetchActor(): Promise<Actor | null> {
+  const r = await fetch('/api/actor', { cache: 'no-store' });
+  const json = (await r.json().catch(() => null)) as { actor?: Actor | null } | null;
+  return (json?.actor ?? null) as Actor | null;
+}
+
+async function ensureGuest(nickname: string): Promise<Actor> {
+  const r = await fetch('/api/actor', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ nickname }),
+  });
+  const json = (await r.json().catch(() => null)) as { actor?: Actor | null; error?: string } | null;
+  if (!r.ok) throw new Error(json?.error || 'IDENTITY_FAILED');
+  const actor = json?.actor ?? null;
+  if (!actor) throw new Error('IDENTITY_FAILED');
+  return actor;
+}
+
+export function useRoomConnection(options: {
+  roomCode: string;
+  mode: 'player' | 'spectator';
+  initialNickname?: string;
+}) {
+  const roomCode = options.roomCode.trim().toUpperCase();
+
+  const [actor, setActor] = React.useState<Actor | null>(null);
+  const [snapshot, setSnapshot] = React.useState<MatchSnapshot | null>(null);
+  const [connected, setConnected] = React.useState(false);
+  const [connecting, setConnecting] = React.useState(false);
+  const [lastError, setLastError] = React.useState<ProtocolError | null>(null);
+  const [lastCardDrawn, setLastCardDrawn] = React.useState<CardDrawn | null>(null);
+
+  const wsRef = React.useRef<WebSocket | null>(null);
+  const connectRef = React.useRef<(a: Actor) => void>(() => {});
+  const reconnectTimerRef = React.useRef<number | null>(null);
+  const reconnectAttemptRef = React.useRef(0);
+
+  const lastEventSeqRef = React.useRef<number>(0);
+  const nextClientSeqRef = React.useRef<number>(0);
+  const pendingRef = React.useRef<null | { commandId: string; clientSeq: number }>(null);
+
+  const clearReconnectTimer = React.useCallback(() => {
+    if (reconnectTimerRef.current) {
+      window.clearTimeout(reconnectTimerRef.current);
+      reconnectTimerRef.current = null;
+    }
+  }, []);
+
+  const sendRaw = React.useCallback((msg: ClientMessage) => {
+    const ws = wsRef.current;
+    if (!ws || ws.readyState !== WebSocket.OPEN) return false;
+    ws.send(JSON.stringify(msg));
+    return true;
+  }, []);
+
+  const join = React.useCallback(
+    (a: Actor) => {
+      if (!roomCode) return;
+      const commandId = uuid();
+      const msg: ClientMessage = {
+        kind: 'command',
+        command: {
+          type: 'room/join',
+          commandId,
+          clientSeq: 0,
+          roomCode,
+          userId: a.playerId,
+          displayName: a.displayName,
+          mode: options.mode,
+          resumeFromSeqExclusive: lastEventSeqRef.current,
+        },
+      };
+      sendRaw(msg);
+    },
+    [options.mode, roomCode, sendRaw],
+  );
+
+  const onServerMessage = React.useCallback((parsed: ServerMessage) => {
+    if (parsed.kind === 'snapshot') {
+      setSnapshot(parsed.snapshot);
+      lastEventSeqRef.current = parsed.snapshot.cursor.lastEventSeq;
+      return;
+    }
+
+    if (parsed.kind === 'events') {
+      if (parsed.events.length > 0) {
+        const maxSeq = parsed.events.reduce((m, e) => Math.max(m, e.seq), lastEventSeqRef.current);
+        lastEventSeqRef.current = maxSeq;
+      }
+
+      const pending = pendingRef.current;
+      if (pending) {
+        const ok = parsed.events.some((e) => e.causedBy?.commandId === pending.commandId);
+        if (ok) {
+          pendingRef.current = null;
+          nextClientSeqRef.current = pending.clientSeq + 1;
+        }
+      }
+
+      const lastCard = [...parsed.events]
+        .reverse()
+        .find((e) => e.type === 'game/engine' && (e as Extract<Event, { type: 'game/engine' }>).name === 'card/drawn');
+      if (lastCard && lastCard.type === 'game/engine') {
+        const data = lastCard.data as { deck: 'chance' | 'communityChest'; cardId: string; playerId: string };
+        setLastCardDrawn({
+          eventId: lastCard.eventId,
+          createdAtMs: lastCard.createdAtMs,
+          deck: data.deck,
+          cardId: data.cardId,
+          playerId: data.playerId,
+        });
+      }
+
+      return;
+    }
+
+    if (parsed.kind === 'error') {
+      setLastError(parsed.error);
+      const pending = pendingRef.current;
+      if (pending && parsed.error.commandId === pending.commandId) {
+        pendingRef.current = null;
+      }
+      if (parsed.error.code === 'OUT_OF_ORDER') {
+        const expected = (parsed.error.details as { expectedClientSeq?: unknown } | undefined)?.expectedClientSeq;
+        if (typeof expected === 'number' && Number.isFinite(expected) && expected >= 0) nextClientSeqRef.current = expected;
+      }
+    }
+  }, []);
+
+  const connect = React.useCallback(
+    (a: Actor) => {
+      clearReconnectTimer();
+      if (!roomCode) return;
+      const prev = wsRef.current;
+      if (prev) {
+        try {
+          prev.close();
+        } catch {
+          void 0;
+        }
+      }
+
+      setConnecting(true);
+      setLastError(null);
+
+      const ws = new WebSocket(getWsUrl());
+      wsRef.current = ws;
+
+      ws.addEventListener('open', () => {
+        reconnectAttemptRef.current = 0;
+        setConnected(true);
+        setConnecting(false);
+        join(a);
+      });
+
+      ws.addEventListener('message', (ev) => {
+        const raw = typeof ev.data === 'string' ? ev.data : '';
+        if (!raw) return;
+        let parsed: unknown;
+        try {
+          parsed = JSON.parse(raw) as unknown;
+        } catch {
+          return;
+        }
+        if (!parsed || typeof parsed !== 'object') return;
+        const kind = (parsed as { kind?: unknown }).kind;
+        if (kind !== 'snapshot' && kind !== 'events' && kind !== 'error') return;
+        onServerMessage(parsed as ServerMessage);
+      });
+
+      const scheduleReconnect = () => {
+        setConnected(false);
+        setConnecting(false);
+        if (!roomCode) return;
+        const attempt = (reconnectAttemptRef.current += 1);
+        const delay = Math.min(8_000, 800 + attempt * 700);
+        clearReconnectTimer();
+        reconnectTimerRef.current = window.setTimeout(() => connectRef.current(a), delay);
+      };
+
+      ws.addEventListener('close', scheduleReconnect);
+      ws.addEventListener('error', scheduleReconnect);
+    },
+    [clearReconnectTimer, join, onServerMessage, roomCode],
+  );
+  connectRef.current = connect;
+
+  React.useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const a = await fetchActor();
+      if (cancelled) return;
+      if (a) setActor(a);
+      else setActor(null);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  React.useEffect(() => {
+    if (!actor || !roomCode) return;
+    connect(actor);
+    return () => {
+      clearReconnectTimer();
+      const ws = wsRef.current;
+      wsRef.current = null;
+      if (ws) {
+        try {
+          ws.close();
+        } catch {
+          void 0;
+        }
+      }
+    };
+  }, [actor, clearReconnectTimer, connect, roomCode]);
+
+  const identifyGuest = React.useCallback(async (nickname: string) => {
+    const a = await ensureGuest(nickname);
+    setActor(a);
+    return a;
+  }, []);
+
+  const sendCommand = React.useCallback(
+    (command: CommandInput) => {
+      const ws = wsRef.current;
+      const a = actor;
+      if (!ws || ws.readyState !== WebSocket.OPEN) return;
+      if (!a) return;
+      if (pendingRef.current) return;
+      const commandId = uuid();
+      const clientSeq = nextClientSeqRef.current;
+      pendingRef.current = { commandId, clientSeq };
+      setLastError(null);
+      const msg: ClientMessage = {
+        kind: 'command',
+        command: { ...(command as Command), commandId, clientSeq } as Command,
+      };
+      ws.send(JSON.stringify(msg));
+    },
+    [actor],
+  );
+
+  const clearLastCard = React.useCallback(() => setLastCardDrawn(null), []);
+
+  return {
+    actor,
+    identifyGuest,
+    snapshot,
+    connected,
+    connecting,
+    lastError,
+    sendCommand,
+    pending: pendingRef.current !== null,
+    lastCardDrawn,
+    clearLastCard,
+  };
+}

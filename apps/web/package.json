@@ -1,0 +1,20 @@
+{
+  "name": "@neoblock/web",
+  "version": "0.0.0",
+  "private": true,
+  "dependencies": {
+    "@neoblock/shared": "0.0.0",
+    "@neoblock/ui": "0.0.0",
+    "next": "14.2.35",
+    "next-auth": "^4.24.11",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "scripts": {
+    "dev": "node scripts/next.cjs dev",
+    "build": "node scripts/next.cjs build",
+    "start": "node scripts/next.cjs start",
+    "lint": "eslint . --max-warnings=0",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  }
+}

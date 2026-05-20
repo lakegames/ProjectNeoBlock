@@ -1,0 +1,43 @@
+{
+  "name": "neoblock",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "concurrently -n shared,ui,server,web -c auto \"npm -w @neoblock/shared run dev\" \"npm -w @neoblock/ui run dev\" \"npm -w @neoblock/server run dev\" \"npm -w @neoblock/web run dev\"",
+    "dev:web": "npm -w @neoblock/web run dev",
+    "dev:server": "npm -w @neoblock/server run dev",
+    "build": "npm -ws run build",
+    "start": "npm -ws run start --if-present",
+    "lint": "npm -ws run lint",
+    "test": "npm -ws run test --if-present",
+    "typecheck": "npm -ws run typecheck",
+    "format": "prettier -w .",
+    "format:check": "prettier -c .",
+    "clean": "npm -ws run clean --if-present",
+    "test:e2e": "npm -w @neoblock/server run test:e2e"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "@types/react": "^18.3.24",
+    "@types/react-dom": "^18.3.7",
+    "@next/eslint-plugin-next": "^14.2.35",
+    "@typescript-eslint/eslint-plugin": "^8.30.0",
+    "@typescript-eslint/parser": "^8.30.0",
+    "eslint": "^8.57.0",
+    "eslint-config-prettier": "^10.0.0",
+    "eslint-import-resolver-typescript": "^4.4.4",
+    "eslint-plugin-import": "^2.31.0",
+    "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react-hooks": "^5.2.0",
+    "prettier": "^3.5.3",
+    "concurrently": "^9.1.2",
+    "tsx": "^4.19.4",
+    "typescript": "^5.9.0"
+  }
+}
