@@ -39,6 +39,17 @@ export type PlayerReadyChangedEvent = EventBase & {
   ready: boolean;
 };
 
+export type RoomConfigChangedEvent = EventBase & {
+  type: 'room/configChanged';
+  config: {
+    maxPlayers: number;
+    boardPreset?: 'default' | 'full' | 'e2e_fast';
+    turnTimeMs?: number;
+    rulesetVersionId?: string;
+    boardVersionId?: string;
+  };
+};
+
 export type GameStartedEvent = EventBase & {
   type: 'room/gameStarted';
   gameId: GameId;
@@ -106,6 +117,7 @@ export type Event =
   | PlayerConnectionChangedEvent
   | PlayerLeftEvent
   | PlayerReadyChangedEvent
+  | RoomConfigChangedEvent
   | GameStartedEvent
   | TurnStartedEvent
   | DiceRolledEvent

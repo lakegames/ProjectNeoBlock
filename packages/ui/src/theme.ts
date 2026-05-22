@@ -1,76 +1,71 @@
 import * as React from 'react';
 
 export type Theme = {
-  color: {
-    bg: string;
-    surface: string;
-    fg: string;
-    mutedFg: string;
-    border: string;
-    muted: string;
-    primary: string;
-    primaryFg: string;
-    primarySoft: string;
-    danger: string;
-    dangerFg: string;
-    dangerSoft: string;
-  };
   radius: {
     sm: number;
     md: number;
     lg: number;
+    xl?: number;
   };
   shadow: {
     sm: string;
     md: string;
+    focus?: string;
+  };
+  space?: {
+    xs: number;
+    sm: number;
+    md: number;
+    lg: number;
+  };
+  motion?: {
+    fast: string;
+    normal: string;
+    ease: string;
   };
 };
 
 export const defaultTheme: Theme = {
-  color: {
-    bg: '#f8fafc',
-    surface: '#ffffff',
-    fg: 'rgba(0,0,0,0.92)',
-    mutedFg: 'rgba(0,0,0,0.65)',
-    border: 'rgba(0,0,0,0.12)',
-    muted: 'rgba(0,0,0,0.06)',
-    primary: '#2563eb',
-    primaryFg: '#ffffff',
-    primarySoft: 'rgba(37,99,235,0.12)',
-    danger: '#b42318',
-    dangerFg: '#ffffff',
-    dangerSoft: 'rgba(180,35,24,0.12)',
-  },
   radius: {
-    sm: 10,
-    md: 12,
-    lg: 16,
+    sm: 6,
+    md: 8,
+    lg: 8,
+    xl: 8,
   },
   shadow: {
-    sm: '0 1px 2px rgba(16,24,40,0.08)',
+    sm: '0 0 1px rgba(0,0,0,0.2)',
     md: '0 8px 24px rgba(16,24,40,0.14)',
+    focus: '0 0 0 3px var(--nb-color-ring, rgba(37,99,235,0.28))',
+  },
+  space: {
+    xs: 6,
+    sm: 10,
+    md: 14,
+    lg: 18,
+  },
+  motion: {
+    fast: '120ms',
+    normal: '180ms',
+    ease: 'cubic-bezier(0.2, 0, 0, 1)',
   },
 };
 
 export function themeToVars(theme: Theme): Record<string, string> {
   return {
-    '--nb-color-bg': theme.color.bg,
-    '--nb-color-surface': theme.color.surface,
-    '--nb-color-fg': theme.color.fg,
-    '--nb-color-muted-fg': theme.color.mutedFg,
-    '--nb-color-border': theme.color.border,
-    '--nb-color-muted': theme.color.muted,
-    '--nb-color-primary': theme.color.primary,
-    '--nb-color-primary-fg': theme.color.primaryFg,
-    '--nb-color-primary-soft': theme.color.primarySoft,
-    '--nb-color-danger': theme.color.danger,
-    '--nb-color-danger-fg': theme.color.dangerFg,
-    '--nb-color-danger-soft': theme.color.dangerSoft,
     '--nb-radius-sm': `${theme.radius.sm}px`,
     '--nb-radius-md': `${theme.radius.md}px`,
     '--nb-radius-lg': `${theme.radius.lg}px`,
+    '--nb-radius-xl': `${theme.radius.xl ?? theme.radius.lg}px`,
     '--nb-shadow-sm': theme.shadow.sm,
     '--nb-shadow-md': theme.shadow.md,
+    '--nb-shadow-focus': theme.shadow.focus ?? '0 0 0 3px var(--nb-color-ring, rgba(37,99,235,0.28))',
+    '--nb-space-xs': `${theme.space?.xs ?? 6}px`,
+    '--nb-space-sm': `${theme.space?.sm ?? 10}px`,
+    '--nb-space-md': `${theme.space?.md ?? 14}px`,
+    '--nb-space-lg': `${theme.space?.lg ?? 18}px`,
+    '--nb-motion-fast': theme.motion?.fast ?? '120ms',
+    '--nb-motion-normal': theme.motion?.normal ?? '180ms',
+    '--nb-motion-ease': theme.motion?.ease ?? 'cubic-bezier(0.2, 0, 0, 1)',
   };
 }
 

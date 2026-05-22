@@ -1,0 +1,142 @@
+.nb-home {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-height: 100%;
+}
+
+.nb-home__nav {
+  display: flex;
+  align-items: center;
+  padding: 0 28px;
+  height: 56px;
+  border-bottom: 1px solid var(--nb-color-border, rgba(0, 0, 0, 0.12));
+}
+
+.nb-home__tabs {
+  display: flex;
+  gap: 22px;
+  align-items: center;
+}
+
+.nb-home__tab {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  height: 40px;
+  padding: 0 4px;
+  border: 0;
+  background: transparent;
+  color: var(--nb-color-muted-fg, rgba(0, 0, 0, 0.65));
+  font-size: 18px;
+  line-height: 24px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.nb-home__tab[data-active='true'] {
+  color: var(--nb-color-primary, #e54b1a);
+}
+
+.nb-home__tab[data-active='true']::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -9px;
+  height: 3px;
+  border-radius: 6px 6px 0 0;
+  background: var(--nb-color-primary, #e54b1a);
+}
+
+.nb-home__body {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  flex: 1 0 auto;
+}
+
+.nb-home__body::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 1px;
+  transform: translateX(-0.5px);
+  background: rgba(0, 0, 0, 0.06);
+}
+
+.nb-home__col {
+  display: flex;
+  justify-content: center;
+  padding: 80px 24px;
+}
+
+.nb-home__col--join {
+  background: #ffffff;
+}
+
+.nb-home__col--create {
+  background: rgba(255, 226, 207, 0.25);
+}
+
+.nb-home__panel {
+  width: min(520px, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.nb-home__title {
+  margin: 0;
+  text-align: center;
+  font-size: 24px;
+  line-height: 32px;
+  font-weight: 700;
+  color: var(--nb-color-fg, rgba(0, 0, 0, 0.92));
+}
+
+.nb-home__subtitle {
+  margin: -10px 0 6px;
+  text-align: center;
+  font-size: 16px;
+  line-height: 22px;
+  color: var(--nb-color-muted-fg, rgba(0, 0, 0, 0.65));
+}
+
+.nb-home__grid2 {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  align-items: start;
+}
+
+.nb-home__card {
+  padding: 16px;
+  border-radius: 12px;
+}
+
+.nb-home__card-title {
+  font-size: 16px;
+  line-height: 22px;
+  font-weight: 700;
+  margin: 0 0 10px;
+  color: var(--nb-color-fg, rgba(0, 0, 0, 0.92));
+}
+
+.nb-home__field {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.nb-home__actions {
+  margin-top: 12px;
+  display: flex;
+  gap: 10px;
+}
+
+.nb-home__room-card {
+  width: 100%;
+}

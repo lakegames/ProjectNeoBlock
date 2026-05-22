@@ -136,7 +136,7 @@ export default function ConfigHomePage() {
                         <span style={{ marginLeft: 8, color: 'rgba(0,0,0,0.65)' }}>
                           ｜发布 {d.publishedVersionId ? d.publishedVersionId : '-'} ｜草稿 {d.draftVersionId}
                         </span>
-                        <Link href={`/config/${encodeURIComponent(d.docId)}`}>
+                        <Link href={`/config/${d.docId}`}>
                           <Button style={{ marginLeft: 10 }}>进入</Button>
                         </Link>
                       </li>

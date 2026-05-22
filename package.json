@@ -9,7 +9,7 @@
     "node": ">=20"
   },
   "scripts": {
-    "dev": "concurrently -n shared,ui,server,web -c auto \"npm -w @neoblock/shared run dev\" \"npm -w @neoblock/ui run dev\" \"npm -w @neoblock/server run dev\" \"npm -w @neoblock/web run dev\"",
+    "dev": "concurrently -n shared,ui,rules,server,web -c auto \"npm -w @neoblock/shared run dev\" \"npm -w @neoblock/ui run dev\" \"npm -w @neoblock/rules run dev\" \"npm -w @neoblock/server run dev\" \"npm -w @neoblock/web run dev\"",
     "dev:web": "npm -w @neoblock/web run dev",
     "dev:server": "npm -w @neoblock/server run dev",
     "build": "npm -ws run build",
@@ -29,6 +29,7 @@
     "@next/eslint-plugin-next": "^14.2.35",
     "@typescript-eslint/eslint-plugin": "^8.30.0",
     "@typescript-eslint/parser": "^8.30.0",
+    "@svgr/cli": "^8.1.0",
     "eslint": "^8.57.0",
     "eslint-config-prettier": "^10.0.0",
     "eslint-import-resolver-typescript": "^4.4.4",

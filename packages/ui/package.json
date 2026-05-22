@@ -19,8 +19,9 @@
     "react-dom": "^18.0.0"
   },
   "scripts": {
+    "icons:gen": "tsx scripts/generate-icons.ts",
     "dev": "tsc -p tsconfig.json -w --preserveWatchOutput",
-    "build": "tsc -p tsconfig.json",
+    "build": "npm run icons:gen && tsc -p tsconfig.json",
     "lint": "eslint . --max-warnings=0",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   }

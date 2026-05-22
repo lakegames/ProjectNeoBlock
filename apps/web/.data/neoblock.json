@@ -1,119 +1,141 @@
 {
-  "profiles": {},
-  "invites": {},
-  "friends": {},
+  "profiles": {
+    "54568547": {
+      "id": "54568547",
+      "displayName": "Kailun",
+      "createdAt": "2026-05-21T04:45:14.181Z",
+      "updatedAt": "2026-05-22T19:24:47.687Z",
+      "githubAvatarUrl": "https://avatars.githubusercontent.com/u/54568547?v=4",
+      "customAvatarMime": null,
+      "avatarUpdatedAt": null,
+      "customAvatarDataUrl": null
+    },
+    "dev:OpenAI": {
+      "id": "dev:OpenAI",
+      "displayName": "OpenAI",
+      "createdAt": "2026-05-20T16:29:36.355Z",
+      "updatedAt": "2026-05-20T16:29:36.355Z"
+    },
+    "dev:Something": {
+      "id": "dev:Something",
+      "displayName": "Something",
+      "createdAt": "2026-05-21T04:58:53.482Z",
+      "updatedAt": "2026-05-21T04:58:53.482Z"
+    }
+  },
+  "invites": {
+    "QLJLF7P5": {
+      "code": "QLJLF7P5",
+      "inviterId": "dev:OpenAI",
+      "createdAt": "2026-05-20T16:18:10.691Z"
+    },
+    "DB4U8G4P": {
+      "code": "DB4U8G4P",
+      "inviterId": "54568547",
+      "createdAt": "2026-05-21T04:56:56.046Z"
+    },
+    "KY9KN8DF": {
+      "code": "KY9KN8DF",
+      "inviterId": "54568547",
+      "createdAt": "2026-05-21T04:57:01.704Z",
+      "usedBy": "dev:KaiMimo",
+      "usedAt": "2026-05-21T04:58:18.192Z"
+    },
+    "Y8PXJRGA": {
+      "code": "Y8PXJRGA",
+      "inviterId": "54568547",
+      "createdAt": "2026-05-21T04:58:26.360Z",
+      "usedBy": "dev:Something",
+      "usedAt": "2026-05-21T04:58:33.073Z"
+    },
+    "5DE2UCFC": {
+      "code": "5DE2UCFC",
+      "inviterId": "54568547",
+      "createdAt": "2026-05-21T04:58:34.698Z",
+      "usedBy": "dev:Gugu",
+      "usedAt": "2026-05-21T04:58:38.440Z"
+    }
+  },
+  "friends": {
+    "54568547": [
+      "dev:KaiMimo",
+      "dev:Something",
+      "dev:Gugu"
+    ],
+    "dev:KaiMimo": [
+      "54568547"
+    ],
+    "dev:Something": [
+      "54568547"
+    ],
+    "dev:Gugu": [
+      "54568547"
+    ]
+  },
   "rooms": {
-    "UV7XEY": {
-      "code": "UV7XEY",
-      "roomId": "room:UV7XEY",
+    "3ABT9B": {
+      "code": "3ABT9B",
+      "roomId": "room:3ABT9B",
       "status": "lobby",
-      "hostPlayerId": "guest:99400451-81ce-473c-a2df-8673dc45df95",
-      "createdAtMs": 1779286438381,
+      "hostPlayerId": "guest:e71a5b0c-3f7a-42db-8225-faa59ef9abf7",
+      "createdAtMs": 1779481991535,
       "config": {
         "maxPlayers": 4,
         "turnTimeSec": 60,
-        "enableAuto": true,
-        "enableAI": true,
+        "enableAuto": false,
+        "enableAI": false,
         "rulesetVersionId": "v1779275289236_06966527",
-        "boardVersionId": "v1779275289236_d0a29ffb",
+        "boardVersionId": "v1779480856928_4efe63fa",
         "cardsVersionId": "v1779275289236_620b07a6"
       },
       "members": [
         {
-          "playerId": "guest:7cb26c92-ba9c-4b82-8f49-f2fa464d19cd",
+          "playerId": "guest:e71a5b0c-3f7a-42db-8225-faa59ef9abf7",
           "displayName": "AAA",
           "isSpectator": false,
           "ready": false,
-          "joinedAtMs": 1779286494335
+          "joinedAtMs": 1779482208075
         },
         {
-          "playerId": "guest:99400451-81ce-473c-a2df-8673dc45df95",
-          "displayName": "Ac",
+          "playerId": "user:54568547",
+          "userId": "54568547",
+          "displayName": "Kailun",
           "isSpectator": false,
           "ready": false,
-          "joinedAtMs": 1779286438381
+          "joinedAtMs": 1779481991535
         }
       ]
     },
-    "QRYNY4": {
-      "code": "QRYNY4",
-      "roomId": "room:QRYNY4",
+    "WJS9F6": {
+      "code": "WJS9F6",
+      "roomId": "room:WJS9F6",
       "status": "lobby",
-      "hostPlayerId": "guest:a526abcc-ed7d-4455-8fcd-37db181cd813",
-      "createdAtMs": 1779287437260,
+      "hostPlayerId": "user:54568547",
+      "createdAtMs": 1779482874675,
       "config": {
         "maxPlayers": 4,
         "turnTimeSec": 60,
         "enableAuto": false,
         "enableAI": false,
         "rulesetVersionId": "v1779275289236_06966527",
-        "boardVersionId": "v1779275289236_d0a29ffb",
+        "boardVersionId": "v1779480856928_4efe63fa",
         "cardsVersionId": "v1779275289236_620b07a6"
       },
       "members": [
         {
-          "playerId": "guest:b63d3f60-866f-4eac-b9a1-980386903287",
-          "displayName": "QRYNY4",
+          "playerId": "guest:fcb1552e-829e-4b6d-9aae-e057de8baf3e",
+          "displayName": "AAAAAAAA",
           "isSpectator": false,
           "ready": false,
-          "joinedAtMs": 1779287553574
+          "joinedAtMs": 1779482890457
         },
         {
-          "playerId": "guest:a526abcc-ed7d-4455-8fcd-37db181cd813",
-          "displayName": "Host",
+          "playerId": "user:54568547",
+          "userId": "54568547",
+          "displayName": "Kailun",
           "isSpectator": false,
           "ready": false,
-          "joinedAtMs": 1779287437260
-        }
-      ]
-    },
-    "SHWCVT": {
-      "code": "SHWCVT",
-      "roomId": "room:SHWCVT",
-      "status": "lobby",
-      "hostPlayerId": "guest:1fc4c2bb-865e-4357-8c1d-cff22d224e7d",
-      "createdAtMs": 1779287789754,
-      "config": {
-        "maxPlayers": 4,
-        "turnTimeSec": 60,
-        "enableAuto": false,
-        "enableAI": false,
-        "rulesetVersionId": "v1779275289236_06966527",
-        "boardVersionId": "v1779275289236_d0a29ffb",
-        "cardsVersionId": "v1779275289236_620b07a6"
-      },
-      "members": [
-        {
-          "playerId": "guest:1fc4c2bb-865e-4357-8c1d-cff22d224e7d",
-          "displayName": "Host",
-          "isSpectator": false,
-          "ready": false,
-          "joinedAtMs": 1779287789754
-        }
-      ]
-    },
-    "F9YABZ": {
-      "code": "F9YABZ",
-      "roomId": "room:F9YABZ",
-      "status": "lobby",
-      "hostPlayerId": "guest:30e692d0-c81a-4545-8cd7-27f582cf5a2d",
-      "createdAtMs": 1779288657245,
-      "config": {
-        "maxPlayers": 4,
-        "turnTimeSec": 60,
-        "enableAuto": false,
-        "enableAI": false,
-        "rulesetVersionId": "v1779275289236_06966527",
-        "boardVersionId": "v1779275289236_d0a29ffb",
-        "cardsVersionId": "v1779275289236_620b07a6"
-      },
-      "members": [
-        {
-          "playerId": "guest:30e692d0-c81a-4545-8cd7-27f582cf5a2d",
-          "displayName": "Host",
-          "isSpectator": false,
-          "ready": false,
-          "joinedAtMs": 1779288657245
+          "joinedAtMs": 1779482874675
         }
       ]
     }
@@ -497,6 +519,1113 @@
           "note": "seed"
         }
       }
+    },
+    "builtin:board-full": {
+      "docId": "builtin:board-full",
+      "kind": "board",
+      "name": "标准 40 格（测试）",
+      "createdAtMs": 1779480856928,
+      "updatedAtMs": 1779480856928,
+      "publishedVersionId": "v1779480856928_4efe63fa",
+      "draftVersionId": "v1779480856928",
+      "versionIds": [
+        "v1779480856928",
+        "v1779480856928_4efe63fa"
+      ],
+      "versions": {
+        "v1779480856928": {
+          "versionId": "v1779480856928",
+          "status": "draft",
+          "createdAtMs": 1779480856928,
+          "updatedAtMs": 1779480856928,
+          "data": {
+            "jailIndex": 10,
+            "tiles": [
+              {
+                "kind": "start"
+              },
+              {
+                "kind": "property",
+                "propertyId": "f_p01",
+                "groupId": "f_g_brown",
+                "price": 60,
+                "houseCost": 50,
+                "rents": [
+                  2,
+                  10,
+                  30,
+                  90,
+                  160,
+                  250
+                ]
+              },
+              {
+                "kind": "communityChest"
+              },
+              {
+                "kind": "property",
+                "propertyId": "f_p02",
+                "groupId": "f_g_brown",
+                "price": 60,
+                "houseCost": 50,
+                "rents": [
+                  4,
+                  20,
+                  60,
+                  180,
+                  320,
+                  450
+                ]
+              },
+              {
+                "kind": "tax",
+                "amount": 200
+              },
+              {
+                "kind": "property",
+                "propertyId": "f_p03",
+                "groupId": "f_g_rail",
+                "price": 200,
+                "houseCost": 100,
+                "rents": [
+                  25,
+                  50,
+                  100,
+                  200,
+                  350,
+                  500
+                ]
+              },
+              {
+                "kind": "property",
+                "propertyId": "f_p04",
+                "groupId": "f_g_lightblue",
+                "price": 100,
+                "houseCost": 50,
+                "rents": [
+                  6,
+                  30,
+                  90,
+                  270,
+                  400,
+                  550
+                ]
+              },
+              {
+                "kind": "chance"
+              },
+              {
+                "kind": "property",
+                "propertyId": "f_p05",
+                "groupId": "f_g_lightblue",
+                "price": 100,
+                "houseCost": 50,
+                "rents": [
+                  6,
+                  30,
+                  90,
+                  270,
+                  400,
+                  550
+                ]
+              },
+              {
+                "kind": "property",
+                "propertyId": "f_p06",
+                "groupId": "f_g_lightblue",
+                "price": 120,
+                "houseCost": 50,
+                "rents": [
+                  8,
+                  40,
+                  100,
+                  300,
+                  450,
+                  600
+                ]
+              },
+              {
+                "kind": "jail"
+              },
+              {
+                "kind": "property",
+                "propertyId": "f_p07",
+                "groupId": "f_g_pink",
+                "price": 140,
+                "houseCost": 100,
+                "rents": [
+                  10,
+                  50,
+                  150,
+                  450,
+                  625,
+                  750
+                ]
+              },
+              {
+                "kind": "property",
+                "propertyId": "f_p08",
+                "groupId": "f_g_util",
+                "price": 150,
+                "houseCost": 100,
+                "rents": [
+                  10,
+                  20,
+                  30,
+                  40,
+                  50,
+                  60
+                ]
+              },
+              {
+                "kind": "property",
+                "propertyId": "f_p09",
+                "groupId": "f_g_pink",
+                "price": 160,
+                "houseCost": 100,
+                "rents": [
+                  12,
+                  60,
+                  180,
+                  500,
+                  700,
+                  900
+                ]
+              },
+              {
+                "kind": "property",
+                "propertyId": "f_p10",
+                "groupId": "f_g_pink",
+                "price": 180,
+                "houseCost": 100,
+                "rents": [
+                  14,
+                  70,
+                  200,
+                  550,
+                  750,
+                  950
+                ]
+              },
+              {
+                "kind": "property",
+                "propertyId": "f_p11",
+                "groupId": "f_g_rail",
+                "price": 200,
+                "houseCost": 100,
+                "rents": [
+                  25,
+                  50,
+                  100,
+                  200,
+                  350,
+                  500
+                ]
+              },
+              {
+                "kind": "property",
+                "propertyId": "f_p12",
+                "groupId": "f_g_orange",
+                "price": 180,
+                "houseCost": 100,
+                "rents": [
+                  14,
+                  70,
+                  200,
+                  550,
+                  750,
+                  950
+                ]
+              },
+              {
+                "kind": "communityChest"
+              },
+              {
+                "kind": "property",
+                "propertyId": "f_p13",
+                "groupId": "f_g_orange",
+                "price": 200,
+                "houseCost": 100,
+                "rents": [
+                  16,
+                  80,
+                  220,
+                  600,
+                  800,
+                  1000
+                ]
+              },
+              {
+                "kind": "property",
+                "propertyId": "f_p14",
+                "groupId": "f_g_orange",
+                "price": 220,
+                "houseCost": 150,
+                "rents": [
+                  18,
+                  90,
+                  250,
+                  700,
+                  875,
+                  1050
+                ]
+              },
+              {
+                "kind": "chance"
+              },
+              {
+                "kind": "property",
+                "propertyId": "f_p15",
+                "groupId": "f_g_red",
+                "price": 220,
+                "houseCost": 150,
+                "rents": [
+                  18,
+                  90,
+                  250,
+                  700,
+                  875,
+                  1050
+                ]
+              },
+              {
+                "kind": "chance"
+              },
+              {
+                "kind": "property",
+                "propertyId": "f_p16",
+                "groupId": "f_g_red",
+                "price": 240,
+                "houseCost": 150,
+                "rents": [
+                  20,
+                  100,
+                  300,
+                  750,
+                  925,
+                  1100
+                ]
+              },
+              {
+                "kind": "property",
+                "propertyId": "f_p17",
+                "groupId": "f_g_red",
+                "price": 260,
+                "houseCost": 150,
+                "rents": [
+                  22,
+                  110,
+                  330,
+                  800,
+                  975,
+                  1150
+                ]
+              },
+              {
+                "kind": "property",
+                "propertyId": "f_p18",
+                "groupId": "f_g_rail",
+                "price": 200,
+                "houseCost": 100,
+                "rents": [
+                  25,
+                  50,
+                  100,
+                  200,
+                  350,
+                  500
+                ]
+              },
+              {
+                "kind": "property",
+                "propertyId": "f_p19",
+                "groupId": "f_g_yellow",
+                "price": 260,
+                "houseCost": 150,
+                "rents": [
+                  22,
+                  110,
+                  330,
+                  800,
+                  975,
+                  1150
+                ]
+              },
+              {
+                "kind": "property",
+                "propertyId": "f_p20",
+                "groupId": "f_g_yellow",
+                "price": 280,
+                "houseCost": 150,
+                "rents": [
+                  24,
+                  120,
+                  360,
+                  850,
+                  1025,
+                  1200
+                ]
+              },
+              {
+                "kind": "property",
+                "propertyId": "f_p21",
+                "groupId": "f_g_util",
+                "price": 150,
+                "houseCost": 100,
+                "rents": [
+                  10,
+                  20,
+                  30,
+                  40,
+                  50,
+                  60
+                ]
+              },
+              {
+                "kind": "property",
+                "propertyId": "f_p22",
+                "groupId": "f_g_yellow",
+                "price": 300,
+                "houseCost": 200,
+                "rents": [
+                  26,
+                  130,
+                  390,
+                  900,
+                  1100,
+                  1275
+                ]
+              },
+              {
+                "kind": "goToJail"
+              },
+              {
+                "kind": "property",
+                "propertyId": "f_p23",
+                "groupId": "f_g_green",
+                "price": 300,
+                "houseCost": 200,
+                "rents": [
+                  26,
+                  130,
+                  390,
+                  900,
+                  1100,
+                  1275
+                ]
+              },
+              {
+                "kind": "property",
+                "propertyId": "f_p24",
+                "groupId": "f_g_green",
+                "price": 320,
+                "houseCost": 200,
+                "rents": [
+                  28,
+                  150,
+                  450,
+                  1000,
+                  1200,
+                  1400
+                ]
+              },
+              {
+                "kind": "communityChest"
+              },
+              {
+                "kind": "property",
+                "propertyId": "f_p25",
+                "groupId": "f_g_green",
+                "price": 350,
+                "houseCost": 200,
+                "rents": [
+                  35,
+                  175,
+                  500,
+                  1100,
+                  1300,
+                  1500
+                ]
+              },
+              {
+                "kind": "property",
+                "propertyId": "f_p26",
+                "groupId": "f_g_rail",
+                "price": 200,
+                "houseCost": 100,
+                "rents": [
+                  25,
+                  50,
+                  100,
+                  200,
+                  350,
+                  500
+                ]
+              },
+              {
+                "kind": "chance"
+              },
+              {
+                "kind": "property",
+                "propertyId": "f_p27",
+                "groupId": "f_g_darkblue",
+                "price": 350,
+                "houseCost": 200,
+                "rents": [
+                  35,
+                  175,
+                  500,
+                  1100,
+                  1300,
+                  1500
+                ]
+              },
+              {
+                "kind": "tax",
+                "amount": 100
+              },
+              {
+                "kind": "property",
+                "propertyId": "f_p28",
+                "groupId": "f_g_darkblue",
+                "price": 400,
+                "houseCost": 200,
+                "rents": [
+                  50,
+                  200,
+                  600,
+                  1400,
+                  1700,
+                  2000
+                ]
+              }
+            ]
+          }
+        },
+        "v1779480856928_4efe63fa": {
+          "versionId": "v1779480856928_4efe63fa",
+          "status": "published",
+          "createdAtMs": 1779480856928,
+          "updatedAtMs": 1779480856928,
+          "data": {
+            "tiles": [
+              {
+                "kind": "start"
+              },
+              {
+                "kind": "property",
+                "propertyId": "f_p01",
+                "groupId": "f_g_brown",
+                "price": 60,
+                "houseCost": 50,
+                "rents": [
+                  2,
+                  10,
+                  30,
+                  90,
+                  160,
+                  250
+                ]
+              },
+              {
+                "kind": "communityChest"
+              },
+              {
+                "kind": "property",
+                "propertyId": "f_p02",
+                "groupId": "f_g_brown",
+                "price": 60,
+                "houseCost": 50,
+                "rents": [
+                  4,
+                  20,
+                  60,
+                  180,
+                  320,
+                  450
+                ]
+              },
+              {
+                "kind": "tax",
+                "amount": 200
+              },
+              {
+                "kind": "property",
+                "propertyId": "f_p03",
+                "groupId": "f_g_rail",
+                "price": 200,
+                "houseCost": 100,
+                "rents": [
+                  25,
+                  50,
+                  100,
+                  200,
+                  350,
+                  500
+                ]
+              },
+              {
+                "kind": "property",
+                "propertyId": "f_p04",
+                "groupId": "f_g_lightblue",
+                "price": 100,
+                "houseCost": 50,
+                "rents": [
+                  6,
+                  30,
+                  90,
+                  270,
+                  400,
+                  550
+                ]
+              },
+              {
+                "kind": "chance"
+              },
+              {
+                "kind": "property",
+                "propertyId": "f_p05",
+                "groupId": "f_g_lightblue",
+                "price": 100,
+                "houseCost": 50,
+                "rents": [
+                  6,
+                  30,
+                  90,
+                  270,
+                  400,
+                  550
+                ]
+              },
+              {
+                "kind": "property",
+                "propertyId": "f_p06",
+                "groupId": "f_g_lightblue",
+                "price": 120,
+                "houseCost": 50,
+                "rents": [
+                  8,
+                  40,
+                  100,
+                  300,
+                  450,
+                  600
+                ]
+              },
+              {
+                "kind": "jail"
+              },
+              {
+                "kind": "property",
+                "propertyId": "f_p07",
+                "groupId": "f_g_pink",
+                "price": 140,
+                "houseCost": 100,
+                "rents": [
+                  10,
+                  50,
+                  150,
+                  450,
+                  625,
+                  750
+                ]
+              },
+              {
+                "kind": "property",
+                "propertyId": "f_p08",
+                "groupId": "f_g_util",
+                "price": 150,
+                "houseCost": 100,
+                "rents": [
+                  10,
+                  20,
+                  30,
+                  40,
+                  50,
+                  60
+                ]
+              },
+              {
+                "kind": "property",
+                "propertyId": "f_p09",
+                "groupId": "f_g_pink",
+                "price": 160,
+                "houseCost": 100,
+                "rents": [
+                  12,
+                  60,
+                  180,
+                  500,
+                  700,
+                  900
+                ]
+              },
+              {
+                "kind": "property",
+                "propertyId": "f_p10",
+                "groupId": "f_g_pink",
+                "price": 180,
+                "houseCost": 100,
+                "rents": [
+                  14,
+                  70,
+                  200,
+                  550,
+                  750,
+                  950
+                ]
+              },
+              {
+                "kind": "property",
+                "propertyId": "f_p11",
+                "groupId": "f_g_rail",
+                "price": 200,
+                "houseCost": 100,
+                "rents": [
+                  25,
+                  50,
+                  100,
+                  200,
+                  350,
+                  500
+                ]
+              },
+              {
+                "kind": "property",
+                "propertyId": "f_p12",
+                "groupId": "f_g_orange",
+                "price": 180,
+                "houseCost": 100,
+                "rents": [
+                  14,
+                  70,
+                  200,
+                  550,
+                  750,
+                  950
+                ]
+              },
+              {
+                "kind": "communityChest"
+              },
+              {
+                "kind": "property",
+                "propertyId": "f_p13",
+                "groupId": "f_g_orange",
+                "price": 200,
+                "houseCost": 100,
+                "rents": [
+                  16,
+                  80,
+                  220,
+                  600,
+                  800,
+                  1000
+                ]
+              },
+              {
+                "kind": "property",
+                "propertyId": "f_p14",
+                "groupId": "f_g_orange",
+                "price": 220,
+                "houseCost": 150,
+                "rents": [
+                  18,
+                  90,
+                  250,
+                  700,
+                  875,
+                  1050
+                ]
+              },
+              {
+                "kind": "chance"
+              },
+              {
+                "kind": "property",
+                "propertyId": "f_p15",
+                "groupId": "f_g_red",
+                "price": 220,
+                "houseCost": 150,
+                "rents": [
+                  18,
+                  90,
+                  250,
+                  700,
+                  875,
+                  1050
+                ]
+              },
+              {
+                "kind": "chance"
+              },
+              {
+                "kind": "property",
+                "propertyId": "f_p16",
+                "groupId": "f_g_red",
+                "price": 240,
+                "houseCost": 150,
+                "rents": [
+                  20,
+                  100,
+                  300,
+                  750,
+                  925,
+                  1100
+                ]
+              },
+              {
+                "kind": "property",
+                "propertyId": "f_p17",
+                "groupId": "f_g_red",
+                "price": 260,
+                "houseCost": 150,
+                "rents": [
+                  22,
+                  110,
+                  330,
+                  800,
+                  975,
+                  1150
+                ]
+              },
+              {
+                "kind": "property",
+                "propertyId": "f_p18",
+                "groupId": "f_g_rail",
+                "price": 200,
+                "houseCost": 100,
+                "rents": [
+                  25,
+                  50,
+                  100,
+                  200,
+                  350,
+                  500
+                ]
+              },
+              {
+                "kind": "property",
+                "propertyId": "f_p19",
+                "groupId": "f_g_yellow",
+                "price": 260,
+                "houseCost": 150,
+                "rents": [
+                  22,
+                  110,
+                  330,
+                  800,
+                  975,
+                  1150
+                ]
+              },
+              {
+                "kind": "property",
+                "propertyId": "f_p20",
+                "groupId": "f_g_yellow",
+                "price": 280,
+                "houseCost": 150,
+                "rents": [
+                  24,
+                  120,
+                  360,
+                  850,
+                  1025,
+                  1200
+                ]
+              },
+              {
+                "kind": "property",
+                "propertyId": "f_p21",
+                "groupId": "f_g_util",
+                "price": 150,
+                "houseCost": 100,
+                "rents": [
+                  10,
+                  20,
+                  30,
+                  40,
+                  50,
+                  60
+                ]
+              },
+              {
+                "kind": "property",
+                "propertyId": "f_p22",
+                "groupId": "f_g_yellow",
+                "price": 300,
+                "houseCost": 200,
+                "rents": [
+                  26,
+                  130,
+                  390,
+                  900,
+                  1100,
+                  1275
+                ]
+              },
+              {
+                "kind": "goToJail"
+              },
+              {
+                "kind": "property",
+                "propertyId": "f_p23",
+                "groupId": "f_g_green",
+                "price": 300,
+                "houseCost": 200,
+                "rents": [
+                  26,
+                  130,
+                  390,
+                  900,
+                  1100,
+                  1275
+                ]
+              },
+              {
+                "kind": "property",
+                "propertyId": "f_p24",
+                "groupId": "f_g_green",
+                "price": 320,
+                "houseCost": 200,
+                "rents": [
+                  28,
+                  150,
+                  450,
+                  1000,
+                  1200,
+                  1400
+                ]
+              },
+              {
+                "kind": "communityChest"
+              },
+              {
+                "kind": "property",
+                "propertyId": "f_p25",
+                "groupId": "f_g_green",
+                "price": 350,
+                "houseCost": 200,
+                "rents": [
+                  35,
+                  175,
+                  500,
+                  1100,
+                  1300,
+                  1500
+                ]
+              },
+              {
+                "kind": "property",
+                "propertyId": "f_p26",
+                "groupId": "f_g_rail",
+                "price": 200,
+                "houseCost": 100,
+                "rents": [
+                  25,
+                  50,
+                  100,
+                  200,
+                  350,
+                  500
+                ]
+              },
+              {
+                "kind": "chance"
+              },
+              {
+                "kind": "property",
+                "propertyId": "f_p27",
+                "groupId": "f_g_darkblue",
+                "price": 350,
+                "houseCost": 200,
+                "rents": [
+                  35,
+                  175,
+                  500,
+                  1100,
+                  1300,
+                  1500
+                ]
+              },
+              {
+                "kind": "tax",
+                "amount": 100
+              },
+              {
+                "kind": "property",
+                "propertyId": "f_p28",
+                "groupId": "f_g_darkblue",
+                "price": 400,
+                "houseCost": 200,
+                "rents": [
+                  50,
+                  200,
+                  600,
+                  1400,
+                  1700,
+                  2000
+                ]
+              }
+            ],
+            "jailIndex": 10
+          },
+          "baseVersionId": "v1779480856928",
+          "note": "seed"
+        }
+      }
     }
-  }
+  },
+  "audit": [
+    {
+      "id": "45835d41-30f6-4e94-9789-2162a59bffbe",
+      "atMs": 1779339206501,
+      "actorUid": "54568547",
+      "action": "admin.room.close",
+      "targetType": "room",
+      "targetId": "F9YABZ",
+      "detail": {
+        "before": {
+          "status": "lobby",
+          "startedAtMs": null,
+          "closedAtMs": null
+        },
+        "deleted": true
+      }
+    },
+    {
+      "id": "47a039c0-65df-4295-a5bc-b15202903e55",
+      "atMs": 1779339209272,
+      "actorUid": "54568547",
+      "action": "admin.room.close",
+      "targetType": "room",
+      "targetId": "SHWCVT",
+      "detail": {
+        "before": {
+          "status": "lobby",
+          "startedAtMs": null,
+          "closedAtMs": null
+        },
+        "deleted": true
+      }
+    },
+    {
+      "id": "040a711f-8ba7-4b26-a2ab-794532753d01",
+      "atMs": 1779339210395,
+      "actorUid": "54568547",
+      "action": "admin.room.close",
+      "targetType": "room",
+      "targetId": "QRYNY4",
+      "detail": {
+        "before": {
+          "status": "lobby",
+          "startedAtMs": null,
+          "closedAtMs": null
+        },
+        "deleted": true
+      }
+    },
+    {
+      "id": "0de9ed30-c0fa-43fd-8d9e-cd249a416bb7",
+      "atMs": 1779339212734,
+      "actorUid": "54568547",
+      "action": "admin.room.close",
+      "targetType": "room",
+      "targetId": "UV7XEY",
+      "detail": {
+        "before": {
+          "status": "lobby",
+          "startedAtMs": null,
+          "closedAtMs": null
+        },
+        "deleted": true
+      }
+    },
+    {
+      "id": "88a100fe-ad82-4a31-9514-cabbf12aab80",
+      "atMs": 1779479914764,
+      "actorUid": "54568547",
+      "action": "admin.room.close",
+      "targetType": "room",
+      "targetId": "UUESYN",
+      "detail": {
+        "before": {
+          "status": "lobby",
+          "startedAtMs": null,
+          "closedAtMs": null
+        },
+        "deleted": true
+      }
+    },
+    {
+      "id": "29996444-c993-4386-96af-50f0d685a144",
+      "atMs": 1779479916957,
+      "actorUid": "54568547",
+      "action": "admin.room.close",
+      "targetType": "room",
+      "targetId": "6VPMLE",
+      "detail": {
+        "before": {
+          "status": "lobby",
+          "startedAtMs": null,
+          "closedAtMs": null
+        },
+        "deleted": true
+      }
+    },
+    {
+      "id": "1884e797-724d-4837-b4aa-8d61bf4bffbf",
+      "atMs": 1779481434911,
+      "actorUid": "54568547",
+      "action": "admin.room.kick",
+      "targetType": "room",
+      "targetId": "7FSYQU",
+      "detail": {
+        "playerId": "user:54568547",
+        "beforeHostPlayerId": "user:54568547",
+        "afterHostPlayerId": "guest:5e77e3df-cb37-4c46-ad8e-7faa40fb3330",
+        "deleted": false
+      }
+    },
+    {
+      "id": "ad6167b0-907a-4001-a557-3b832907f69c",
+      "atMs": 1779481436325,
+      "actorUid": "54568547",
+      "action": "admin.room.kick",
+      "targetType": "room",
+      "targetId": "7FSYQU",
+      "detail": {
+        "playerId": "guest:5e77e3df-cb37-4c46-ad8e-7faa40fb3330",
+        "beforeHostPlayerId": "guest:5e77e3df-cb37-4c46-ad8e-7faa40fb3330",
+        "afterHostPlayerId": null,
+        "deleted": true
+      }
+    },
+    {
+      "id": "7816127d-b1c0-42d3-b5ab-723a0873a22a",
+      "atMs": 1779482235361,
+      "actorUid": "54568547",
+      "action": "admin.room.kick",
+      "targetType": "room",
+      "targetId": "3ABT9B",
+      "detail": {
+        "playerId": "guest:ff3d95d0-48f8-46d9-a992-0f66fa800a39",
+        "beforeHostPlayerId": "user:54568547",
+        "afterHostPlayerId": "user:54568547",
+        "deleted": false
+      }
+    },
+    {
+      "id": "65f91e53-fb73-4540-ab86-12c52ca5ad99",
+      "atMs": 1779482256688,
+      "actorUid": "54568547",
+      "action": "admin.room.setHost",
+      "targetType": "room",
+      "targetId": "3ABT9B",
+      "detail": {
+        "beforeHostPlayerId": "user:54568547",
+        "afterHostPlayerId": "guest:e71a5b0c-3f7a-42db-8225-faa59ef9abf7"
+      }
+    }
+  ]
 }

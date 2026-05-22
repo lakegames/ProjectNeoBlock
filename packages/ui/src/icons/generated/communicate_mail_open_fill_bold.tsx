@@ -1,0 +1,18 @@
+import * as React from 'react';
+import type { SVGProps } from 'react';
+const SvgCommunicateMailOpenFillBold = (props: SVGProps<SVGSVGElement>) => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="1em"
+    height="1em"
+    fill="none"
+    viewBox="0 0 120 120"
+    {...props}
+  >
+    <path
+      fill="#000"
+      d="M52.774 6.604a12.5 12.5 0 0 1 14.452 0L81.197 16.5H86c6.821 0 12.365 5.464 12.496 12.253l8.73 6.184a12.5 12.5 0 0 1 5.274 10.2V100c0 6.904-5.597 12.5-12.5 12.5H20c-6.903 0-12.5-5.596-12.5-12.5V45.137a12.5 12.5 0 0 1 5.274-10.2l8.729-6.184C21.634 21.963 27.179 16.5 34 16.5h4.802zM34 25.5a3.5 3.5 0 0 0-3.5 3.5v31.92l27.69 16.728a3.5 3.5 0 0 0 3.62 0L89.5 60.92V29a3.5 3.5 0 0 0-3.5-3.5zM17.977 42.281a3.5 3.5 0 0 0-1.477 2.856v5.35c0 1.225.642 2.362 1.69 2.996l3.31 1.999V39.785zm80.523 13.2 3.31-1.998a3.5 3.5 0 0 0 1.69-2.997v-5.35a3.5 3.5 0 0 0-1.477-2.855L98.5 39.785zM62.023 13.948a3.5 3.5 0 0 0-4.046 0L54.373 16.5h11.254z"
+    />
+  </svg>
+);
+export default SvgCommunicateMailOpenFillBold;

@@ -1,12 +1,27 @@
 "use client";
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { useEffect, useMemo, useState } from 'react';
 import { useSession } from 'next-auth/react';
 
 import { Button } from '@neoblock/ui';
 
-type Profile = { id: string; displayName: string; createdAt: string; updatedAt: string };
+type Profile = {
+  id: string;
+  displayName: string;
+  createdAt: string;
+  updatedAt: string;
+  avatarKind?: 'custom' | 'github' | 'none';
+  avatarUrl?: string | null;
+};
+
+function initialFor(name: string) {
+  const s = name.trim();
+  if (!s) return '?';
+  const last = s.at(-1);
+  return last ? last.toUpperCase() : '?';
+}
 
 export default function ProfilePage() {
   const { data } = useSession();
@@ -15,6 +30,9 @@ export default function ProfilePage() {
   const [displayName, setDisplayName] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [avatarSaving, setAvatarSaving] = useState(false);
+  const [avatarError, setAvatarError] = useState<string | null>(null);
 
   const uid = (data?.user as { id?: string } | undefined)?.id;
 
@@ -22,6 +40,8 @@ export default function ProfilePage() {
     setError(null);
     setProfile(null);
     setFriends([]);
+    setAvatarPreview(null);
+    setAvatarError(null);
     if (!uid) return;
 
     fetch('/api/profile')
@@ -66,6 +86,48 @@ export default function ProfilePage() {
     }
   }
 
+  async function uploadAvatar() {
+    if (!uid || !avatarPreview || avatarSaving) return;
+    setAvatarSaving(true);
+    setAvatarError(null);
+    try {
+      const r = await fetch('/api/profile/avatar', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ dataUrl: avatarPreview }),
+      });
+      const json = await r.json();
+      if (!r.ok) throw new Error(json?.error || 'AVATAR_UPLOAD_FAILED');
+      setProfile((json.profile ?? null) as Profile | null);
+      setAvatarPreview(null);
+    } catch (e) {
+      setAvatarError(String((e as Error).message || e));
+    } finally {
+      setAvatarSaving(false);
+    }
+  }
+
+  async function clearAvatar() {
+    if (!uid || avatarSaving) return;
+    setAvatarSaving(true);
+    setAvatarError(null);
+    try {
+      const r = await fetch('/api/profile/avatar', { method: 'DELETE' });
+      const json = await r.json();
+      if (!r.ok) throw new Error(json?.error || 'AVATAR_CLEAR_FAILED');
+      setProfile((json.profile ?? null) as Profile | null);
+      setAvatarPreview(null);
+    } catch (e) {
+      setAvatarError(String((e as Error).message || e));
+    } finally {
+      setAvatarSaving(false);
+    }
+  }
+
+  const shownAvatarUrl = avatarPreview ?? profile?.avatarUrl ?? null;
+  const shownInitial = initialFor(profile?.displayName ?? displayName ?? uid ?? '');
+  const canClearAvatar = (profile?.avatarKind ?? 'none') === 'custom';
+
   return (
     <main style={{ padding: 24, maxWidth: 720 }}>
       <h1 style={{ margin: 0 }}>账号资料</h1>
@@ -86,6 +148,71 @@ export default function ProfilePage() {
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
             <div style={{ fontWeight: 600 }}>用户ID</div>
             <div style={{ color: 'rgba(0,0,0,0.65)' }}>{uid}</div>
+          </div>
+
+          <div style={{ marginTop: 14 }}>
+            <div style={{ fontWeight: 600 }}>头像</div>
+            <div style={{ marginTop: 10, display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
+              <div
+                style={{
+                  width: 72,
+                  height: 72,
+                  borderRadius: 12,
+                  border: '1px solid rgba(0,0,0,0.12)',
+                  background: 'rgba(0,0,0,0.04)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  overflow: 'hidden',
+                  fontWeight: 800,
+                  fontSize: 22,
+                  color: 'rgba(0,0,0,0.7)',
+                }}
+              >
+                {shownAvatarUrl ? (
+                  <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+                    <Image src={shownAvatarUrl} alt="" fill sizes="72px" style={{ objectFit: 'cover' }} unoptimized />
+                  </div>
+                ) : (
+                  shownInitial
+                )}
+              </div>
+
+              <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+                <input
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp"
+                  onChange={(e) => {
+                    setAvatarError(null);
+                    const f = e.target.files?.[0] ?? null;
+                    if (!f) return;
+                    const reader = new FileReader();
+                    reader.onload = () => {
+                      const dataUrl = typeof reader.result === 'string' ? reader.result : null;
+                      if (!dataUrl) return;
+                      setAvatarPreview(dataUrl);
+                    };
+                    reader.readAsDataURL(f);
+                  }}
+                />
+                <Button onClick={uploadAvatar} disabled={!avatarPreview || avatarSaving}>
+                  {avatarSaving ? '上传中…' : '上传'}
+                </Button>
+                {avatarPreview ? (
+                  <Button
+                    mode="Second"
+                    onClick={() => setAvatarPreview(null)}
+                    disabled={avatarSaving}
+                  >
+                    取消预览
+                  </Button>
+                ) : null}
+                <Button onClick={clearAvatar} disabled={!canClearAvatar || avatarSaving}>
+                  {avatarSaving ? '处理中…' : '清除'}
+                </Button>
+              </div>
+            </div>
+            {avatarError ? <div style={{ marginTop: 10, color: '#b42318' }}>{avatarError}</div> : null}
           </div>
 
           <div style={{ marginTop: 14 }}>
@@ -121,4 +248,3 @@ export default function ProfilePage() {
     </main>
   );
 }
-

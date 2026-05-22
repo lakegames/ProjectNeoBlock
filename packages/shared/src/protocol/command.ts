@@ -32,6 +32,18 @@ export type StartGameCommand = CommandBase & {
   playerId: PlayerId;
 };
 
+export type RoomConfigPatch = {
+  maxPlayers?: number;
+  boardPreset?: 'default' | 'full' | 'e2e_fast';
+};
+
+export type SetRoomConfigCommand = CommandBase & {
+  type: 'room/setConfig';
+  roomId: RoomId;
+  playerId: PlayerId;
+  config: RoomConfigPatch;
+};
+
 export type RollDiceCommand = CommandBase & {
   type: 'game/rollDice';
   roomId: RoomId;
@@ -142,10 +154,38 @@ export type DeclareBankruptcyCommand = CommandBase & {
   playerId: PlayerId;
 };
 
+export type DebugAddCashCommand = CommandBase & {
+  type: 'debug/addCash';
+  roomId: RoomId;
+  gameId: GameId;
+  playerId: PlayerId;
+  targetPlayerId: PlayerId;
+  delta: number;
+};
+
+export type DebugAssignPropertyCommand = CommandBase & {
+  type: 'debug/assignProperty';
+  roomId: RoomId;
+  gameId: GameId;
+  playerId: PlayerId;
+  propertyId: string;
+  ownerPlayerId: PlayerId | null;
+};
+
+export type DebugSetBuildingsCommand = CommandBase & {
+  type: 'debug/setBuildings';
+  roomId: RoomId;
+  gameId: GameId;
+  playerId: PlayerId;
+  propertyId: string;
+  buildings: number;
+};
+
 export type Command =
   | JoinRoomCommand
   | LeaveRoomCommand
   | SetReadyCommand
+  | SetRoomConfigCommand
   | StartGameCommand
   | RollDiceCommand
   | BuyPropertyCommand
@@ -159,6 +199,9 @@ export type Command =
   | SellBuildingCommand
   | ProposeTradeCommand
   | RespondTradeCommand
-  | DeclareBankruptcyCommand;
+  | DeclareBankruptcyCommand
+  | DebugAddCashCommand
+  | DebugAssignPropertyCommand
+  | DebugSetBuildingsCommand;
 
 export type CommandType = Command['type'];

@@ -6,6 +6,10 @@ import type { ConfigDoc } from './config';
 export type Profile = {
   id: string;
   displayName: string;
+  githubAvatarUrl?: string | null;
+  customAvatarDataUrl?: string | null;
+  customAvatarMime?: 'image/png' | 'image/jpeg' | 'image/webp' | null;
+  avatarUpdatedAt?: string | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -16,6 +20,16 @@ export type Invite = {
   createdAt: string;
   usedBy?: string;
   usedAt?: string;
+};
+
+export type AuditEntry = {
+  id: string;
+  atMs: number;
+  actorUid: string;
+  action: string;
+  targetType?: string;
+  targetId?: string;
+  detail?: unknown;
 };
 
 export type Participant = {
@@ -55,6 +69,8 @@ export type Room = {
   config: RoomConfig;
   members: RoomMember[];
   startedAtMs?: number;
+  endedAtMs?: number;
+  closedAtMs?: number;
 };
 
 export type AppData = {
@@ -63,9 +79,10 @@ export type AppData = {
   friends: Record<string, string[]>;
   rooms: Record<string, Room>;
   configDocs: Record<string, ConfigDoc>;
+  audit: AuditEntry[];
 };
 
-const defaultData: AppData = { profiles: {}, invites: {}, friends: {}, rooms: {}, configDocs: {} };
+const defaultData: AppData = { profiles: {}, invites: {}, friends: {}, rooms: {}, configDocs: {}, audit: [] };
 
 function coerceBoolean(input: unknown, fallback: boolean) {
   return typeof input === 'boolean' ? input : fallback;
@@ -179,6 +196,8 @@ function coerceRoom(input: unknown, roomCode: string): Room | null {
     r.status === 'lobby' || r.status === 'playing' || r.status === 'ended' ? r.status : ('lobby' as const);
   const createdAtMs = coerceNumber(r.createdAtMs, Date.now());
   const startedAtMs = typeof r.startedAtMs === 'number' && Number.isFinite(r.startedAtMs) ? r.startedAtMs : undefined;
+  const endedAtMs = typeof r.endedAtMs === 'number' && Number.isFinite(r.endedAtMs) ? r.endedAtMs : undefined;
+  const closedAtMs = typeof r.closedAtMs === 'number' && Number.isFinite(r.closedAtMs) ? r.closedAtMs : undefined;
   const config = r.config ? coerceRoomConfig(r.config) : defaultRoomConfig();
 
   if (Array.isArray(r.members)) {
@@ -206,7 +225,18 @@ function coerceRoom(input: unknown, roomCode: string): Room | null {
 
     const hostPlayerId =
       typeof r.hostPlayerId === 'string' && r.hostPlayerId ? r.hostPlayerId : members[0]?.playerId || 'unknown';
-    return { code, roomId, status, hostPlayerId, createdAtMs, config, members, ...(startedAtMs ? { startedAtMs } : {}) };
+    return {
+      code,
+      roomId,
+      status,
+      hostPlayerId,
+      createdAtMs,
+      config,
+      members,
+      ...(startedAtMs ? { startedAtMs } : {}),
+      ...(endedAtMs ? { endedAtMs } : {}),
+      ...(closedAtMs ? { closedAtMs } : {}),
+    };
   }
 
   if (Array.isArray(r.participants)) {
@@ -245,6 +275,8 @@ function coerceRoom(input: unknown, roomCode: string): Room | null {
     config,
     members: [],
     ...(startedAtMs ? { startedAtMs } : {}),
+    ...(endedAtMs ? { endedAtMs } : {}),
+    ...(closedAtMs ? { closedAtMs } : {}),
   };
 }
 
@@ -283,12 +315,41 @@ export async function readAppData(): Promise<AppData> {
       const coerced = coerceConfigDoc(value, docId);
       if (coerced) configDocs[coerced.docId] = coerced;
     }
+
+    const auditRaw = Array.isArray((parsed as unknown as { audit?: unknown }).audit)
+      ? ((parsed as unknown as { audit: unknown[] }).audit as unknown[])
+      : [];
+    const audit: AuditEntry[] = auditRaw
+      .map((x) => {
+        if (typeof x !== 'object' || x === null) return null;
+        const r = x as Record<string, unknown>;
+        const id = typeof r.id === 'string' && r.id ? r.id : null;
+        const atMs = coerceNumber(r.atMs, 0);
+        const actorUid = typeof r.actorUid === 'string' && r.actorUid ? r.actorUid : null;
+        const action = typeof r.action === 'string' && r.action ? r.action : null;
+        if (!id || !actorUid || !action || !atMs) return null;
+        const targetType = typeof r.targetType === 'string' && r.targetType ? r.targetType : undefined;
+        const targetId = typeof r.targetId === 'string' && r.targetId ? r.targetId : undefined;
+        const detail = (r as { detail?: unknown }).detail;
+        const entry: AuditEntry = {
+          id,
+          atMs,
+          actorUid,
+          action,
+          ...(targetType ? { targetType } : {}),
+          ...(targetId ? { targetId } : {}),
+          ...(typeof detail === 'undefined' ? {} : { detail }),
+        };
+        return entry;
+      })
+      .filter((x): x is AuditEntry => x !== null);
     return {
       profiles: parsed.profiles ?? {},
       invites: parsed.invites ?? {},
       friends: parsed.friends ?? {},
       rooms,
       configDocs,
+      audit,
     };
   } catch {
     return structuredClone(defaultData);

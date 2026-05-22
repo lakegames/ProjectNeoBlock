@@ -335,6 +335,68 @@ export function defaultBoardConfig(): BoardConfigTemplate {
   };
 }
 
+export function fullBoardConfig(): BoardConfigTemplate {
+  const p = (input: {
+    propertyId: string;
+    groupId: string;
+    price: number;
+    houseCost: number;
+    rents: [number, number, number, number, number, number];
+  }): BoardTileTemplate => ({
+    kind: 'property',
+    propertyId: input.propertyId,
+    groupId: input.groupId,
+    price: input.price,
+    houseCost: input.houseCost,
+    rents: input.rents,
+  });
+  return {
+    jailIndex: 10,
+    tiles: [
+      { kind: 'start' },
+      p({ propertyId: 'f_p01', groupId: 'f_g_brown', price: 60, houseCost: 50, rents: [2, 10, 30, 90, 160, 250] }),
+      { kind: 'communityChest' },
+      p({ propertyId: 'f_p02', groupId: 'f_g_brown', price: 60, houseCost: 50, rents: [4, 20, 60, 180, 320, 450] }),
+      { kind: 'tax', amount: 200 },
+      p({ propertyId: 'f_p03', groupId: 'f_g_rail', price: 200, houseCost: 100, rents: [25, 50, 100, 200, 350, 500] }),
+      p({ propertyId: 'f_p04', groupId: 'f_g_lightblue', price: 100, houseCost: 50, rents: [6, 30, 90, 270, 400, 550] }),
+      { kind: 'chance' },
+      p({ propertyId: 'f_p05', groupId: 'f_g_lightblue', price: 100, houseCost: 50, rents: [6, 30, 90, 270, 400, 550] }),
+      p({ propertyId: 'f_p06', groupId: 'f_g_lightblue', price: 120, houseCost: 50, rents: [8, 40, 100, 300, 450, 600] }),
+      { kind: 'jail' },
+      p({ propertyId: 'f_p07', groupId: 'f_g_pink', price: 140, houseCost: 100, rents: [10, 50, 150, 450, 625, 750] }),
+      p({ propertyId: 'f_p08', groupId: 'f_g_util', price: 150, houseCost: 100, rents: [10, 20, 30, 40, 50, 60] }),
+      p({ propertyId: 'f_p09', groupId: 'f_g_pink', price: 160, houseCost: 100, rents: [12, 60, 180, 500, 700, 900] }),
+      p({ propertyId: 'f_p10', groupId: 'f_g_pink', price: 180, houseCost: 100, rents: [14, 70, 200, 550, 750, 950] }),
+      p({ propertyId: 'f_p11', groupId: 'f_g_rail', price: 200, houseCost: 100, rents: [25, 50, 100, 200, 350, 500] }),
+      p({ propertyId: 'f_p12', groupId: 'f_g_orange', price: 180, houseCost: 100, rents: [14, 70, 200, 550, 750, 950] }),
+      { kind: 'communityChest' },
+      p({ propertyId: 'f_p13', groupId: 'f_g_orange', price: 200, houseCost: 100, rents: [16, 80, 220, 600, 800, 1000] }),
+      p({ propertyId: 'f_p14', groupId: 'f_g_orange', price: 220, houseCost: 150, rents: [18, 90, 250, 700, 875, 1050] }),
+      { kind: 'chance' },
+      p({ propertyId: 'f_p15', groupId: 'f_g_red', price: 220, houseCost: 150, rents: [18, 90, 250, 700, 875, 1050] }),
+      { kind: 'chance' },
+      p({ propertyId: 'f_p16', groupId: 'f_g_red', price: 240, houseCost: 150, rents: [20, 100, 300, 750, 925, 1100] }),
+      p({ propertyId: 'f_p17', groupId: 'f_g_red', price: 260, houseCost: 150, rents: [22, 110, 330, 800, 975, 1150] }),
+      p({ propertyId: 'f_p18', groupId: 'f_g_rail', price: 200, houseCost: 100, rents: [25, 50, 100, 200, 350, 500] }),
+      p({ propertyId: 'f_p19', groupId: 'f_g_yellow', price: 260, houseCost: 150, rents: [22, 110, 330, 800, 975, 1150] }),
+      p({ propertyId: 'f_p20', groupId: 'f_g_yellow', price: 280, houseCost: 150, rents: [24, 120, 360, 850, 1025, 1200] }),
+      p({ propertyId: 'f_p21', groupId: 'f_g_util', price: 150, houseCost: 100, rents: [10, 20, 30, 40, 50, 60] }),
+      p({ propertyId: 'f_p22', groupId: 'f_g_yellow', price: 300, houseCost: 200, rents: [26, 130, 390, 900, 1100, 1275] }),
+      { kind: 'goToJail' },
+      p({ propertyId: 'f_p23', groupId: 'f_g_green', price: 300, houseCost: 200, rents: [26, 130, 390, 900, 1100, 1275] }),
+      p({ propertyId: 'f_p24', groupId: 'f_g_green', price: 320, houseCost: 200, rents: [28, 150, 450, 1000, 1200, 1400] }),
+      { kind: 'communityChest' },
+      p({ propertyId: 'f_p25', groupId: 'f_g_green', price: 350, houseCost: 200, rents: [35, 175, 500, 1100, 1300, 1500] }),
+      p({ propertyId: 'f_p26', groupId: 'f_g_rail', price: 200, houseCost: 100, rents: [25, 50, 100, 200, 350, 500] }),
+      { kind: 'chance' },
+      p({ propertyId: 'f_p27', groupId: 'f_g_darkblue', price: 350, houseCost: 200, rents: [35, 175, 500, 1100, 1300, 1500] }),
+      { kind: 'tax', amount: 100 },
+      p({ propertyId: 'f_p28', groupId: 'f_g_darkblue', price: 400, houseCost: 200, rents: [50, 200, 600, 1400, 1700, 2000] }),
+    ],
+  };
+}
+
 export function defaultCardsConfig(): CardsConfig {
   return {
     cards: [

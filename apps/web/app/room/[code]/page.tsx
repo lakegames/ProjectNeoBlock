@@ -1,8 +1,9 @@
 "use client";
 
 import Link from 'next/link';
-import { useParams, useSearchParams } from 'next/navigation';
-import { useEffect, useMemo, useState } from 'react';
+import Image from 'next/image';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { Button, Input } from '@neoblock/ui';
 
@@ -40,6 +41,20 @@ type Room = {
 type Self = { playerId: string; isSpectator: boolean; displayName: string; ready: boolean };
 
 type PublishedConfigItem = { docId: string; name: string; versionId: string; updatedAtMs: number };
+
+type PublicProfile = {
+  id: string;
+  displayName: string;
+  avatarKind: 'custom' | 'github' | 'none';
+  avatarUrl: string | null;
+};
+
+function initialFor(name: string) {
+  const s = name.trim();
+  if (!s) return '?';
+  const last = s.at(-1);
+  return last ? last.toUpperCase() : '?';
+}
 
 function validateConfig(input: { maxPlayers: number; turnTimeSec: number }) {
   if (!Number.isInteger(input.maxPlayers) || input.maxPlayers < 2 || input.maxPlayers > 16) {
@@ -484,6 +499,7 @@ function LegacyRoomPage() {
 void LegacyRoomPage;
 
 export default function RoomPage() {
+  const router = useRouter();
   const params = useParams<{ code: string }>();
   const roomCode = useMemo(() => String(params?.code || '').trim().toUpperCase(), [params]);
   const searchParams = useSearchParams();
@@ -491,8 +507,10 @@ export default function RoomPage() {
 
   const [guestNickname, setGuestNickname] = useState('');
   const [joinError, setJoinError] = useState<string | null>(null);
+  const [debugCopied, setDebugCopied] = useState(false);
+  const [debugError, setDebugError] = useState<string | null>(null);
 
-  const { actor, identifyGuest, snapshot, connected, connecting, lastError, sendCommand, pending, lastCardDrawn, clearLastCard } =
+  const { actor, identifyGuest, snapshot, connected, connecting, lastError, sendCommand, pending, lastCardDrawn, clearLastCard, getDebugDump } =
     useRoomConnection({
       roomCode,
       mode: wantSpectate ? 'spectator' : 'player',
@@ -500,6 +518,7 @@ export default function RoomPage() {
 
   const room = snapshot?.room ?? null;
   const game = snapshot?.game ?? null;
+  const isGameEnded = game?.status === 'ended';
 
   const selfMember = useMemo(() => {
     if (!actor || !room) return null;
@@ -510,7 +529,111 @@ export default function RoomPage() {
   const spectators = useMemo(() => (room?.members ?? []).filter((m) => m.isSpectator), [room?.members]);
   const host = useMemo(() => (room ? room.members.find((m) => m.playerId === room.hostPlayerId) ?? null : null), [room]);
 
+  const userIdsKey = useMemo(() => {
+    const ids = [...new Set((room?.members ?? []).map((m) => m.userId).filter((x): x is string => !!x))];
+    ids.sort();
+    return ids.join(',');
+  }, [room?.members]);
+  const [publicProfiles, setPublicProfiles] = useState<Record<string, PublicProfile>>({});
+  useEffect(() => {
+    const ids = userIdsKey ? userIdsKey.split(',').filter(Boolean) : [];
+    if (!ids.length) {
+      setPublicProfiles({});
+      return;
+    }
+    fetch(`/api/profile/public?ids=${encodeURIComponent(ids.join(','))}`, { cache: 'no-store' })
+      .then((r) => r.json().then((j) => ({ ok: r.ok, json: j })))
+      .then(({ ok, json }) => {
+        if (!ok) return;
+        const list = (json.profiles ?? []) as PublicProfile[];
+        const map: Record<string, PublicProfile> = {};
+        for (const p of list) map[p.id] = p;
+        setPublicProfiles(map);
+      })
+      .catch(() => {});
+  }, [userIdsKey]);
+
   const isHost = !!room && !!actor && actor.playerId === room.hostPlayerId && !selfMember?.isSpectator;
+
+  const [syncError, setSyncError] = useState<string | null>(null);
+  const [startRequested, setStartRequested] = useState(false);
+  const lastSyncKeyRef = useRef('');
+  const desiredConfigRef = useRef<null | { maxPlayers: number | null; boardPreset: 'default' | 'full' | null }>(null);
+  async function syncRoomConfigToWs() {
+    if (!roomCode || !room || !actor || !isHost) return;
+    if (room.status !== 'lobby') return;
+    if (pending) return;
+    setSyncError(null);
+    try {
+      const stateResp = await fetch(`/api/room/state?roomCode=${encodeURIComponent(roomCode)}`, { cache: 'no-store' });
+      const stateJson = (await stateResp.json().catch(() => null)) as
+        | { room?: { config?: { maxPlayers?: unknown; boardVersionId?: unknown } } }
+        | null;
+      if (!stateResp.ok) throw new Error((stateJson as { error?: string } | null)?.error || 'ROOM_STATE_FAILED');
+
+      const maxPlayersRaw = stateJson?.room?.config?.maxPlayers;
+      const maxPlayers = typeof maxPlayersRaw === 'number' && Number.isFinite(maxPlayersRaw) ? Math.trunc(maxPlayersRaw) : null;
+      const boardVersionIdRaw = stateJson?.room?.config?.boardVersionId;
+      const boardVersionId = typeof boardVersionIdRaw === 'string' ? boardVersionIdRaw : null;
+
+      let boardPreset: 'default' | 'full' | null = null;
+      if (boardVersionId) {
+        const pubResp = await fetch('/api/config/published', { cache: 'no-store' });
+        const pubJson = (await pubResp.json().catch(() => null)) as
+          | { boards?: { docId?: unknown; versionId?: unknown }[] }
+          | null;
+        const boards = Array.isArray(pubJson?.boards) ? pubJson!.boards! : [];
+        const hit = boards.find((b) => typeof b?.versionId === 'string' && b.versionId === boardVersionId) ?? null;
+        const docId = hit && typeof hit.docId === 'string' ? hit.docId : null;
+        boardPreset = docId === 'builtin:board-full' ? 'full' : 'default';
+      }
+
+      desiredConfigRef.current = { maxPlayers, boardPreset };
+      const key = `${maxPlayers ?? ''}|${boardPreset ?? ''}`;
+      if (key === lastSyncKeyRef.current) return;
+
+      if (maxPlayers || boardPreset) {
+        sendCommand({
+          type: 'room/setConfig',
+          roomId: room.roomId,
+          playerId: actor.playerId,
+          config: {
+            ...(maxPlayers ? { maxPlayers } : {}),
+            ...(boardPreset ? { boardPreset } : {}),
+          },
+        });
+        lastSyncKeyRef.current = key;
+      }
+    } catch (e) {
+      setSyncError(String((e as Error).message || e));
+    }
+  }
+
+  useEffect(() => {
+    if (!room || !actor || !isHost) return;
+    if (room.status !== 'lobby') return;
+    if (pending) return;
+    void syncRoomConfigToWs();
+  }, [actor, isHost, pending, room?.roomId, room?.status]);
+
+  useEffect(() => {
+    if (!startRequested) return;
+    if (!room || !actor || !isHost) return;
+    if (room.status !== 'lobby') {
+      setStartRequested(false);
+      return;
+    }
+    if (pending) return;
+    const desired = desiredConfigRef.current;
+    const bp = (room.config as { boardPreset?: unknown }).boardPreset;
+    const boardPreset = bp === 'default' || bp === 'full' || bp === 'e2e_fast' ? bp : null;
+    if (desired?.boardPreset && boardPreset !== desired.boardPreset) {
+      void syncRoomConfigToWs();
+      return;
+    }
+    sendCommand({ type: 'room/startGame', roomId: room.roomId, playerId: actor.playerId });
+    setStartRequested(false);
+  }, [actor, isHost, pending, room, sendCommand, startRequested]);
 
   const canReady = !!room && !!selfMember && !selfMember.isSpectator && room.status === 'lobby';
   const startDisabledReason = useMemo(() => {
@@ -527,6 +650,63 @@ export default function RoomPage() {
 
   const canIdentify = useMemo(() => !!guestNickname.trim(), [guestNickname]);
   useEffect(() => setJoinError(null), [guestNickname]);
+
+  const [didMarkEnded, setDidMarkEnded] = useState(false);
+  useEffect(() => {
+    if (!roomCode || !actor || !room) return;
+    if (!isHost || !isGameEnded) return;
+    if (didMarkEnded) return;
+    setDidMarkEnded(true);
+    fetch('/api/room/mark-ended', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ roomCode }),
+    }).catch(() => {});
+  }, [actor, didMarkEnded, isGameEnded, isHost, room, roomCode]);
+
+  const [leaveLoading, setLeaveLoading] = useState(false);
+  const [leaveError, setLeaveError] = useState<string | null>(null);
+  async function leaveRoom() {
+    if (!roomCode || leaveLoading) return;
+    setLeaveLoading(true);
+    setLeaveError(null);
+    try {
+      const r = await fetch('/api/room/leave', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ roomCode }),
+      });
+      const json = await r.json();
+      if (!r.ok) throw new Error(json?.error || 'LEAVE_FAILED');
+      router.push('/');
+    } catch (e) {
+      setLeaveError(String((e as Error).message || e));
+    } finally {
+      setLeaveLoading(false);
+    }
+  }
+
+  const [closeLoading, setCloseLoading] = useState(false);
+  const [closeError, setCloseError] = useState<string | null>(null);
+  async function closeRoom() {
+    if (!roomCode || closeLoading) return;
+    setCloseLoading(true);
+    setCloseError(null);
+    try {
+      const r = await fetch('/api/room/close', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ roomCode }),
+      });
+      const json = await r.json();
+      if (!r.ok) throw new Error(json?.error || 'CLOSE_FAILED');
+      router.push('/');
+    } catch (e) {
+      setCloseError(String((e as Error).message || e));
+    } finally {
+      setCloseLoading(false);
+    }
+  }
 
   async function joinAsGuest() {
     if (!canIdentify) return;
@@ -554,6 +734,30 @@ export default function RoomPage() {
         <Link href={`/room/${encodeURIComponent(roomCode)}?spectate=1`}>
           <Button>观战链接</Button>
         </Link>
+        <Button
+          mode="Second"
+          onClick={async () => {
+            setDebugError(null);
+            setDebugCopied(false);
+            try {
+              const dump = getDebugDump();
+              const text = JSON.stringify(dump, null, 2);
+              await navigator.clipboard.writeText(text);
+              setDebugCopied(true);
+              window.setTimeout(() => setDebugCopied(false), 1500);
+            } catch (e) {
+              setDebugError(String((e as Error).message || e));
+            }
+          }}
+          disabled={pending}
+        >
+          {debugCopied ? '已复制' : '复制调试信息'}
+        </Button>
+        {actor && room ? (
+          <Button onClick={leaveRoom} disabled={leaveLoading || pending}>
+            {leaveLoading ? '离开中…' : '离开房间'}
+          </Button>
+        ) : null}
       </div>
 
       <div style={{ marginTop: 20, padding: 12, border: '1px solid rgba(0,0,0,0.08)', borderRadius: 12 }}>
@@ -604,15 +808,25 @@ export default function RoomPage() {
             <Button
               onClick={() => {
                 if (!room) return;
-                sendCommand({ type: 'room/startGame', roomId: room.roomId, playerId: actor.playerId });
+                setStartRequested(true);
+                void syncRoomConfigToWs();
               }}
               disabled={!!startDisabledReason || pending}
             >
               {pending ? '开局中…' : startDisabledReason ? `开局（${startDisabledReason}）` : '房主开局'}
             </Button>
+            {isHost && (room?.status === 'lobby' || isGameEnded) ? (
+              <Button onClick={closeRoom} disabled={closeLoading}>
+                {closeLoading ? '关闭中…' : '关闭房间'}
+              </Button>
+            ) : null}
           </div>
         )}
         {lastError ? <div style={{ marginTop: 10, color: '#b42318' }}>{lastError.message}</div> : null}
+        {syncError ? <div style={{ marginTop: 10, color: '#b42318' }}>{syncError}</div> : null}
+        {debugError ? <div style={{ marginTop: 10, color: '#b42318' }}>{debugError}</div> : null}
+        {leaveError ? <div style={{ marginTop: 10, color: '#b42318' }}>{leaveError}</div> : null}
+        {closeError ? <div style={{ marginTop: 10, color: '#b42318' }}>{closeError}</div> : null}
       </div>
 
       <div style={{ marginTop: 20, padding: 12, border: '1px solid rgba(0,0,0,0.08)', borderRadius: 12 }}>
@@ -622,8 +836,42 @@ export default function RoomPage() {
             <ul style={{ margin: 0, paddingLeft: 18 }}>
               {players.map((p) => (
                 <li key={p.playerId} style={{ marginTop: 6 }}>
-                  {p.displayName}
-                  {p.playerId === room?.hostPlayerId ? '（房主）' : ''}｜{room?.status === 'lobby' ? (p.ready ? '已准备' : '未准备') : '对局中'}
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                    {(() => {
+                      const uid = p.userId;
+                      const pub = uid ? publicProfiles[uid] : undefined;
+                      const avatarUrl = pub?.avatarUrl ?? null;
+                      const initial = initialFor(p.displayName);
+                      return avatarUrl ? (
+                        <div style={{ position: 'relative', width: 22, height: 22, borderRadius: 999, overflow: 'hidden', flex: '0 0 auto' }}>
+                          <Image src={avatarUrl} alt="" fill sizes="22px" style={{ objectFit: 'cover' }} unoptimized />
+                        </div>
+                      ) : (
+                        <div
+                          style={{
+                            width: 22,
+                            height: 22,
+                            borderRadius: 999,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            background: 'rgba(0,0,0,0.06)',
+                            color: 'rgba(0,0,0,0.7)',
+                            fontWeight: 800,
+                            fontSize: 12,
+                            flex: '0 0 auto',
+                          }}
+                        >
+                          {initial}
+                        </div>
+                      );
+                    })()}
+                    <div style={{ minWidth: 0 }}>
+                      {p.displayName}
+                      {p.playerId === room?.hostPlayerId ? '（房主）' : ''}｜
+                      {room?.status === 'lobby' ? (p.ready ? '已准备' : '未准备') : '对局中'}
+                    </div>
+                  </div>
                 </li>
               ))}
             </ul>
@@ -640,7 +888,38 @@ export default function RoomPage() {
             <ul style={{ margin: 0, paddingLeft: 18 }}>
               {spectators.map((p) => (
                 <li key={p.playerId} style={{ marginTop: 6 }}>
-                  {p.displayName}
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                    {(() => {
+                      const uid = p.userId;
+                      const pub = uid ? publicProfiles[uid] : undefined;
+                      const avatarUrl = pub?.avatarUrl ?? null;
+                      const initial = initialFor(p.displayName);
+                      return avatarUrl ? (
+                        <div style={{ position: 'relative', width: 22, height: 22, borderRadius: 999, overflow: 'hidden', flex: '0 0 auto' }}>
+                          <Image src={avatarUrl} alt="" fill sizes="22px" style={{ objectFit: 'cover' }} unoptimized />
+                        </div>
+                      ) : (
+                        <div
+                          style={{
+                            width: 22,
+                            height: 22,
+                            borderRadius: 999,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            background: 'rgba(0,0,0,0.06)',
+                            color: 'rgba(0,0,0,0.7)',
+                            fontWeight: 800,
+                            fontSize: 12,
+                            flex: '0 0 auto',
+                          }}
+                        >
+                          {initial}
+                        </div>
+                      );
+                    })()}
+                    <div style={{ minWidth: 0 }}>{p.displayName}</div>
+                  </div>
                 </li>
               ))}
             </ul>

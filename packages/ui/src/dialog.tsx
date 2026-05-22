@@ -107,11 +107,14 @@ export function Dialog({ open, onOpenChange, title, description, children, foote
         style={{
           width,
           maxWidth: 'min(92vw, 720px)',
+          maxHeight: 'calc(100vh - 32px)',
           background: 'var(--nb-color-surface, #fff)',
           border: '1px solid var(--nb-color-border, rgba(0,0,0,0.12))',
           borderRadius: 'var(--nb-radius-lg, 16px)',
           boxShadow: 'var(--nb-shadow-md, 0 8px 24px rgba(16,24,40,0.14))',
           overflow: 'hidden',
+          display: 'flex',
+          flexDirection: 'column',
         }}
       >
         <div style={{ padding: 14, display: 'flex', alignItems: 'start', justifyContent: 'space-between', gap: 10 }}>
@@ -127,12 +130,12 @@ export function Dialog({ open, onOpenChange, title, description, children, foote
               </div>
             ) : null}
           </div>
-          <Button variant="ghost" onClick={() => onOpenChange(false)} aria-label="关闭弹窗">
+          <Button mode="NoBackground" onClick={() => onOpenChange(false)} aria-label="关闭弹窗">
             关闭
           </Button>
         </div>
 
-        {children ? <div style={{ padding: 14, paddingTop: 0 }}>{children}</div> : null}
+        {children ? <div style={{ padding: 14, paddingTop: 0, overflow: 'auto', flex: '1 1 auto', minHeight: 0 }}>{children}</div> : null}
 
         {footer ? (
           <div

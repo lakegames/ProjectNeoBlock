@@ -13,6 +13,7 @@ export type RoomConfigSnapshot = {
   turnTimeMs?: number;
   rulesetVersionId?: string;
   boardVersionId?: string;
+  boardPreset?: 'default' | 'full' | 'e2e_fast';
 };
 
 export type RoomMemberSnapshot = {

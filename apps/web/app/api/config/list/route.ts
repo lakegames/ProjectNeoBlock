@@ -12,7 +12,8 @@ export async function GET(req: Request) {
   if (kindParam && !kind) return NextResponse.json({ error: 'INVALID_KIND' }, { status: 400 });
 
   const data = await readAppData();
-  if (!Object.keys(data.configDocs).length) {
+  const full = data.configDocs['builtin:board-full'];
+  if (!Object.keys(data.configDocs).length || !full || !full.publishedVersionId) {
     await updateAppData((d) => {
       ensureSeedConfigs(d, Date.now());
     });

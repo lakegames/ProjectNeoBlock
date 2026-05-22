@@ -4,6 +4,7 @@ import GitHubProvider from 'next-auth/providers/github';
 
 type TokenWithUid = {
   uid?: string;
+  accessToken?: string;
 };
 
 const secret = process.env.NEXTAUTH_SECRET;
@@ -17,6 +18,7 @@ export const authOptions: NextAuthOptions = {
           GitHubProvider({
             clientId: process.env.GITHUB_ID,
             clientSecret: process.env.GITHUB_SECRET,
+            authorization: { params: { scope: 'read:user user:email read:org' } },
           }),
         ]
       : []),
@@ -38,6 +40,9 @@ export const authOptions: NextAuthOptions = {
       const t = token as typeof token & TokenWithUid;
       if (account) {
         t.uid = `${account.provider}:${account.providerAccountId}`;
+        if (typeof (account as { access_token?: unknown }).access_token === 'string') {
+          t.accessToken = (account as { access_token: string }).access_token;
+        }
       }
       if (user && (user as { id?: string }).id) {
         t.uid = (user as { id: string }).id;

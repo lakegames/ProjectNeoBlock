@@ -151,7 +151,7 @@ export function Drawer({ open, onOpenChange, title, children, width = 420, side 
           ) : (
             <div />
           )}
-          <Button variant="ghost" onClick={() => onOpenChange(false)} aria-label="关闭抽屉">
+          <Button mode="NoBackground" onClick={() => onOpenChange(false)} aria-label="关闭抽屉">
             关闭
           </Button>
         </div>

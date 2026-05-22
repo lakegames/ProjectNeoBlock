@@ -1,0 +1,9 @@
+- [x] Profile 数据模型包含头像字段，且旧数据文件可兼容读取
+- [x] /api/profile GET 返回头像字段，并在可获取到 session.user.image 时写入 githubAvatarUrl
+- [x] /api/profile/avatar 支持设置与清除 customAvatarDataUrl，并具备类型/大小校验
+- [x] /api/profile/public 返回最小公开头像信息，不泄露敏感字段
+- [x] Profile 页面可上传/预览/清除头像，并正确回退到 GitHub/首字母占位
+- [x] AppShell 账号入口显示头像或首字母占位
+- [x] 房间玩家列表/卡片显示头像或首字母占位（对账号用户可展示其头像）
+- [x] Admin 用户列表显示头像或首字母占位
+- [x] @neoblock/ui build 与 @neoblock/web typecheck 通过

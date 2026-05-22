@@ -50,6 +50,7 @@ type RoomState = {
     turnTimeMs?: number;
     rulesetVersionId?: string;
     boardVersionId?: string;
+    boardPreset?: BoardPreset;
   };
   members: Map<PlayerId, RoomMember>;
   playerToSocket: Map<PlayerId, WebSocket>;
@@ -70,7 +71,7 @@ type ConnectionState = {
   playerId: PlayerId | null;
 };
 
-export type BoardPreset = 'default' | 'e2e_fast';
+export type BoardPreset = 'default' | 'full' | 'e2e_fast';
 
 export type StartServerOptions = {
   port?: number;
@@ -106,6 +107,68 @@ function createDefaultBoard(): BoardConfig {
   };
 }
 
+function createFullBoard(): BoardConfig {
+  const p = (input: {
+    propertyId: string;
+    groupId: string;
+    price: number;
+    houseCost: number;
+    rents: [number, number, number, number, number, number];
+  }): BoardConfig['tiles'][number] => ({
+    kind: 'property',
+    propertyId: input.propertyId,
+    groupId: input.groupId,
+    price: input.price,
+    houseCost: input.houseCost,
+    rents: input.rents,
+  });
+  return {
+    jailIndex: 10,
+    tiles: [
+      { kind: 'start' },
+      p({ propertyId: 'f_p01', groupId: 'f_g_brown', price: 60, houseCost: 50, rents: [2, 10, 30, 90, 160, 250] }),
+      { kind: 'communityChest' },
+      p({ propertyId: 'f_p02', groupId: 'f_g_brown', price: 60, houseCost: 50, rents: [4, 20, 60, 180, 320, 450] }),
+      { kind: 'tax', amount: 200 },
+      p({ propertyId: 'f_p03', groupId: 'f_g_rail', price: 200, houseCost: 100, rents: [25, 50, 100, 200, 350, 500] }),
+      p({ propertyId: 'f_p04', groupId: 'f_g_lightblue', price: 100, houseCost: 50, rents: [6, 30, 90, 270, 400, 550] }),
+      { kind: 'chance' },
+      p({ propertyId: 'f_p05', groupId: 'f_g_lightblue', price: 100, houseCost: 50, rents: [6, 30, 90, 270, 400, 550] }),
+      p({ propertyId: 'f_p06', groupId: 'f_g_lightblue', price: 120, houseCost: 50, rents: [8, 40, 100, 300, 450, 600] }),
+      { kind: 'jail' },
+      p({ propertyId: 'f_p07', groupId: 'f_g_pink', price: 140, houseCost: 100, rents: [10, 50, 150, 450, 625, 750] }),
+      p({ propertyId: 'f_p08', groupId: 'f_g_util', price: 150, houseCost: 100, rents: [10, 20, 30, 40, 50, 60] }),
+      p({ propertyId: 'f_p09', groupId: 'f_g_pink', price: 160, houseCost: 100, rents: [12, 60, 180, 500, 700, 900] }),
+      p({ propertyId: 'f_p10', groupId: 'f_g_pink', price: 180, houseCost: 100, rents: [14, 70, 200, 550, 750, 950] }),
+      p({ propertyId: 'f_p11', groupId: 'f_g_rail', price: 200, houseCost: 100, rents: [25, 50, 100, 200, 350, 500] }),
+      p({ propertyId: 'f_p12', groupId: 'f_g_orange', price: 180, houseCost: 100, rents: [14, 70, 200, 550, 750, 950] }),
+      { kind: 'communityChest' },
+      p({ propertyId: 'f_p13', groupId: 'f_g_orange', price: 200, houseCost: 100, rents: [16, 80, 220, 600, 800, 1000] }),
+      p({ propertyId: 'f_p14', groupId: 'f_g_orange', price: 220, houseCost: 150, rents: [18, 90, 250, 700, 875, 1050] }),
+      { kind: 'chance' },
+      p({ propertyId: 'f_p15', groupId: 'f_g_red', price: 220, houseCost: 150, rents: [18, 90, 250, 700, 875, 1050] }),
+      { kind: 'chance' },
+      p({ propertyId: 'f_p16', groupId: 'f_g_red', price: 240, houseCost: 150, rents: [20, 100, 300, 750, 925, 1100] }),
+      p({ propertyId: 'f_p17', groupId: 'f_g_red', price: 260, houseCost: 150, rents: [22, 110, 330, 800, 975, 1150] }),
+      p({ propertyId: 'f_p18', groupId: 'f_g_rail', price: 200, houseCost: 100, rents: [25, 50, 100, 200, 350, 500] }),
+      p({ propertyId: 'f_p19', groupId: 'f_g_yellow', price: 260, houseCost: 150, rents: [22, 110, 330, 800, 975, 1150] }),
+      p({ propertyId: 'f_p20', groupId: 'f_g_yellow', price: 280, houseCost: 150, rents: [24, 120, 360, 850, 1025, 1200] }),
+      p({ propertyId: 'f_p21', groupId: 'f_g_util', price: 150, houseCost: 100, rents: [10, 20, 30, 40, 50, 60] }),
+      p({ propertyId: 'f_p22', groupId: 'f_g_yellow', price: 300, houseCost: 200, rents: [26, 130, 390, 900, 1100, 1275] }),
+      { kind: 'goToJail' },
+      p({ propertyId: 'f_p23', groupId: 'f_g_green', price: 300, houseCost: 200, rents: [26, 130, 390, 900, 1100, 1275] }),
+      p({ propertyId: 'f_p24', groupId: 'f_g_green', price: 320, houseCost: 200, rents: [28, 150, 450, 1000, 1200, 1400] }),
+      { kind: 'communityChest' },
+      p({ propertyId: 'f_p25', groupId: 'f_g_green', price: 350, houseCost: 200, rents: [35, 175, 500, 1100, 1300, 1500] }),
+      p({ propertyId: 'f_p26', groupId: 'f_g_rail', price: 200, houseCost: 100, rents: [25, 50, 100, 200, 350, 500] }),
+      { kind: 'chance' },
+      p({ propertyId: 'f_p27', groupId: 'f_g_darkblue', price: 350, houseCost: 200, rents: [35, 175, 500, 1100, 1300, 1500] }),
+      { kind: 'tax', amount: 100 },
+      p({ propertyId: 'f_p28', groupId: 'f_g_darkblue', price: 400, houseCost: 200, rents: [50, 200, 600, 1400, 1700, 2000] }),
+    ],
+  };
+}
+
 function createE2EFastBoard(): BoardConfig {
   return {
     jailIndex: 2,
@@ -123,6 +186,7 @@ function mapThrownError(err: unknown, commandId?: CommandId): ProtocolError {
   const code = (() => {
     if (raw === 'NOT_YOUR_TURN') return ErrorCode.NOT_YOUR_TURN;
     if (raw === 'WRONG_GAME') return ErrorCode.GAME_NOT_FOUND;
+    if (raw === 'FORBIDDEN') return ErrorCode.FORBIDDEN;
     if (raw === 'UNSUPPORTED_COMMAND') return ErrorCode.INVALID_COMMAND;
     if (raw === 'INVALID_PHASE') return ErrorCode.INVALID_COMMAND;
     if (raw === 'NO_PENDING_BUY') return ErrorCode.INVALID_COMMAND;
@@ -130,6 +194,25 @@ function mapThrownError(err: unknown, commandId?: CommandId): ProtocolError {
     if (raw === 'NOT_BUYABLE') return ErrorCode.INVALID_COMMAND;
     if (raw === 'ELIMINATED') return ErrorCode.INVALID_COMMAND;
     if (raw === 'PLAYER_NOT_FOUND') return ErrorCode.NOT_FOUND;
+    if (
+      raw === 'PROMPT_MISMATCH' ||
+      raw === 'INVALID_CHOICE' ||
+      raw === 'BID_TOO_LOW' ||
+      raw === 'INSUFFICIENT_CASH' ||
+      raw === 'OTHER_INSUFFICIENT_CASH' ||
+      raw === 'NO_AUCTION' ||
+      raw === 'AUCTION_MISMATCH' ||
+      raw === 'NOT_A_BIDDER' ||
+      raw === 'NO_TRADE' ||
+      raw === 'INVALID_TRADE' ||
+      raw === 'NOT_OWNER' ||
+      raw === 'HAS_BUILDINGS' ||
+      raw === 'INVALID_PROPERTY' ||
+      raw === 'NOT_OWNED' ||
+      raw === 'UNSUPPORTED_PROMPT'
+    ) {
+      return ErrorCode.VALIDATION_FAILED;
+    }
     return ErrorCode.INTERNAL_ERROR;
   })();
   return createProtocolError({ code, message: raw, ...(commandId ? { commandId } : {}) });
@@ -219,7 +302,7 @@ export async function startServer(options: StartServerOptions = {}): Promise<Run
       status: 'lobby',
       hostPlayerId: '' as PlayerId,
       createdAtMs: nowMs(),
-      config: { maxPlayers: 4 },
+      config: { maxPlayers: 4, boardPreset },
       members: new Map(),
       playerToSocket: new Map(),
       sockets: new Set(),
@@ -401,7 +484,45 @@ export async function startServer(options: StartServerOptions = {}): Promise<Run
       broadcast(room, {
         kind: 'events',
         roomId: room.roomId,
-        gameId: room.game?.gameId ?? null,
+        gameId: null,
+        fromSeqExclusive: base.seq - 1,
+        events: [e],
+      });
+      broadcast(room, { kind: 'snapshot', snapshot: buildSnapshot(room) });
+      commitClientSeq();
+      room.processedCommandIds.add(commandId);
+      return;
+    }
+
+    if (command.type === 'room/setConfig') {
+      requireInRoom();
+      requireClientSeq();
+      requireSelfPlayer(command.playerId);
+      requireNotSpectator();
+      if (command.roomId !== room.roomId)
+        throw createProtocolError({ code: ErrorCode.ROOM_NOT_FOUND, message: 'roomId 不匹配', commandId });
+      if (room.game) throw createProtocolError({ code: ErrorCode.GAME_ALREADY_STARTED, message: '对局已开始', commandId });
+      if (room.hostPlayerId !== command.playerId)
+        throw createProtocolError({ code: ErrorCode.NOT_HOST, message: '仅房主可改参数', commandId });
+
+      const patch = command.config ?? {};
+      if (typeof patch.maxPlayers === 'number' && Number.isFinite(patch.maxPlayers)) {
+        const next = Math.trunc(patch.maxPlayers);
+        if (next < 2 || next > 16)
+          throw createProtocolError({ code: ErrorCode.VALIDATION_FAILED, message: 'maxPlayers 范围为 2-16', commandId });
+        room.config.maxPlayers = next;
+      }
+      if (patch.boardPreset === 'default' || patch.boardPreset === 'full' || patch.boardPreset === 'e2e_fast') {
+        room.config.boardPreset = patch.boardPreset;
+      }
+
+      const base = allocEventBase(room, { causedBy: { commandId, playerId: command.playerId } });
+      const e: Event = { ...base, type: 'room/configChanged', config: room.config };
+      appendEvents(room, [e]);
+      broadcast(room, {
+        kind: 'events',
+        roomId: room.roomId,
+        gameId: null,
         fromSeqExclusive: base.seq - 1,
         events: [e],
       });
@@ -430,7 +551,8 @@ export async function startServer(options: StartServerOptions = {}): Promise<Run
 
       const gameId = crypto.randomUUID();
       const seed = fixedGameSeed ?? crypto.randomUUID();
-      const board = boardPreset === 'e2e_fast' ? createE2EFastBoard() : createDefaultBoard();
+      const bp = room.config.boardPreset ?? boardPreset;
+      const board = bp === 'e2e_fast' ? createE2EFastBoard() : bp === 'full' ? createFullBoard() : createDefaultBoard();
       const result = createGame({
         roomId: room.roomId,
         gameId,
@@ -479,6 +601,52 @@ export async function startServer(options: StartServerOptions = {}): Promise<Run
       if (cAny.gameId !== room.game.gameId)
         throw createProtocolError({ code: ErrorCode.GAME_NOT_FOUND, message: 'gameId 不匹配', commandId });
       if ('playerId' in cAny) requireSelfPlayer((cAny as { playerId: PlayerId }).playerId);
+
+      const r = handleCommand(room.game.match, command, nowMs());
+      room.game.match = r.state;
+
+      const fromSeqExclusive = room.lastEventSeq;
+      const normalized = r.events.map((e) => {
+        const base = allocEventBase(room, e.causedBy ? { causedBy: e.causedBy } : {});
+        return { ...e, eventId: base.eventId, seq: base.seq };
+      });
+
+      appendEvents(room, normalized);
+      if (normalized.length > 0) {
+        broadcast(room, {
+          kind: 'events',
+          roomId: room.roomId,
+          gameId: room.game.gameId,
+          fromSeqExclusive,
+          events: normalized,
+        });
+      }
+
+      broadcast(room, { kind: 'snapshot', snapshot: buildSnapshot(room) });
+      commitClientSeq();
+      room.processedCommandIds.add(commandId);
+      return;
+    }
+
+    if (command.type.startsWith('debug/')) {
+      requireInRoom();
+      requireClientSeq();
+      requireNotSpectator();
+
+      if (process.env.NEOBLOCK_DEBUG_TOOLS !== '1')
+        throw createProtocolError({ code: ErrorCode.FORBIDDEN, message: 'debug 未启用', commandId });
+
+      if (!room.game)
+        throw createProtocolError({ code: ErrorCode.GAME_NOT_STARTED, message: '对局未开始', commandId });
+
+      const cAny = command as Extract<Command, { type: `debug/${string}` }>;
+      if (cAny.roomId !== room.roomId)
+        throw createProtocolError({ code: ErrorCode.ROOM_NOT_FOUND, message: 'roomId 不匹配', commandId });
+      if (cAny.gameId !== room.game.gameId)
+        throw createProtocolError({ code: ErrorCode.GAME_NOT_FOUND, message: 'gameId 不匹配', commandId });
+      if ('playerId' in cAny) requireSelfPlayer((cAny as { playerId: PlayerId }).playerId);
+      if ((cAny as { playerId?: PlayerId }).playerId !== room.hostPlayerId)
+        throw createProtocolError({ code: ErrorCode.NOT_HOST, message: '仅房主可用 debug', commandId });
 
       const r = handleCommand(room.game.match, command, nowMs());
       room.game.match = r.state;

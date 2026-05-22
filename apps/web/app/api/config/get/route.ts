@@ -7,11 +7,22 @@ export const runtime = 'nodejs';
 
 export async function GET(req: Request) {
   const url = new URL(req.url);
-  const docId = url.searchParams.get('docId')?.trim() ?? '';
+  let docId = url.searchParams.get('docId')?.trim() ?? '';
+  for (let i = 0; i < 2; i += 1) {
+    if (!docId.includes('%')) break;
+    try {
+      const d = decodeURIComponent(docId);
+      if (d === docId) break;
+      docId = d;
+    } catch {
+      break;
+    }
+  }
   if (!docId) return NextResponse.json({ error: 'INVALID_DOC_ID' }, { status: 400 });
 
   const data = await readAppData();
-  if (!Object.keys(data.configDocs).length) {
+  const full = data.configDocs['builtin:board-full'];
+  if (!Object.keys(data.configDocs).length || !full || !full.publishedVersionId) {
     await updateAppData((d) => {
       ensureSeedConfigs(d, Date.now());
     });
@@ -51,4 +62,3 @@ export async function GET(req: Request) {
     published: published ? { versionId: published.versionId, data: published.data, updatedAtMs: published.updatedAtMs } : null,
   });
 }
-

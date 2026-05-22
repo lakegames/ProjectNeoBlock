@@ -1,5 +1,12 @@
 import './globals.css';
+import './tokens.css';
+import './app-shell.css';
+import './ui/motion.css';
+import './ui/button.css';
+import './ui/input.css';
+import './ui/card.css';
 import Providers from './providers';
+import AppShell from './app-shell';
 
 export const metadata = {
   title: 'NeoBlock',
@@ -8,9 +15,11 @@ export const metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="zh-CN" suppressHydrationWarning>
+    <html lang="zh-CN" data-theme="light" suppressHydrationWarning>
       <body suppressHydrationWarning>
-        <Providers>{children}</Providers>
+        <Providers>
+          <AppShell>{children}</AppShell>
+        </Providers>
       </body>
     </html>
   );

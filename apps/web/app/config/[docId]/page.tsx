@@ -103,7 +103,20 @@ function Issues({ issues }: { issues: ConfigIssue[] }) {
 
 export default function ConfigDocPage() {
   const params = useParams<{ docId: string }>();
-  const docId = useMemo(() => String(params?.docId || ''), [params]);
+  const docId = useMemo(() => {
+    let v = String(params?.docId || '');
+    for (let i = 0; i < 2; i += 1) {
+      if (!v.includes('%')) break;
+      try {
+        const d = decodeURIComponent(v);
+        if (d === v) break;
+        v = d;
+      } catch {
+        break;
+      }
+    }
+    return v;
+  }, [params]);
 
   const [data, setData] = useState<ConfigDocResponse | null>(null);
   const [loading, setLoading] = useState(false);

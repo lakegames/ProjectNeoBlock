@@ -138,6 +138,17 @@ function clearTurnTransient(game: GameState) {
   delete game.lastDice;
 }
 
+function buildingsInUse(buildings: number) {
+  return buildings === 5 ? { houses: 0, hotels: 1 } : { houses: Math.max(0, Math.min(4, buildings)), hotels: 0 };
+}
+
+function applyBuildingsDeltaToBank(game: GameState, before: number, after: number) {
+  const b = buildingsInUse(before);
+  const a = buildingsInUse(after);
+  game.bank.houses += b.houses - a.houses;
+  game.bank.hotels += b.hotels - a.hotels;
+}
+
 function rulesStartSalary(board: BoardConfig) {
   return board.startSalary ?? 200;
 }
@@ -264,6 +275,7 @@ export function createGame(input: CreateGameInput): HandleCommandResult {
 }
 
 function validateGameCommand(match: MatchState, command: Command) {
+  if (command.type.startsWith('debug/')) return;
   if (
     command.type === 'game/rollDice' ||
     command.type === 'game/buyProperty' ||
@@ -1014,7 +1026,12 @@ export function handleCommand(match: MatchState, command: Command, nowMs: number
             data: { propertyId: pending.propertyId },
           });
         }
-        const bidders = activePlayerIds(match.game);
+        const bidders = (() => {
+          const list = activePlayerIds(match.game);
+          const idx = list.indexOf(pending.playerId);
+          if (idx <= 0) return list;
+          return [...list.slice(idx), ...list.slice(0, idx)];
+        })();
         const firstBidder = bidders[0] ?? pending.playerId;
         {
           const r = allocEvent(cursor, nowMs, causedBy);
@@ -1130,8 +1147,8 @@ export function handleCommand(match: MatchState, command: Command, nowMs: number
           });
         }
       } else {
-        const currentIndex = bidderIndex % active.length;
-        const nextBidder = active[(currentIndex + 1) % active.length]!;
+        const nextIndex = pass ? bidderIndex % active.length : (bidderIndex + 1) % active.length;
+        const nextBidder = active[nextIndex]!;
         {
           const r = allocEvent(cursor, nowMs, causedBy);
           cursor = r.match;
@@ -1241,6 +1258,99 @@ export function handleCommand(match: MatchState, command: Command, nowMs: number
     }
     const nextState = applyEvents(match, events);
     return { state: nextState, events };
+  }
+
+  if (command.type === 'debug/addCash') {
+    requireGame();
+    const delta = Number.isFinite(command.delta) ? Math.trunc(command.delta) : 0;
+    const targetId = command.targetPlayerId;
+    const target = match.game.players[targetId];
+    if (!target) throw new Error('PLAYER_NOT_FOUND');
+
+    let cursor = match;
+    const events: Event[] = [];
+    {
+      const r = allocEvent(cursor, nowMs, causedBy);
+      cursor = r.match;
+      events.push({
+        ...r.base,
+        type: 'game/moneyChanged',
+        gameId: match.game.gameId,
+        playerId: targetId,
+        delta,
+        reason: 'debug:addCash',
+      });
+    }
+
+    const after = applyEvents(match, events);
+    const debtEvents = deriveAutoDebtPayment(after, cursor, nowMs, causedBy);
+    const combined = [...events, ...debtEvents.events];
+    const afterDebt = applyEvents(match, combined);
+    const endEvents = deriveEndEvents(afterDebt, debtEvents.match, nowMs);
+    const finalEvents = [...combined, ...endEvents.events];
+    const nextState = applyEvents(match, finalEvents);
+    return { state: nextState, events: finalEvents };
+  }
+
+  if (command.type === 'debug/assignProperty') {
+    requireGame();
+    const tile = getPropertyTile(match.game, command.propertyId);
+    if (!tile) throw new Error('INVALID_PROPERTY');
+    if (!(command.ownerPlayerId === null || match.game.players[command.ownerPlayerId])) throw new Error('PLAYER_NOT_FOUND');
+
+    let cursor = match;
+    const events: Event[] = [];
+    {
+      const r = allocEvent(cursor, nowMs, causedBy);
+      cursor = r.match;
+      events.push({
+        ...r.base,
+        type: 'game/engine',
+        gameId: match.game.gameId,
+        name: 'debug/propertyAssigned',
+        data: { propertyId: command.propertyId, ownerPlayerId: command.ownerPlayerId },
+      });
+    }
+
+    const after = applyEvents(match, events);
+    const debtEvents = deriveAutoDebtPayment(after, cursor, nowMs, causedBy);
+    const combined = [...events, ...debtEvents.events];
+    const afterDebt = applyEvents(match, combined);
+    const endEvents = deriveEndEvents(afterDebt, debtEvents.match, nowMs);
+    const finalEvents = [...combined, ...endEvents.events];
+    const nextState = applyEvents(match, finalEvents);
+    return { state: nextState, events: finalEvents };
+  }
+
+  if (command.type === 'debug/setBuildings') {
+    requireGame();
+    const tile = getPropertyTile(match.game, command.propertyId);
+    if (!tile) throw new Error('INVALID_PROPERTY');
+    if (!tile.ownerPlayerId) throw new Error('NOT_OWNED');
+    const buildings = Math.max(0, Math.min(5, Math.trunc(command.buildings)));
+
+    let cursor = match;
+    const events: Event[] = [];
+    {
+      const r = allocEvent(cursor, nowMs, causedBy);
+      cursor = r.match;
+      events.push({
+        ...r.base,
+        type: 'game/engine',
+        gameId: match.game.gameId,
+        name: 'debug/buildingsSet',
+        data: { propertyId: command.propertyId, buildings },
+      });
+    }
+
+    const after = applyEvents(match, events);
+    const debtEvents = deriveAutoDebtPayment(after, cursor, nowMs, causedBy);
+    const combined = [...events, ...debtEvents.events];
+    const afterDebt = applyEvents(match, combined);
+    const endEvents = deriveEndEvents(afterDebt, debtEvents.match, nowMs);
+    const finalEvents = [...combined, ...endEvents.events];
+    const nextState = applyEvents(match, finalEvents);
+    return { state: nextState, events: finalEvents };
   }
 
   return { state: match, events: [] };
@@ -1707,6 +1817,46 @@ export function applyEvent(match: MatchState, event: Event): MatchState {
       if (from) from.properties = from.properties.filter((x) => x !== data.propertyId);
       const to = game.players[data.toPlayerId];
       if (to && !to.properties.includes(data.propertyId)) to.properties.push(data.propertyId);
+      return next;
+    }
+    if (event.name === 'debug/propertyAssigned') {
+      const data = event.data as { propertyId: string; ownerPlayerId: PlayerId | null };
+      const tile = getPropertyTile(game, data.propertyId);
+      if (!tile) return next;
+      const beforeOwner = tile.ownerPlayerId ?? null;
+      const beforeBuildings = Math.max(0, Math.floor(tile.buildings ?? 0));
+
+      if (beforeOwner) {
+        const from = game.players[beforeOwner];
+        if (from) from.properties = from.properties.filter((x) => x !== data.propertyId);
+      }
+      if (data.ownerPlayerId) {
+        const to = game.players[data.ownerPlayerId];
+        if (to && !to.properties.includes(data.propertyId)) to.properties.push(data.propertyId);
+        tile.ownerPlayerId = data.ownerPlayerId;
+      } else {
+        delete tile.ownerPlayerId;
+      }
+
+      if (beforeBuildings > 0) {
+        applyBuildingsDeltaToBank(game, beforeBuildings, 0);
+        tile.buildings = 0;
+      } else {
+        tile.buildings = 0;
+      }
+      tile.mortgaged = false;
+      return next;
+    }
+    if (event.name === 'debug/buildingsSet') {
+      const data = event.data as { propertyId: string; buildings: number };
+      const tile = getPropertyTile(game, data.propertyId);
+      if (!tile) return next;
+      const before = Math.max(0, Math.floor(tile.buildings ?? 0));
+      const after = Math.max(0, Math.min(5, Math.floor(data.buildings)));
+      if (before !== after) {
+        applyBuildingsDeltaToBank(game, before, after);
+        tile.buildings = after;
+      }
       return next;
     }
     if (event.name === 'card/drawn') {

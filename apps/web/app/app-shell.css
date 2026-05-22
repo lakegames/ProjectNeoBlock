@@ -1,0 +1,89 @@
+.nb-app-shell {
+    background: linear-gradient(0deg, rgba(255, 255, 255, 0.00) 0%, rgba(255, 255, 255, 0.20) 50%, rgba(255, 255, 255, 0.30) 100%), var(--primary-1, #FFE2CF);
+    flex-direction: column;
+    align-items: flex-start;
+    display: flex;
+}
+
+.nb-app-shell__topbar {
+    display: flex;
+    padding: var(--gap-gap-none, 0) var(--padding-padding-max, 28px);
+    align-items: center;
+    gap: var(--gap-gap-content-space, 10px);
+    align-self: stretch;
+    width: 100%;
+    justify-content: space-between;
+    height: 60px;
+}
+
+.nb-app-shell__topbar-left {
+    display: flex;
+    align-items: center;
+    gap: var(--gap-gap-content-space, 10px);
+}
+
+.nb-app-shell__menu-button,
+.nb-app-shell__avatar-button {
+    padding: 8px !important;
+    border-radius: var(--border-radius-border-radius-small, 8px) !important;
+    background: var(--control-normal-lightBackground-white, #FBF3F1) !important;
+    /* BasicShadow/BasicShadow-Level4WithLIne */
+    box-shadow: 0 0 1px 0 rgba(0, 0, 0, 0.20), 0 6px 18px 0 rgba(0, 0, 0, 0.08) !important;
+}
+
+.nb-app-shell__admin-link{
+    border-radius: var(--border-radius-border-radius-small, 8px) !important;
+    background: var(--control-normal-lightBackground-white, #FBF3F1) !important;
+    /* BasicShadow/BasicShadow-Level4WithLIne */
+    box-shadow: 0 0 1px 0 rgba(0, 0, 0, 0.20), 0 6px 18px 0 rgba(0, 0, 0, 0.08) !important;
+}
+
+.nb-app-shell__brand {
+    color: var(--text-text-normal-text-black, #5A5756);
+
+    /* Typography-Text */
+    font-family: "OPPO Sans 4.0";
+    font-size: var(--size-size-regular, 18px);
+    font-style: normal;
+    font-weight: var(--font-weight-bold, 700);
+    line-height: var(--line-height-line-height-regular, 24px); /* 133.333% */
+}
+
+.nb-app-shell__topbar-center {
+}
+
+.nb-app-shell__status {
+}
+
+.nb-app-shell__topbar-right {
+    display: flex;
+    align-items: center;
+    gap: var(--gap-gap-content-space, 10px);
+}
+
+.nb-app-shell__admin-link {
+}
+
+.nb-app-shell__avatar-button {
+}
+
+.nb-app-shell__content {
+    display: flex;
+    padding: var(--padding-padding-none, 0) var(--padding-padding-big, 14px) var(--padding-padding-big, 14px) var(--padding-padding-big, 14px);
+    align-items: flex-start;
+    gap: var(--gap-gap-component-space, 8px);
+    flex: 1 0 0;
+    align-self: stretch;
+}
+
+.nb-app-shell__content main{
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    flex: 1 0 0;
+    align-self: stretch;
+    border-radius: var(--border-radius-border-radius-big, 12px);
+    background: #FFF;
+    width: 100%;
+    box-shadow: 0 0 1px 0 rgba(0, 0, 0, 0.20), 0 6px 18px 0 rgba(0, 0, 0, 0.08);
+}

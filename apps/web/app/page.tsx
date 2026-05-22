@@ -5,7 +5,7 @@ import { signIn, signOut, useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 
-import { Button } from '@neoblock/ui';
+import { Button, Input, RoomCard } from '@neoblock/ui';
 
 type RoomListItem = {
   roomCode: string;
@@ -40,6 +40,7 @@ export default function Page() {
 
   const [rooms, setRooms] = useState<RoomListItem[]>([]);
   const [roomsLoading, setRoomsLoading] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   const [createMode, setCreateMode] = useState<'guest' | 'account'>('guest');
   const [createNickname, setCreateNickname] = useState('');
@@ -90,6 +91,15 @@ export default function Page() {
   useEffect(() => {
     refreshRooms();
   }, []);
+
+  useEffect(() => {
+    setIsAdmin(false);
+    if (!uid) return;
+    fetch('/api/admin/ping', { cache: 'no-store' })
+      .then((r) => r.json().then((j) => ({ ok: r.ok, json: j })))
+      .then(({ ok }) => setIsAdmin(ok))
+      .catch(() => setIsAdmin(false));
+  }, [uid]);
 
   useEffect(() => {
     fetch('/api/config/published', { cache: 'no-store' })
@@ -171,7 +181,7 @@ export default function Page() {
   }
 
   return (
-    <main style={{ padding: 24, maxWidth: 860 }}>
+    <main>
       <h1 style={{ margin: 0 }}>NeoBlock</h1>
       <p style={{ marginTop: 8, color: 'rgba(0,0,0,0.65)' }}>
         Task3：大厅、房间参数、准备/开局、观战（最小 UI）
@@ -193,6 +203,11 @@ export default function Page() {
         <Link href="/join">
           <Button>加入房间</Button>
         </Link>
+        {isAdmin ? (
+          <Link href="/admin">
+            <Button>Admin</Button>
+          </Link>
+        ) : null}
       </div>
 
       <div style={{ marginTop: 20, padding: 12, border: '1px solid rgba(0,0,0,0.08)', borderRadius: 12 }}>
@@ -235,15 +250,12 @@ export default function Page() {
         </div>
 
         <div style={{ marginTop: 10, display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
-          <input
+          <Input
             value={createNickname}
             onChange={(e) => setCreateNickname(e.target.value)}
             placeholder={createMode === 'guest' ? '匿名昵称（必填）' : '昵称（可选）'}
             disabled={createMode === 'account' && !uid}
             style={{
-              padding: '10px 12px',
-              borderRadius: 10,
-              border: '1px solid rgba(0,0,0,0.12)',
               minWidth: 240,
             }}
           />
@@ -301,7 +313,7 @@ export default function Page() {
               </option>
             ))}
           </select>
-          <input
+          <Input
             value={String(createMaxPlayers)}
             onChange={(e) => setCreateMaxPlayers(Number(e.target.value))}
             type="number"
@@ -309,13 +321,10 @@ export default function Page() {
             max={16}
             step={1}
             style={{
-              padding: '10px 12px',
-              borderRadius: 10,
-              border: '1px solid rgba(0,0,0,0.12)',
               width: 160,
             }}
           />
-          <input
+          <Input
             value={String(createTurnTimeSec)}
             onChange={(e) => setCreateTurnTimeSec(Number(e.target.value))}
             type="number"
@@ -323,9 +332,6 @@ export default function Page() {
             max={600}
             step={1}
             style={{
-              padding: '10px 12px',
-              borderRadius: 10,
-              border: '1px solid rgba(0,0,0,0.12)',
               width: 160,
             }}
           />
@@ -366,26 +372,20 @@ export default function Page() {
           </label>
         </div>
         <div style={{ marginTop: 10, display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
-          <input
+          <Input
             value={joinRoomCode}
             onChange={(e) => setJoinRoomCode(e.target.value)}
             placeholder="房间码（例如 ABC123）"
             style={{
-              padding: '10px 12px',
-              borderRadius: 10,
-              border: '1px solid rgba(0,0,0,0.12)',
               minWidth: 240,
             }}
           />
-          <input
+          <Input
             value={joinNickname}
             onChange={(e) => setJoinNickname(e.target.value)}
             placeholder={joinMode === 'guest' ? '匿名昵称（必填）' : '昵称（可选）'}
             disabled={joinMode === 'account' && !uid}
             style={{
-              padding: '10px 12px',
-              borderRadius: 10,
-              border: '1px solid rgba(0,0,0,0.12)',
               minWidth: 240,
             }}
           />
@@ -405,25 +405,28 @@ export default function Page() {
         </div>
         <div style={{ marginTop: 10 }}>
           {rooms.length ? (
-            <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 12 }}>
               {rooms.map((r) => (
-                <li key={r.roomCode} style={{ marginTop: 8 }}>
-                  <span style={{ fontWeight: 600 }}>{r.roomCode}</span> ｜{r.status}｜
-                  玩家 {r.playerCount}/{r.maxPlayers}｜
-                  观战 {r.spectatorCount}｜
-                  房主 {r.hostDisplayName}｜
-                  回合 {r.turnTimeSec}s｜
-                  托管 {r.enableAuto ? '开' : '关'}｜
-                  AI {r.enableAI ? '开' : '关'}{' '}
-                  <Link href={`/room/${encodeURIComponent(r.roomCode)}`}>
-                    <Button style={{ marginLeft: 10 }}>查看</Button>
-                  </Link>
-                  <Link href={`/room/${encodeURIComponent(r.roomCode)}?spectate=1`}>
-                    <Button style={{ marginLeft: 6 }}>观战</Button>
-                  </Link>
-                </li>
+                <RoomCard
+                  key={r.roomCode}
+                  {...r}
+                  actions={
+                    <>
+                      <Link href={`/room/${encodeURIComponent(r.roomCode)}`}>
+                        <Button size="sm" mode="Second">
+                          查看
+                        </Button>
+                      </Link>
+                      <Link href={`/room/${encodeURIComponent(r.roomCode)}?spectate=1`}>
+                        <Button size="sm" mode="NoBackground">
+                          观战
+                        </Button>
+                      </Link>
+                    </>
+                  }
+                />
               ))}
-            </ul>
+            </div>
           ) : (
             <div style={{ color: 'rgba(0,0,0,0.65)' }}>暂无房间</div>
           )}

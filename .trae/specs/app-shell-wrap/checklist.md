@@ -1,0 +1,4 @@
+- [x] 任意页面都具备统一 App Shell 结构（Topbar + Content）
+- [x] 顶栏 DOM 结构与截图一致：左菜单按钮+NeoBlock、中间状态胶囊挂载点、右侧 Admin 与头像按钮挂载点
+- [x] 本次改造不修改任何既有样式（仅新增结构容器与 className/data 挂载点）
+- [x] Typecheck 通过（至少 web）

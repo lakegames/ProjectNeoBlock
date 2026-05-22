@@ -132,6 +132,31 @@ export function validateCommand(input: unknown): ValidationResult<Command> {
       requireString('playerId');
       break;
     }
+    case 'room/setConfig': {
+      requireString('roomId');
+      requireString('playerId');
+      const config = input.config;
+      if (!isRecord(config)) {
+        issues.push(issue('config', 'config 必须为对象'));
+        break;
+      }
+      const maxPlayers = config.maxPlayers;
+      if (!(maxPlayers === undefined || (isNumber(maxPlayers) && maxPlayers >= 2 && maxPlayers <= 16))) {
+        issues.push(issue('config.maxPlayers', 'maxPlayers 必须为 2-16 的整数'));
+      }
+      const boardPreset = config.boardPreset;
+      if (
+        !(
+          boardPreset === undefined ||
+          boardPreset === 'default' ||
+          boardPreset === 'full' ||
+          boardPreset === 'e2e_fast'
+        )
+      ) {
+        issues.push(issue('config.boardPreset', 'boardPreset 必须为 default/full/e2e_fast'));
+      }
+      break;
+    }
     case 'game/rollDice': {
       requireString('roomId');
       requireString('gameId');
@@ -222,6 +247,34 @@ export function validateCommand(input: unknown): ValidationResult<Command> {
       requireString('roomId');
       requireString('gameId');
       requireString('playerId');
+      break;
+    }
+    case 'debug/addCash': {
+      requireString('roomId');
+      requireString('gameId');
+      requireString('playerId');
+      requireString('targetPlayerId');
+      const delta = input.delta;
+      if (!isNumber(delta)) issues.push(issue('delta', 'delta 必须为 number'));
+      break;
+    }
+    case 'debug/assignProperty': {
+      requireString('roomId');
+      requireString('gameId');
+      requireString('playerId');
+      requireString('propertyId');
+      const owner = input.ownerPlayerId;
+      if (!(owner === null || (isString(owner) && owner.length > 0)))
+        issues.push(issue('ownerPlayerId', 'ownerPlayerId 必须为 playerId 字符串或 null'));
+      break;
+    }
+    case 'debug/setBuildings': {
+      requireString('roomId');
+      requireString('gameId');
+      requireString('playerId');
+      requireString('propertyId');
+      const buildings = input.buildings;
+      if (!isNumber(buildings)) issues.push(issue('buildings', 'buildings 必须为 number'));
       break;
     }
     default:

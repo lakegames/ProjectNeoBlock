@@ -1,0 +1,5 @@
+- [ ] fullBoardConfig() 生成 40 格 tiles，且通过 validateBoardConfig 校验
+- [ ] ensureSeedConfigs 新增并发布 builtin:board-full（仅新增，不替换默认 builtin:board）
+- [ ] 大厅“棋盘”下拉框出现测试棋盘选项，且可用其创建房间
+- [ ] 对局页面棋盘渲染正常（40 格不溢出/不报错）
+- [ ] npm -w @neoblock/web run typecheck 通过

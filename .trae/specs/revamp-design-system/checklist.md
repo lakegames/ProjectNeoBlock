@@ -1,0 +1,7 @@
+- [x] Figma 设计系统可被读取并用于实现（若无法读取，能及时停下并向用户确认/补充）
+- [x] `@neoblock/ui` 具备清晰、可复用的主题 tokens（颜色/排版/圆角/阴影/间距）
+- [x] Button 组件样式与交互状态符合 Figma，并保持现有页面调用尽量兼容
+- [x] Input 组件样式与交互状态符合 Figma，并保持现有页面调用尽量兼容
+- [x] 新增 Card 与 RoomCard 组件，RoomCard 可覆盖大厅房间列表信息展示
+- [x] 大厅页房间列表已切换为 RoomCard，加入/创建区域已使用新版 Button/Input
+- [x] Typecheck 通过

@@ -1,0 +1,36 @@
+.nb-input {
+  appearance: none;
+  border: 1px solid transparent;
+  background: var(--nb-color-input-bg, var(--nb-color-surface, #fff));
+  color: var(--nb-color-fg, rgba(0, 0, 0, 0.92));
+  font: inherit;
+  outline: none;
+  transition:
+    box-shadow var(--nb-motion-fast, 120ms) var(--nb-motion-ease, ease),
+    border-color var(--nb-motion-fast, 120ms) var(--nb-motion-ease, ease),
+    background var(--nb-motion-fast, 120ms) var(--nb-motion-ease, ease);
+}
+
+.nb-input::placeholder {
+  color: var(--nb-color-muted-fg, rgba(0, 0, 0, 0.65));
+}
+
+.nb-input:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+  background: var(--nb-color-muted, rgba(0, 0, 0, 0.06));
+}
+
+.nb-input:focus-visible {
+  border-color: var(--nb-color-primary, #2563eb);
+  box-shadow: var(--nb-shadow-focus, 0 0 0 3px var(--nb-color-ring, rgba(37, 99, 235, 0.28)));
+}
+
+.nb-input[aria-invalid='true'] {
+  border-color: var(--nb-color-danger, #b42318);
+}
+
+.nb-input[aria-invalid='true']:focus-visible {
+  box-shadow: 0 0 0 3px var(--nb-color-danger-soft, rgba(180, 35, 24, 0.12));
+}
+

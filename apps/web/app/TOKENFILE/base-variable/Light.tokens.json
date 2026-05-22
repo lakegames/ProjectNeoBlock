@@ -1,0 +1,16 @@
+{
+  "icon-boldness": {
+    "$type": "string",
+    "$value": "Light",
+    "$extensions": {
+      "com.figma.variableId": "VariableID:143:432",
+      "com.figma.scopes": [
+        "ALL_SCOPES"
+      ],
+      "com.figma.type": "string"
+    }
+  },
+  "$extensions": {
+    "com.figma.modeName": "Light"
+  }
+}

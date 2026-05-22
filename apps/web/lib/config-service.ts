@@ -5,6 +5,7 @@ import {
   defaultBoardConfig,
   defaultCardsConfig,
   defaultRulesConfig,
+  fullBoardConfig,
   validateBoardConfig,
   validateCardsConfig,
   validateRulesConfig,
@@ -60,6 +61,13 @@ export function ensureSeedConfigs(data: AppData, nowMs: number) {
   ensureOne('rules', '默认规则', defaultRulesConfig());
   ensureOne('board', '默认棋盘', defaultBoardConfig());
   ensureOne('cards', '默认卡牌', defaultCardsConfig());
+
+  {
+    const docId = 'builtin:board-full';
+    const existing = data.configDocs[docId];
+    if (!existing) data.configDocs[docId] = createDoc({ docId, kind: 'board', name: '标准 40 格（测试）', nowMs, draftData: fullBoardConfig() });
+    if (!data.configDocs[docId]!.publishedVersionId) publishDoc(data.configDocs[docId]!, nowMs, 'seed');
+  }
 }
 
 export function listDocs(data: AppData, kind?: ConfigKind) {
@@ -176,4 +184,3 @@ export function resolvePublishedPayload(data: AppData, kind: ConfigKind) {
   if (!doc?.publishedVersionId) return null;
   return doc.versions[doc.publishedVersionId]?.data ?? null;
 }
-

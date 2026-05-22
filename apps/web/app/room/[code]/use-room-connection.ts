@@ -78,7 +78,9 @@ export function useRoomConnection(options: {
 
   const lastEventSeqRef = React.useRef<number>(0);
   const nextClientSeqRef = React.useRef<number>(0);
-  const pendingRef = React.useRef<null | { commandId: string; clientSeq: number }>(null);
+  const pendingRef = React.useRef<null | { commandId: string; clientSeq: number; command: Command; retries: number }>(null);
+  const recentEventsRef = React.useRef<Event[]>([]);
+  const recentCommandsRef = React.useRef<Command[]>([]);
 
   const clearReconnectTimer = React.useCallback(() => {
     if (reconnectTimerRef.current) {
@@ -129,6 +131,10 @@ export function useRoomConnection(options: {
         lastEventSeqRef.current = maxSeq;
       }
 
+      if (parsed.events.length) {
+        recentEventsRef.current = [...recentEventsRef.current, ...parsed.events].slice(-200);
+      }
+
       const pending = pendingRef.current;
       if (pending) {
         const ok = parsed.events.some((e) => e.causedBy?.commandId === pending.commandId);
@@ -156,17 +162,33 @@ export function useRoomConnection(options: {
     }
 
     if (parsed.kind === 'error') {
+      if (parsed.error.code === 'OUT_OF_ORDER') {
+        const expected = (parsed.error.details as { expectedClientSeq?: unknown } | undefined)?.expectedClientSeq;
+        if (typeof expected === 'number' && Number.isFinite(expected) && expected >= 0) {
+          const pending = pendingRef.current;
+          if (pending && parsed.error.commandId === pending.commandId && pending.retries < 1) {
+            nextClientSeqRef.current = expected;
+            const commandId = uuid();
+            const msg: ClientMessage = {
+              kind: 'command',
+              command: { ...pending.command, commandId, clientSeq: expected } as Command,
+            };
+            pendingRef.current = { commandId, clientSeq: expected, command: msg.command as Command, retries: pending.retries + 1 };
+            setLastError(null);
+            recentCommandsRef.current = [...recentCommandsRef.current, msg.command as Command].slice(-100);
+            if (sendRaw(msg)) return;
+            pendingRef.current = null;
+          }
+          nextClientSeqRef.current = expected;
+        }
+      }
       setLastError(parsed.error);
       const pending = pendingRef.current;
       if (pending && parsed.error.commandId === pending.commandId) {
         pendingRef.current = null;
       }
-      if (parsed.error.code === 'OUT_OF_ORDER') {
-        const expected = (parsed.error.details as { expectedClientSeq?: unknown } | undefined)?.expectedClientSeq;
-        if (typeof expected === 'number' && Number.isFinite(expected) && expected >= 0) nextClientSeqRef.current = expected;
-      }
     }
-  }, []);
+  }, [sendRaw]);
 
   const connect = React.useCallback(
     (a: Actor) => {
@@ -264,25 +286,44 @@ export function useRoomConnection(options: {
 
   const sendCommand = React.useCallback(
     (command: CommandInput) => {
-      const ws = wsRef.current;
       const a = actor;
-      if (!ws || ws.readyState !== WebSocket.OPEN) return;
       if (!a) return;
       if (pendingRef.current) return;
       const commandId = uuid();
       const clientSeq = nextClientSeqRef.current;
-      pendingRef.current = { commandId, clientSeq };
       setLastError(null);
       const msg: ClientMessage = {
         kind: 'command',
         command: { ...(command as Command), commandId, clientSeq } as Command,
       };
-      ws.send(JSON.stringify(msg));
+      pendingRef.current = { commandId, clientSeq, command: msg.command as Command, retries: 0 };
+      recentCommandsRef.current = [...recentCommandsRef.current, msg.command].slice(-100);
+      sendRaw(msg);
     },
-    [actor],
+    [actor, sendRaw],
   );
 
   const clearLastCard = React.useCallback(() => setLastCardDrawn(null), []);
+
+  const getDebugDump = React.useCallback(() => {
+    return {
+      kind: 'neoblock-debug',
+      version: 1,
+      at: new Date().toISOString(),
+      roomCode,
+      mode: options.mode,
+      url: typeof window !== 'undefined' ? window.location.href : null,
+      userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : null,
+      actor,
+      connected,
+      connecting,
+      pending: pendingRef.current,
+      lastError,
+      snapshot,
+      recentCommands: recentCommandsRef.current,
+      recentEvents: recentEventsRef.current,
+    };
+  }, [actor, connected, connecting, lastError, options.mode, roomCode, snapshot]);
 
   return {
     actor,
@@ -295,5 +336,6 @@ export function useRoomConnection(options: {
     pending: pendingRef.current !== null,
     lastCardDrawn,
     clearLastCard,
+    getDebugDump,
   };
 }

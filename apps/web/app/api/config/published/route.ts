@@ -7,7 +7,8 @@ export const runtime = 'nodejs';
 
 export async function GET() {
   const data = await readAppData();
-  if (!Object.keys(data.configDocs).length) {
+  const full = data.configDocs['builtin:board-full'];
+  if (!Object.keys(data.configDocs).length || !full || !full.publishedVersionId) {
     await updateAppData((d) => {
       ensureSeedConfigs(d, Date.now());
     });
@@ -26,4 +27,3 @@ export async function GET() {
 
   return NextResponse.json({ rules: mapKind('rules'), boards: mapKind('board'), cards: mapKind('cards') });
 }
-
