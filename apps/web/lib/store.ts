@@ -384,7 +384,8 @@ function coerceMatchRecord(input: unknown): MatchRecord | null {
 }
 
 function dataFilePath() {
-  return path.join(process.cwd(), '.data', 'neoblock.json');
+  const base = process.env.NEOBLOCK_DATA_DIR || (process.env.VERCEL ? '/tmp' : process.cwd());
+  return path.join(base, '.data', 'neoblock.json');
 }
 
 async function ensureDataDir() {

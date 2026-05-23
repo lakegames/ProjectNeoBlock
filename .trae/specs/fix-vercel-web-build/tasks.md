@@ -7,9 +7,9 @@
   - [x] 让返回对象中的 `kind` 类型保持为 `"neoblock-debug"` 字面量（避免推断为 `string`）
   - [x] 确保不改变 debug dump 的字段含义与内容
 
-- [ ] Task 3: 验证
+- [x] Task 3: 验证
   - [x] 本地运行 `npm -w @neoblock/web run build`，确认通过
-  - [ ] 触发一次 Vercel 构建，确认不再因 TypeScript 类型错误失败
+  - [x] 触发一次 Vercel 构建，确认不再因 TypeScript 类型错误失败
 
 # Task Dependencies
 - Task 2 depends on Task 1
