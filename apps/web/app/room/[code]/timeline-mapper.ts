@@ -57,6 +57,7 @@ export function eventsToTimelineEntries(input: {
   board?: BoardLike | null;
 }): TimelineEntry[] {
   const { events, members, board } = input;
+  const safeBoard = board ?? null;
 
   const purchasesByCommandId = new Map<string, { playerId: PlayerId; propertyId: string; price: number }[]>();
   const purchasesByPlayerProp = new Map<string, { price: number }[]>();
@@ -103,7 +104,7 @@ export function eventsToTimelineEntries(input: {
   const list: TimelineEntry[] = [];
   for (const e of events) {
     if (e.type === 'game/moneyChanged' && isDuplicatedPurchaseCharge(e)) continue;
-    const entry = eventToTimelineEntry({ event: e, members, board });
+    const entry = eventToTimelineEntry({ event: e, members, board: safeBoard });
     if (entry) list.push(entry);
   }
   return list;
