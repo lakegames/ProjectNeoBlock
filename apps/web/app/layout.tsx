@@ -6,6 +6,7 @@ import './ui/button.css';
 import './ui/input.css';
 import './ui/card.css';
 import { Suspense } from 'react';
+import { Analytics } from '@vercel/analytics/next';
 import Providers from './providers';
 import AppShell from './app-shell';
 
@@ -24,6 +25,7 @@ export default function RootLayout({ children, modal }: { children: React.ReactN
           </Suspense>
           {modal ?? null}
         </Providers>
+        <Analytics />
       </body>
     </html>
   );
