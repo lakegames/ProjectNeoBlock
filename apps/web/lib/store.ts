@@ -194,7 +194,7 @@ function coerceConfigDoc(input: unknown, docIdKey: string): ConfigDoc | null {
   const updatedAtMs = coerceNumber(r.updatedAtMs, createdAtMs);
   const name = coerceString(r.name, `${kind}:${docId}`);
   const ownerRaw = (r as { ownerId?: unknown }).ownerId;
-  const ownerId = ownerRaw === undefined ? undefined : coerceStringOrNull(ownerRaw);
+  const ownerId = ownerRaw === undefined ? null : coerceStringOrNull(ownerRaw);
   const visibilityRaw = (r as { visibility?: unknown }).visibility;
   const visibility = visibilityRaw === 'private' || visibilityRaw === 'public' ? visibilityRaw : undefined;
 

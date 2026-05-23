@@ -5,6 +5,7 @@ import './ui/motion.css';
 import './ui/button.css';
 import './ui/input.css';
 import './ui/card.css';
+import { Suspense } from 'react';
 import Providers from './providers';
 import AppShell from './app-shell';
 
@@ -18,7 +19,9 @@ export default function RootLayout({ children, modal }: { children: React.ReactN
     <html lang="zh-CN" data-theme="light" suppressHydrationWarning>
       <body suppressHydrationWarning>
         <Providers>
-          <AppShell>{children}</AppShell>
+          <Suspense fallback={null}>
+            <AppShell>{children}</AppShell>
+          </Suspense>
           {modal ?? null}
         </Providers>
       </body>

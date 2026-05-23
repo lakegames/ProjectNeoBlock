@@ -1,0 +1,4 @@
+- [ ] Vercel `next build` 不再因 `use-room-connection.ts` 的 `getDebugDump` 类型错误失败
+- [x] `getDebugDump()` 的返回值可赋值给 `RoomConnectionDebugDump`
+- [x] `kind` 字段类型为字面量 `"neoblock-debug"`（非 `string`）
+- [x] 本地 `npm -w @neoblock/web run build` 通过

@@ -395,7 +395,7 @@ export function useRoomConnection(options: {
 
   const clearLastCard = React.useCallback(() => setLastCardDrawn(null), []);
 
-  const getDebugDump = React.useCallback(() => {
+  const getDebugDump = React.useCallback((): RoomConnectionDebugDump => {
     return {
       kind: 'neoblock-debug',
       version: 1,
