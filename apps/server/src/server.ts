@@ -686,7 +686,7 @@ export async function startServer(options: StartServerOptions = {}): Promise<Run
       room.status = 'playing';
 
       const fromSeqExclusive = room.lastEventSeq;
-      const normalized = result.events.map((e) => {
+      const normalized = result.events.map((e: Event) => {
         const base = allocEventBase(room, {});
         const causedBy = e.causedBy ?? { commandId, playerId: command.playerId };
         return { ...e, causedBy, eventId: base.eventId, seq: base.seq };
@@ -731,7 +731,7 @@ export async function startServer(options: StartServerOptions = {}): Promise<Run
       }
 
       const fromSeqExclusive = room.lastEventSeq;
-      const normalized = r.events.map((e) => {
+      const normalized = r.events.map((e: Event) => {
         const base = allocEventBase(room, e.causedBy ? { causedBy: e.causedBy } : {});
         return { ...e, eventId: base.eventId, seq: base.seq };
       });
@@ -783,7 +783,7 @@ export async function startServer(options: StartServerOptions = {}): Promise<Run
       }
 
       const fromSeqExclusive = room.lastEventSeq;
-      const normalized = r.events.map((e) => {
+      const normalized = r.events.map((e: Event) => {
         const base = allocEventBase(room, e.causedBy ? { causedBy: e.causedBy } : {});
         return { ...e, eventId: base.eventId, seq: base.seq };
       });
