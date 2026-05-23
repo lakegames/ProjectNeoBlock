@@ -28,6 +28,9 @@ import {
 } from '@neoblock/rules';
 import { WebSocket, WebSocketServer } from 'ws';
 
+import { createAppDataStore } from './appdata/store.js';
+import { createAppDataHttpHandler } from './appdata/http-api.js';
+
 type RoomMember = {
   playerId: PlayerId;
   userId?: UserId;
@@ -243,6 +246,9 @@ export async function startServer(options: StartServerOptions = {}): Promise<Run
   const boardPreset = options.boardPreset ?? ((process.env.BOARD_PRESET as BoardPreset | undefined) ?? 'default');
   const fixedGameSeed = options.fixedGameSeed ?? process.env.FIXED_GAME_SEED;
   const initialCash = options.initialCash ?? (process.env.INITIAL_CASH ? Number(process.env.INITIAL_CASH) : undefined);
+
+  const appDataStore = createAppDataStore();
+  const handleAppDataHttp = createAppDataHttpHandler(appDataStore);
 
   const roomsByCode = new Map<RoomCode, RoomState>();
   const roomsById = new Map<RoomId, RoomState>();
@@ -943,6 +949,11 @@ export async function startServer(options: StartServerOptions = {}): Promise<Run
       res.statusCode = 200;
       res.setHeader('content-type', 'application/json; charset=utf-8');
       res.end(JSON.stringify({ ok: true }));
+      return;
+    }
+
+    if (typeof req.url === 'string' && req.url.startsWith('/api/')) {
+      void handleAppDataHttp(req, res);
       return;
     }
 

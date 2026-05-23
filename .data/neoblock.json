@@ -1,0 +1,17 @@
+{
+  "profiles": {
+    "user:1": {
+      "id": "user:1",
+      "displayName": "Alice",
+      "githubAvatarUrl": null,
+      "customAvatarDataUrl": null,
+      "customAvatarMime": null,
+      "avatarUpdatedAt": null,
+      "createdAt": "2026-05-23T19:53:44.410Z",
+      "updatedAt": "2026-05-23T19:53:44.410Z"
+    }
+  },
+  "friends": {},
+  "rooms": {},
+  "gameInvites": []
+}

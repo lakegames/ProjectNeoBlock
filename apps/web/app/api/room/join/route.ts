@@ -1,130 +1,31 @@
-import crypto from 'node:crypto';
-
-import { getServerSession } from 'next-auth/next';
 import { NextResponse } from 'next/server';
 
-import { authOptions } from 'lib/auth';
+import { proxyAppDataApi } from 'lib/appdata-proxy';
 import { encodeGuestIdentity, guestCookieName, type GuestIdentity } from 'lib/identity';
-import { roomEmptyCloseMs } from 'lib/room-lifecycle';
-import { normalizeDisplayName, normalizeRoomCode } from 'lib/room';
-import { updateAppData, type RoomMember } from 'lib/store';
 
 export const runtime = 'nodejs';
 
-type Body = {
-  roomCode?: string;
-  nickname?: string;
-  mode?: 'guest' | 'account';
-};
-
-function makePlayerMember(input: {
-  playerId: string;
-  userId?: string;
-  displayName: string;
-  joinedAtMs: number;
-}): RoomMember {
-  return {
-    playerId: input.playerId,
-    ...(input.userId ? { userId: input.userId } : {}),
-    displayName: input.displayName,
-    isSpectator: false,
-    ready: false,
-    joinedAtMs: input.joinedAtMs,
-  };
-}
-
 export async function POST(req: Request) {
-  const body = (await req.json().catch(() => null)) as Body | null;
-  const roomCodeRaw = body?.roomCode;
-  const nicknameRaw = body?.nickname;
-  const mode = body?.mode ?? 'guest';
-  const nowMs = Date.now();
+  const { status, body } = await proxyAppDataApi(req, '/api/room/join');
+  const payload = (body ?? null) as { newGuest?: GuestIdentity | null } | null;
+  const newGuest = payload?.newGuest;
 
-  if (!roomCodeRaw) return NextResponse.json({ error: 'INVALID_ROOM_CODE' }, { status: 400 });
-  const roomCode = normalizeRoomCode(roomCodeRaw);
-  if (!roomCode) return NextResponse.json({ error: 'INVALID_ROOM_CODE' }, { status: 400 });
-
-  if (mode === 'account') {
-    const session = await getServerSession(authOptions);
-    const uid = (session?.user as { id?: string } | undefined)?.id;
-    if (!uid) return NextResponse.json({ error: 'UNAUTHORIZED' }, { status: 401 });
-
-    const result = await updateAppData((data) => {
-      const room = data.rooms[roomCode];
-      if (!room) return { ok: false as const, error: 'ROOM_NOT_FOUND' as const };
-      if (room.closedAtMs) return { ok: false as const, error: 'ROOM_CLOSED' as const };
-      if (room.members.length === 0 && room.emptySinceMs && nowMs - room.emptySinceMs >= roomEmptyCloseMs) {
-        room.closedAtMs = nowMs;
-        return { ok: false as const, error: 'ROOM_CLOSED' as const };
-      }
-      if (room.emptySinceMs) delete room.emptySinceMs;
-      if (room.status !== 'lobby') return { ok: false as const, error: 'GAME_ALREADY_STARTED' as const };
-
-      const profile = data.profiles[uid];
-      const displayName = normalizeDisplayName(nicknameRaw || profile?.displayName || session?.user?.name || uid) || uid;
-      const playerId = `user:${uid}`;
-
-      const isExisting = room.members.some((m) => m.playerId === playerId && !m.isSpectator);
-      const playerCount = room.members.filter((m) => !m.isSpectator).length;
-      if (!isExisting && playerCount >= room.config.maxPlayers)
-        return { ok: false as const, error: 'ROOM_FULL' as const };
-
-      const existing = room.members.find((m) => m.playerId === playerId);
-      if (existing) {
-        existing.displayName = displayName;
-        existing.isSpectator = false;
-      } else {
-        room.members.unshift(
-          makePlayerMember({ playerId, userId: uid, displayName, joinedAtMs: nowMs }),
-        );
-      }
-      room.members = room.members.slice(0, 64);
-      return { ok: true as const, roomCode };
+  if (newGuest && typeof newGuest.id === 'string' && typeof newGuest.nickname === 'string') {
+    const { newGuest: _, ...rest } = payload as { newGuest: GuestIdentity } & Record<string, unknown>;
+    const res = NextResponse.json(rest, { status });
+    res.cookies.set(guestCookieName, encodeGuestIdentity(newGuest), {
+      httpOnly: true,
+      sameSite: 'lax',
+      path: '/',
+      maxAge: 60 * 60 * 24 * 30,
     });
-
-    if (!result.ok) {
-      const status = result.error === 'ROOM_NOT_FOUND' ? 404 : result.error === 'ROOM_CLOSED' ? 410 : 400;
-      return NextResponse.json(result, { status });
-    }
-    return NextResponse.json(result);
+    return res;
   }
 
-  const nickname = normalizeDisplayName(nicknameRaw || '游客');
-  if (!nickname) return NextResponse.json({ error: 'INVALID_NICKNAME' }, { status: 400 });
-
-  const guest: GuestIdentity = { id: crypto.randomUUID(), nickname };
-
-  const result = await updateAppData((data) => {
-    const room = data.rooms[roomCode];
-    if (!room) return { ok: false as const, error: 'ROOM_NOT_FOUND' as const };
-    if (room.closedAtMs) return { ok: false as const, error: 'ROOM_CLOSED' as const };
-    if (room.members.length === 0 && room.emptySinceMs && nowMs - room.emptySinceMs >= roomEmptyCloseMs) {
-      room.closedAtMs = nowMs;
-      return { ok: false as const, error: 'ROOM_CLOSED' as const };
-    }
-    if (room.emptySinceMs) delete room.emptySinceMs;
-    if (room.status !== 'lobby') return { ok: false as const, error: 'GAME_ALREADY_STARTED' as const };
-
-    const playerId = `guest:${guest.id}`;
-    const playerCount = room.members.filter((m) => !m.isSpectator).length;
-    if (playerCount >= room.config.maxPlayers) return { ok: false as const, error: 'ROOM_FULL' as const };
-
-    room.members.unshift(makePlayerMember({ playerId, displayName: guest.nickname, joinedAtMs: nowMs }));
-    room.members = room.members.slice(0, 64);
-    return { ok: true as const, roomCode };
-  });
-
-  if (!result.ok) {
-    const status = result.error === 'ROOM_NOT_FOUND' ? 404 : result.error === 'ROOM_CLOSED' ? 410 : 400;
-    return NextResponse.json(result, { status });
+  if (payload && typeof payload === 'object' && 'newGuest' in payload) {
+    const { newGuest: _, ...rest } = payload as Record<string, unknown>;
+    return NextResponse.json(rest, { status });
   }
 
-  const res = NextResponse.json(result);
-  res.cookies.set(guestCookieName, encodeGuestIdentity(guest), {
-    httpOnly: true,
-    sameSite: 'lax',
-    path: '/',
-    maxAge: 60 * 60 * 24 * 30,
-  });
-  return res;
+  return NextResponse.json(body, { status });
 }
