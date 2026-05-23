@@ -45,6 +45,7 @@ type RoomState = {
   status: 'lobby' | 'playing' | 'ended';
   hostPlayerId: PlayerId;
   createdAtMs: number;
+  closedAtMs?: number;
   config: {
     maxPlayers: number;
     turnTimeMs?: number;
@@ -61,6 +62,8 @@ type RoomState = {
   processedCommandIds: Set<CommandId>;
   lastClientSeqByPlayer: Map<PlayerId, number>;
   pendingDisconnectTimers: Map<PlayerId, NodeJS.Timeout>;
+  emptySinceMs: number | null;
+  pendingCloseTimer: NodeJS.Timeout | null;
   queue: Promise<void>;
   game: null | { gameId: GameId; match: MatchState };
 };
@@ -108,8 +111,22 @@ function createDefaultBoard(): BoardConfig {
 }
 
 function createFullBoard(): BoardConfig {
+  const groupNameById = (groupId: string) => {
+    if (groupId === 'f_g_brown') return '棕色组';
+    if (groupId === 'f_g_lightblue') return '浅蓝组';
+    if (groupId === 'f_g_pink') return '粉色组';
+    if (groupId === 'f_g_orange') return '橙色组';
+    if (groupId === 'f_g_red') return '红色组';
+    if (groupId === 'f_g_yellow') return '黄色组';
+    if (groupId === 'f_g_green') return '绿色组';
+    if (groupId === 'f_g_darkblue') return '深蓝组';
+    if (groupId === 'f_g_rail') return '铁路组';
+    if (groupId === 'f_g_util') return '公用事业组';
+    return groupId;
+  };
   const p = (input: {
     propertyId: string;
+    name: string;
     groupId: string;
     price: number;
     houseCost: number;
@@ -117,7 +134,9 @@ function createFullBoard(): BoardConfig {
   }): BoardConfig['tiles'][number] => ({
     kind: 'property',
     propertyId: input.propertyId,
+    name: input.name,
     groupId: input.groupId,
+    groupName: groupNameById(input.groupId),
     price: input.price,
     houseCost: input.houseCost,
     rents: input.rents,
@@ -126,45 +145,45 @@ function createFullBoard(): BoardConfig {
     jailIndex: 10,
     tiles: [
       { kind: 'start' },
-      p({ propertyId: 'f_p01', groupId: 'f_g_brown', price: 60, houseCost: 50, rents: [2, 10, 30, 90, 160, 250] }),
+      p({ propertyId: 'f_p01', name: '旧金山', groupId: 'f_g_brown', price: 60, houseCost: 50, rents: [2, 10, 30, 90, 160, 250] }),
       { kind: 'communityChest' },
-      p({ propertyId: 'f_p02', groupId: 'f_g_brown', price: 60, houseCost: 50, rents: [4, 20, 60, 180, 320, 450] }),
+      p({ propertyId: 'f_p02', name: '洛杉矶', groupId: 'f_g_brown', price: 60, houseCost: 50, rents: [4, 20, 60, 180, 320, 450] }),
       { kind: 'tax', amount: 200 },
-      p({ propertyId: 'f_p03', groupId: 'f_g_rail', price: 200, houseCost: 100, rents: [25, 50, 100, 200, 350, 500] }),
-      p({ propertyId: 'f_p04', groupId: 'f_g_lightblue', price: 100, houseCost: 50, rents: [6, 30, 90, 270, 400, 550] }),
+      p({ propertyId: 'f_p03', name: '纽约', groupId: 'f_g_rail', price: 200, houseCost: 100, rents: [25, 50, 100, 200, 350, 500] }),
+      p({ propertyId: 'f_p04', name: '多伦多', groupId: 'f_g_lightblue', price: 100, houseCost: 50, rents: [6, 30, 90, 270, 400, 550] }),
       { kind: 'chance' },
-      p({ propertyId: 'f_p05', groupId: 'f_g_lightblue', price: 100, houseCost: 50, rents: [6, 30, 90, 270, 400, 550] }),
-      p({ propertyId: 'f_p06', groupId: 'f_g_lightblue', price: 120, houseCost: 50, rents: [8, 40, 100, 300, 450, 600] }),
+      p({ propertyId: 'f_p05', name: '温哥华', groupId: 'f_g_lightblue', price: 100, houseCost: 50, rents: [6, 30, 90, 270, 400, 550] }),
+      p({ propertyId: 'f_p06', name: '西雅图', groupId: 'f_g_lightblue', price: 120, houseCost: 50, rents: [8, 40, 100, 300, 450, 600] }),
       { kind: 'jail' },
-      p({ propertyId: 'f_p07', groupId: 'f_g_pink', price: 140, houseCost: 100, rents: [10, 50, 150, 450, 625, 750] }),
-      p({ propertyId: 'f_p08', groupId: 'f_g_util', price: 150, houseCost: 100, rents: [10, 20, 30, 40, 50, 60] }),
-      p({ propertyId: 'f_p09', groupId: 'f_g_pink', price: 160, houseCost: 100, rents: [12, 60, 180, 500, 700, 900] }),
-      p({ propertyId: 'f_p10', groupId: 'f_g_pink', price: 180, houseCost: 100, rents: [14, 70, 200, 550, 750, 950] }),
-      p({ propertyId: 'f_p11', groupId: 'f_g_rail', price: 200, houseCost: 100, rents: [25, 50, 100, 200, 350, 500] }),
-      p({ propertyId: 'f_p12', groupId: 'f_g_orange', price: 180, houseCost: 100, rents: [14, 70, 200, 550, 750, 950] }),
+      p({ propertyId: 'f_p07', name: '墨西哥城', groupId: 'f_g_pink', price: 140, houseCost: 100, rents: [10, 50, 150, 450, 625, 750] }),
+      p({ propertyId: 'f_p08', name: '里约热内卢', groupId: 'f_g_util', price: 150, houseCost: 100, rents: [10, 20, 30, 40, 50, 60] }),
+      p({ propertyId: 'f_p09', name: '布宜诺斯艾利斯', groupId: 'f_g_pink', price: 160, houseCost: 100, rents: [12, 60, 180, 500, 700, 900] }),
+      p({ propertyId: 'f_p10', name: '伦敦', groupId: 'f_g_pink', price: 180, houseCost: 100, rents: [14, 70, 200, 550, 750, 950] }),
+      p({ propertyId: 'f_p11', name: '巴黎', groupId: 'f_g_rail', price: 200, houseCost: 100, rents: [25, 50, 100, 200, 350, 500] }),
+      p({ propertyId: 'f_p12', name: '阿姆斯特丹', groupId: 'f_g_orange', price: 180, houseCost: 100, rents: [14, 70, 200, 550, 750, 950] }),
       { kind: 'communityChest' },
-      p({ propertyId: 'f_p13', groupId: 'f_g_orange', price: 200, houseCost: 100, rents: [16, 80, 220, 600, 800, 1000] }),
-      p({ propertyId: 'f_p14', groupId: 'f_g_orange', price: 220, houseCost: 150, rents: [18, 90, 250, 700, 875, 1050] }),
+      p({ propertyId: 'f_p13', name: '柏林', groupId: 'f_g_orange', price: 200, houseCost: 100, rents: [16, 80, 220, 600, 800, 1000] }),
+      p({ propertyId: 'f_p14', name: '罗马', groupId: 'f_g_orange', price: 220, houseCost: 150, rents: [18, 90, 250, 700, 875, 1050] }),
       { kind: 'chance' },
-      p({ propertyId: 'f_p15', groupId: 'f_g_red', price: 220, houseCost: 150, rents: [18, 90, 250, 700, 875, 1050] }),
+      p({ propertyId: 'f_p15', name: '马德里', groupId: 'f_g_red', price: 220, houseCost: 150, rents: [18, 90, 250, 700, 875, 1050] }),
       { kind: 'chance' },
-      p({ propertyId: 'f_p16', groupId: 'f_g_red', price: 240, houseCost: 150, rents: [20, 100, 300, 750, 925, 1100] }),
-      p({ propertyId: 'f_p17', groupId: 'f_g_red', price: 260, houseCost: 150, rents: [22, 110, 330, 800, 975, 1150] }),
-      p({ propertyId: 'f_p18', groupId: 'f_g_rail', price: 200, houseCost: 100, rents: [25, 50, 100, 200, 350, 500] }),
-      p({ propertyId: 'f_p19', groupId: 'f_g_yellow', price: 260, houseCost: 150, rents: [22, 110, 330, 800, 975, 1150] }),
-      p({ propertyId: 'f_p20', groupId: 'f_g_yellow', price: 280, houseCost: 150, rents: [24, 120, 360, 850, 1025, 1200] }),
-      p({ propertyId: 'f_p21', groupId: 'f_g_util', price: 150, houseCost: 100, rents: [10, 20, 30, 40, 50, 60] }),
-      p({ propertyId: 'f_p22', groupId: 'f_g_yellow', price: 300, houseCost: 200, rents: [26, 130, 390, 900, 1100, 1275] }),
+      p({ propertyId: 'f_p16', name: '里斯本', groupId: 'f_g_red', price: 240, houseCost: 150, rents: [20, 100, 300, 750, 925, 1100] }),
+      p({ propertyId: 'f_p17', name: '苏黎世', groupId: 'f_g_red', price: 260, houseCost: 150, rents: [22, 110, 330, 800, 975, 1150] }),
+      p({ propertyId: 'f_p18', name: '斯德哥尔摩', groupId: 'f_g_rail', price: 200, houseCost: 100, rents: [25, 50, 100, 200, 350, 500] }),
+      p({ propertyId: 'f_p19', name: '赫尔辛基', groupId: 'f_g_yellow', price: 260, houseCost: 150, rents: [22, 110, 330, 800, 975, 1150] }),
+      p({ propertyId: 'f_p20', name: '莫斯科', groupId: 'f_g_yellow', price: 280, houseCost: 150, rents: [24, 120, 360, 850, 1025, 1200] }),
+      p({ propertyId: 'f_p21', name: '伊斯坦布尔', groupId: 'f_g_util', price: 150, houseCost: 100, rents: [10, 20, 30, 40, 50, 60] }),
+      p({ propertyId: 'f_p22', name: '迪拜', groupId: 'f_g_yellow', price: 300, houseCost: 200, rents: [26, 130, 390, 900, 1100, 1275] }),
       { kind: 'goToJail' },
-      p({ propertyId: 'f_p23', groupId: 'f_g_green', price: 300, houseCost: 200, rents: [26, 130, 390, 900, 1100, 1275] }),
-      p({ propertyId: 'f_p24', groupId: 'f_g_green', price: 320, houseCost: 200, rents: [28, 150, 450, 1000, 1200, 1400] }),
+      p({ propertyId: 'f_p23', name: '开罗', groupId: 'f_g_green', price: 300, houseCost: 200, rents: [26, 130, 390, 900, 1100, 1275] }),
+      p({ propertyId: 'f_p24', name: '内罗毕', groupId: 'f_g_green', price: 320, houseCost: 200, rents: [28, 150, 450, 1000, 1200, 1400] }),
       { kind: 'communityChest' },
-      p({ propertyId: 'f_p25', groupId: 'f_g_green', price: 350, houseCost: 200, rents: [35, 175, 500, 1100, 1300, 1500] }),
-      p({ propertyId: 'f_p26', groupId: 'f_g_rail', price: 200, houseCost: 100, rents: [25, 50, 100, 200, 350, 500] }),
+      p({ propertyId: 'f_p25', name: '约翰内斯堡', groupId: 'f_g_green', price: 350, houseCost: 200, rents: [35, 175, 500, 1100, 1300, 1500] }),
+      p({ propertyId: 'f_p26', name: '新德里', groupId: 'f_g_rail', price: 200, houseCost: 100, rents: [25, 50, 100, 200, 350, 500] }),
       { kind: 'chance' },
-      p({ propertyId: 'f_p27', groupId: 'f_g_darkblue', price: 350, houseCost: 200, rents: [35, 175, 500, 1100, 1300, 1500] }),
+      p({ propertyId: 'f_p27', name: '北京', groupId: 'f_g_darkblue', price: 350, houseCost: 200, rents: [35, 175, 500, 1100, 1300, 1500] }),
       { kind: 'tax', amount: 100 },
-      p({ propertyId: 'f_p28', groupId: 'f_g_darkblue', price: 400, houseCost: 200, rents: [50, 200, 600, 1400, 1700, 2000] }),
+      p({ propertyId: 'f_p28', name: '东京', groupId: 'f_g_darkblue', price: 400, houseCost: 200, rents: [50, 200, 600, 1400, 1700, 2000] }),
     ],
   };
 }
@@ -227,7 +246,10 @@ export async function startServer(options: StartServerOptions = {}): Promise<Run
 
   const roomsByCode = new Map<RoomCode, RoomState>();
   const roomsById = new Map<RoomId, RoomState>();
+  const closedRoomCodes = new Map<RoomCode, number>();
   const connections = new WeakMap<WebSocket, ConnectionState>();
+  const roomAutoCloseMs = 3 * 60_000;
+  const closedRoomTtlMs = 30 * 24 * 60 * 60_000;
 
   function nowMs() {
     return Date.now();
@@ -286,6 +308,7 @@ export async function startServer(options: StartServerOptions = {}): Promise<Run
         status: room.status,
         hostPlayerId: room.hostPlayerId,
         createdAtMs: room.createdAtMs,
+        ...(room.closedAtMs ? { closedAtMs: room.closedAtMs } : {}),
         config: room.config,
         members,
       },
@@ -312,6 +335,8 @@ export async function startServer(options: StartServerOptions = {}): Promise<Run
       processedCommandIds: new Set(),
       lastClientSeqByPlayer: new Map(),
       pendingDisconnectTimers: new Map(),
+      emptySinceMs: null,
+      pendingCloseTimer: null,
       queue: Promise.resolve(),
       game: null,
     };
@@ -320,7 +345,55 @@ export async function startServer(options: StartServerOptions = {}): Promise<Run
     return room;
   }
 
+  function purgeClosedRoomCodes() {
+    const now = nowMs();
+    for (const [code, closedAtMs] of closedRoomCodes) {
+      if (now - closedAtMs > closedRoomTtlMs) closedRoomCodes.delete(code);
+    }
+  }
+
+  function cancelRoomAutoClose(room: RoomState) {
+    if (room.pendingCloseTimer) clearTimeout(room.pendingCloseTimer);
+    room.pendingCloseTimer = null;
+    room.emptySinceMs = null;
+  }
+
+  function closeRoom(room: RoomState) {
+    if (room.closedAtMs) return;
+    room.closedAtMs = nowMs();
+    closedRoomCodes.set(room.roomCode, room.closedAtMs);
+    cancelRoomAutoClose(room);
+    for (const timer of room.pendingDisconnectTimers.values()) clearTimeout(timer);
+    for (const ws of room.sockets) closeSocket(ws, 4001, 'room_closed');
+    roomsByCode.delete(room.roomCode);
+    roomsById.delete(room.roomId);
+  }
+
+  function scheduleRoomAutoClose(room: RoomState) {
+    if (room.closedAtMs) return;
+    if (room.members.size !== 0) return;
+    if (!room.emptySinceMs) room.emptySinceMs = nowMs();
+    if (room.pendingCloseTimer) return;
+    room.pendingCloseTimer = setTimeout(() => {
+      const r = roomsById.get(room.roomId);
+      if (!r) return;
+      if (r.members.size !== 0) {
+        cancelRoomAutoClose(r);
+        return;
+      }
+      closeRoom(r);
+    }, roomAutoCloseMs);
+  }
+
+  function updateRoomAutoClose(room: RoomState) {
+    if (room.members.size === 0) scheduleRoomAutoClose(room);
+    else cancelRoomAutoClose(room);
+  }
+
   function ensureRoom(roomCode: RoomCode) {
+    purgeClosedRoomCodes();
+    const closedAt = closedRoomCodes.get(roomCode);
+    if (closedAt && nowMs() - closedAt <= closedRoomTtlMs) return null;
     return roomsByCode.get(roomCode) ?? createRoom(roomCode);
   }
 
@@ -358,6 +431,7 @@ export async function startServer(options: StartServerOptions = {}): Promise<Run
       fromSeqExclusive: base.seq - 1,
       events: [e],
     });
+    broadcast(room, { kind: 'snapshot', snapshot: buildSnapshot(room) });
 
     const existing = room.pendingDisconnectTimers.get(playerId);
     if (existing) clearTimeout(existing);
@@ -370,6 +444,12 @@ export async function startServer(options: StartServerOptions = {}): Promise<Run
       r.lastClientSeqByPlayer.delete(playerId);
       r.pendingDisconnectTimers.delete(playerId);
 
+      if (r.hostPlayerId === playerId && r.members.size > 0) {
+        const ordered = [...r.members.values()].sort((a, b) => a.joinedAtMs - b.joinedAtMs);
+        const nextHost = ordered.find((x) => !x.isSpectator)?.playerId ?? ordered[0]!.playerId;
+        r.hostPlayerId = nextHost;
+      }
+
       const base2 = allocEventBase(r, { causedBy: { playerId } });
       const left: Event = { ...base2, type: 'room/playerLeft', playerId };
       appendEvents(r, [left]);
@@ -380,11 +460,9 @@ export async function startServer(options: StartServerOptions = {}): Promise<Run
         fromSeqExclusive: base2.seq - 1,
         events: [left],
       });
+      broadcast(r, { kind: 'snapshot', snapshot: buildSnapshot(r) });
 
-      if (r.members.size === 0) {
-        roomsByCode.delete(r.roomCode);
-        roomsById.delete(r.roomId);
-      }
+      updateRoomAutoClose(r);
     }, reconnectWindowMs);
     room.pendingDisconnectTimers.set(playerId, timer);
   }
@@ -448,6 +526,12 @@ export async function startServer(options: StartServerOptions = {}): Promise<Run
       if (t) clearTimeout(t);
       room.pendingDisconnectTimers.delete(conn.playerId);
 
+      if (room.hostPlayerId === conn.playerId && room.members.size > 0) {
+        const ordered = [...room.members.values()].sort((a, b) => a.joinedAtMs - b.joinedAtMs);
+        const nextHost = ordered.find((x) => !x.isSpectator)?.playerId ?? ordered[0]!.playerId;
+        room.hostPlayerId = nextHost;
+      }
+
       if (existed) {
         const base = allocEventBase(room, { causedBy: { commandId, playerId: conn.playerId } });
         const left: Event = { ...base, type: 'room/playerLeft', playerId: conn.playerId };
@@ -461,6 +545,8 @@ export async function startServer(options: StartServerOptions = {}): Promise<Run
         });
       }
 
+      updateRoomAutoClose(room);
+      broadcast(room, { kind: 'snapshot', snapshot: buildSnapshot(room) });
       room.processedCommandIds.add(commandId);
       closeSocket(ws, 1000, 'left');
       return;
@@ -485,6 +571,38 @@ export async function startServer(options: StartServerOptions = {}): Promise<Run
         kind: 'events',
         roomId: room.roomId,
         gameId: null,
+        fromSeqExclusive: base.seq - 1,
+        events: [e],
+      });
+      broadcast(room, { kind: 'snapshot', snapshot: buildSnapshot(room) });
+      commitClientSeq();
+      room.processedCommandIds.add(commandId);
+      return;
+    }
+
+    if (command.type === 'room/sendChat') {
+      requireInRoom();
+      requireClientSeq();
+      requireSelfPlayer(command.playerId);
+      if (command.roomId !== room.roomId)
+        throw createProtocolError({ code: ErrorCode.ROOM_NOT_FOUND, message: 'roomId 不匹配', commandId });
+      const member = room.members.get(command.playerId);
+      if (!member)
+        throw createProtocolError({ code: ErrorCode.NOT_IN_ROOM, message: '玩家不在房间中', commandId });
+
+      const base = allocEventBase(room, { causedBy: { commandId, playerId: command.playerId } });
+      const e: Event = {
+        ...base,
+        type: 'room/chatMessage',
+        fromPlayerId: command.playerId,
+        text: command.text,
+        ...(command.toPlayerId ? { toPlayerId: command.toPlayerId } : {}),
+      };
+      appendEvents(room, [e]);
+      broadcast(room, {
+        kind: 'events',
+        roomId: room.roomId,
+        gameId: room.game?.gameId ?? null,
         fromSeqExclusive: base.seq - 1,
         events: [e],
       });
@@ -539,7 +657,8 @@ export async function startServer(options: StartServerOptions = {}): Promise<Run
       requireNotSpectator();
       if (command.roomId !== room.roomId)
         throw createProtocolError({ code: ErrorCode.ROOM_NOT_FOUND, message: 'roomId 不匹配', commandId });
-      if (room.game) throw createProtocolError({ code: ErrorCode.GAME_ALREADY_STARTED, message: '对局已开始', commandId });
+      if (room.game && room.game.match.game.status !== 'ended')
+        throw createProtocolError({ code: ErrorCode.GAME_ALREADY_STARTED, message: '对局已开始', commandId });
       if (room.hostPlayerId !== command.playerId)
         throw createProtocolError({ code: ErrorCode.NOT_HOST, message: '仅房主可开局', commandId });
 
@@ -604,6 +723,12 @@ export async function startServer(options: StartServerOptions = {}): Promise<Run
 
       const r = handleCommand(room.game.match, command, nowMs());
       room.game.match = r.state;
+      if (r.state.game.status === 'ended') {
+        room.status = 'lobby';
+        for (const m of room.members.values()) {
+          if (!m.isSpectator) m.ready = false;
+        }
+      }
 
       const fromSeqExclusive = room.lastEventSeq;
       const normalized = r.events.map((e) => {
@@ -650,6 +775,12 @@ export async function startServer(options: StartServerOptions = {}): Promise<Run
 
       const r = handleCommand(room.game.match, command, nowMs());
       room.game.match = r.state;
+      if (r.state.game.status === 'ended') {
+        room.status = 'lobby';
+        for (const m of room.members.values()) {
+          if (!m.isSpectator) m.ready = false;
+        }
+      }
 
       const fromSeqExclusive = room.lastEventSeq;
       const normalized = r.events.map((e) => {
@@ -685,6 +816,10 @@ export async function startServer(options: StartServerOptions = {}): Promise<Run
     }
 
     const room = ensureRoom(roomCode);
+    if (!room) {
+      sendError(ws, createProtocolError({ code: ErrorCode.ROOM_NOT_FOUND, message: '房间已关闭', commandId: command.commandId }));
+      return;
+    }
     if (room.processedCommandIds.has(command.commandId)) {
       sendError(ws, createProtocolError({ code: ErrorCode.DUPLICATE_COMMAND, message: '重复指令', commandId: command.commandId }));
       return;
@@ -766,12 +901,14 @@ export async function startServer(options: StartServerOptions = {}): Promise<Run
       });
     }
 
+    updateRoomAutoClose(room);
+
     conn.roomId = room.roomId;
     conn.playerId = playerId;
     room.sockets.add(ws);
     room.playerToSocket.set(playerId, ws);
 
-    send(ws, { kind: 'snapshot', snapshot: buildSnapshot(room) });
+    broadcast(room, { kind: 'snapshot', snapshot: buildSnapshot(room) });
 
     const resume = command.resumeFromSeqExclusive ?? null;
     if (resume !== null) {
@@ -887,6 +1024,7 @@ export async function startServer(options: StartServerOptions = {}): Promise<Run
     close: async () => {
       for (const room of roomsById.values()) {
         for (const timer of room.pendingDisconnectTimers.values()) clearTimeout(timer);
+        if (room.pendingCloseTimer) clearTimeout(room.pendingCloseTimer);
       }
       await new Promise<void>((resolve) => {
         wss.close(() => resolve());

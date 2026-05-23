@@ -1,0 +1,6 @@
+- [x] 棋盘右侧存在“事件时间轴”面板，玩家与观战者均可见
+- [x] 时间轴按时间顺序展示，且保留最近 N 条（默认 50）
+- [x] `game/playerMoved` 能显示为“某某 从 #x 到 #y（名称）”形式
+- [x] `game/moneyChanged` 能显示金额与原因，并对 buy/auction/rent/build 等 reason 做可读化
+- [x] `game/engine property/bought` 能显示“某某 购买 地产名 价格 …”，且不与 moneyChanged 产生明显重复噪音
+- [x] 两个客户端加入同一房间时，看到的时间轴条目集合与顺序一致

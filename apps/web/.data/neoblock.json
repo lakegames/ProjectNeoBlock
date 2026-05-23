@@ -3,131 +3,51 @@
     "54568547": {
       "id": "54568547",
       "displayName": "Kailun",
-      "createdAt": "2026-05-21T04:45:14.181Z",
-      "updatedAt": "2026-05-22T19:24:47.687Z",
       "githubAvatarUrl": "https://avatars.githubusercontent.com/u/54568547?v=4",
+      "customAvatarDataUrl": null,
       "customAvatarMime": null,
       "avatarUpdatedAt": null,
-      "customAvatarDataUrl": null
+      "createdAt": "2026-05-23T13:12:18.774Z",
+      "updatedAt": "2026-05-23T13:12:18.774Z"
     },
-    "dev:OpenAI": {
-      "id": "dev:OpenAI",
-      "displayName": "OpenAI",
-      "createdAt": "2026-05-20T16:29:36.355Z",
-      "updatedAt": "2026-05-20T16:29:36.355Z"
-    },
-    "dev:Something": {
-      "id": "dev:Something",
-      "displayName": "Something",
-      "createdAt": "2026-05-21T04:58:53.482Z",
-      "updatedAt": "2026-05-21T04:58:53.482Z"
+    "dev:open": {
+      "id": "dev:open",
+      "displayName": "open",
+      "githubAvatarUrl": null,
+      "customAvatarDataUrl": null,
+      "customAvatarMime": null,
+      "avatarUpdatedAt": null,
+      "createdAt": "2026-05-23T13:23:14.739Z",
+      "updatedAt": "2026-05-23T13:23:14.739Z"
     }
   },
-  "invites": {
-    "QLJLF7P5": {
-      "code": "QLJLF7P5",
-      "inviterId": "dev:OpenAI",
-      "createdAt": "2026-05-20T16:18:10.691Z"
-    },
-    "DB4U8G4P": {
-      "code": "DB4U8G4P",
-      "inviterId": "54568547",
-      "createdAt": "2026-05-21T04:56:56.046Z"
-    },
-    "KY9KN8DF": {
-      "code": "KY9KN8DF",
-      "inviterId": "54568547",
-      "createdAt": "2026-05-21T04:57:01.704Z",
-      "usedBy": "dev:KaiMimo",
-      "usedAt": "2026-05-21T04:58:18.192Z"
-    },
-    "Y8PXJRGA": {
-      "code": "Y8PXJRGA",
-      "inviterId": "54568547",
-      "createdAt": "2026-05-21T04:58:26.360Z",
-      "usedBy": "dev:Something",
-      "usedAt": "2026-05-21T04:58:33.073Z"
-    },
-    "5DE2UCFC": {
-      "code": "5DE2UCFC",
-      "inviterId": "54568547",
-      "createdAt": "2026-05-21T04:58:34.698Z",
-      "usedBy": "dev:Gugu",
-      "usedAt": "2026-05-21T04:58:38.440Z"
-    }
-  },
-  "friends": {
-    "54568547": [
-      "dev:KaiMimo",
-      "dev:Something",
-      "dev:Gugu"
-    ],
-    "dev:KaiMimo": [
-      "54568547"
-    ],
-    "dev:Something": [
-      "54568547"
-    ],
-    "dev:Gugu": [
-      "54568547"
-    ]
-  },
+  "invites": {},
+  "friends": {},
   "rooms": {
-    "3ABT9B": {
-      "code": "3ABT9B",
-      "roomId": "room:3ABT9B",
-      "status": "lobby",
-      "hostPlayerId": "guest:e71a5b0c-3f7a-42db-8225-faa59ef9abf7",
-      "createdAtMs": 1779481991535,
-      "config": {
-        "maxPlayers": 4,
-        "turnTimeSec": 60,
-        "enableAuto": false,
-        "enableAI": false,
-        "rulesetVersionId": "v1779275289236_06966527",
-        "boardVersionId": "v1779480856928_4efe63fa",
-        "cardsVersionId": "v1779275289236_620b07a6"
-      },
-      "members": [
-        {
-          "playerId": "guest:e71a5b0c-3f7a-42db-8225-faa59ef9abf7",
-          "displayName": "AAA",
-          "isSpectator": false,
-          "ready": false,
-          "joinedAtMs": 1779482208075
-        },
-        {
-          "playerId": "user:54568547",
-          "userId": "54568547",
-          "displayName": "Kailun",
-          "isSpectator": false,
-          "ready": false,
-          "joinedAtMs": 1779481991535
-        }
-      ]
-    },
-    "WJS9F6": {
-      "code": "WJS9F6",
-      "roomId": "room:WJS9F6",
+    "52AN3T": {
+      "code": "52AN3T",
+      "roomId": "room:52AN3T",
       "status": "lobby",
       "hostPlayerId": "user:54568547",
-      "createdAtMs": 1779482874675,
+      "createdAtMs": 1779542723752,
       "config": {
         "maxPlayers": 4,
         "turnTimeSec": 60,
         "enableAuto": false,
         "enableAI": false,
-        "rulesetVersionId": "v1779275289236_06966527",
-        "boardVersionId": "v1779480856928_4efe63fa",
-        "cardsVersionId": "v1779275289236_620b07a6"
+        "templateVersionId": "v1779541920448_1439b6a8",
+        "rulesetVersionId": "v1779541920448_f61f483f",
+        "boardVersionId": "v1779541920448_09d287e1",
+        "cardsVersionId": "v1779541920448_f3d5925f"
       },
       "members": [
         {
-          "playerId": "guest:fcb1552e-829e-4b6d-9aae-e057de8baf3e",
-          "displayName": "AAAAAAAA",
+          "playerId": "user:dev:open",
+          "userId": "dev:open",
+          "displayName": "open",
           "isSpectator": false,
           "ready": false,
-          "joinedAtMs": 1779482890457
+          "joinedAtMs": 1779542732957
         },
         {
           "playerId": "user:54568547",
@@ -135,30 +55,66 @@
           "displayName": "Kailun",
           "isSpectator": false,
           "ready": false,
-          "joinedAtMs": 1779482874675
+          "joinedAtMs": 1779542723752
+        }
+      ]
+    },
+    "2YR7RY": {
+      "code": "2YR7RY",
+      "roomId": "room:2YR7RY",
+      "status": "lobby",
+      "hostPlayerId": "user:dev:open",
+      "createdAtMs": 1779545133782,
+      "config": {
+        "maxPlayers": 4,
+        "turnTimeSec": 60,
+        "enableAuto": false,
+        "enableAI": false,
+        "templateVersionId": "v1779541920448_1439b6a8",
+        "rulesetVersionId": "v1779541920448_f61f483f",
+        "boardVersionId": "v1779541920448_09d287e1",
+        "cardsVersionId": "v1779541920448_f3d5925f"
+      },
+      "members": [
+        {
+          "playerId": "user:54568547",
+          "userId": "54568547",
+          "displayName": "Kailun",
+          "isSpectator": false,
+          "ready": false,
+          "joinedAtMs": 1779545138464
+        },
+        {
+          "playerId": "user:dev:open",
+          "userId": "dev:open",
+          "displayName": "open",
+          "isSpectator": false,
+          "ready": false,
+          "joinedAtMs": 1779545133782
         }
       ]
     }
   },
+  "matchRecords": [],
   "configDocs": {
     "builtin:rules": {
       "docId": "builtin:rules",
       "kind": "rules",
       "name": "默认规则",
-      "createdAtMs": 1779275289236,
-      "updatedAtMs": 1779275289236,
-      "publishedVersionId": "v1779275289236_06966527",
-      "draftVersionId": "v1779275289236",
+      "createdAtMs": 1779541920448,
+      "updatedAtMs": 1779541920448,
+      "publishedVersionId": "v1779541920448_f61f483f",
+      "draftVersionId": "v1779541920448",
       "versionIds": [
-        "v1779275289236",
-        "v1779275289236_06966527"
+        "v1779541920448",
+        "v1779541920448_f61f483f"
       ],
       "versions": {
-        "v1779275289236": {
-          "versionId": "v1779275289236",
+        "v1779541920448": {
+          "versionId": "v1779541920448",
           "status": "draft",
-          "createdAtMs": 1779275289236,
-          "updatedAtMs": 1779275289236,
+          "createdAtMs": 1779541920448,
+          "updatedAtMs": 1779541920448,
           "data": {
             "initialCash": 1500,
             "startSalary": 200,
@@ -168,11 +124,11 @@
             "bankHotels": 12
           }
         },
-        "v1779275289236_06966527": {
-          "versionId": "v1779275289236_06966527",
+        "v1779541920448_f61f483f": {
+          "versionId": "v1779541920448_f61f483f",
           "status": "published",
-          "createdAtMs": 1779275289236,
-          "updatedAtMs": 1779275289236,
+          "createdAtMs": 1779541920448,
+          "updatedAtMs": 1779541920448,
           "data": {
             "initialCash": 1500,
             "startSalary": 200,
@@ -181,7 +137,7 @@
             "bankHouses": 32,
             "bankHotels": 12
           },
-          "baseVersionId": "v1779275289236",
+          "baseVersionId": "v1779541920448",
           "note": "seed"
         }
       }
@@ -190,20 +146,20 @@
       "docId": "builtin:board",
       "kind": "board",
       "name": "默认棋盘",
-      "createdAtMs": 1779275289236,
-      "updatedAtMs": 1779275289236,
-      "publishedVersionId": "v1779275289236_d0a29ffb",
-      "draftVersionId": "v1779275289236",
+      "createdAtMs": 1779541920448,
+      "updatedAtMs": 1779541920448,
+      "publishedVersionId": "v1779541920448_1a66d655",
+      "draftVersionId": "v1779541920448",
       "versionIds": [
-        "v1779275289236",
-        "v1779275289236_d0a29ffb"
+        "v1779541920448",
+        "v1779541920448_1a66d655"
       ],
       "versions": {
-        "v1779275289236": {
-          "versionId": "v1779275289236",
+        "v1779541920448": {
+          "versionId": "v1779541920448",
           "status": "draft",
-          "createdAtMs": 1779275289236,
-          "updatedAtMs": 1779275289236,
+          "createdAtMs": 1779541920448,
+          "updatedAtMs": 1779541920448,
           "data": {
             "jailIndex": 6,
             "tiles": [
@@ -304,11 +260,11 @@
             ]
           }
         },
-        "v1779275289236_d0a29ffb": {
-          "versionId": "v1779275289236_d0a29ffb",
+        "v1779541920448_1a66d655": {
+          "versionId": "v1779541920448_1a66d655",
           "status": "published",
-          "createdAtMs": 1779275289236,
-          "updatedAtMs": 1779275289236,
+          "createdAtMs": 1779541920448,
+          "updatedAtMs": 1779541920448,
           "data": {
             "tiles": [
               {
@@ -408,7 +364,7 @@
             ],
             "jailIndex": 6
           },
-          "baseVersionId": "v1779275289236",
+          "baseVersionId": "v1779541920448",
           "note": "seed"
         }
       }
@@ -417,20 +373,20 @@
       "docId": "builtin:cards",
       "kind": "cards",
       "name": "默认卡牌",
-      "createdAtMs": 1779275289236,
-      "updatedAtMs": 1779275289236,
-      "publishedVersionId": "v1779275289236_620b07a6",
-      "draftVersionId": "v1779275289236",
+      "createdAtMs": 1779541920448,
+      "updatedAtMs": 1779541920448,
+      "publishedVersionId": "v1779541920448_f3d5925f",
+      "draftVersionId": "v1779541920448",
       "versionIds": [
-        "v1779275289236",
-        "v1779275289236_620b07a6"
+        "v1779541920448",
+        "v1779541920448_f3d5925f"
       ],
       "versions": {
-        "v1779275289236": {
-          "versionId": "v1779275289236",
+        "v1779541920448": {
+          "versionId": "v1779541920448",
           "status": "draft",
-          "createdAtMs": 1779275289236,
-          "updatedAtMs": 1779275289236,
+          "createdAtMs": 1779541920448,
+          "updatedAtMs": 1779541920448,
           "data": {
             "cards": [
               {
@@ -471,11 +427,11 @@
             ]
           }
         },
-        "v1779275289236_620b07a6": {
-          "versionId": "v1779275289236_620b07a6",
+        "v1779541920448_f3d5925f": {
+          "versionId": "v1779541920448_f3d5925f",
           "status": "published",
-          "createdAtMs": 1779275289236,
-          "updatedAtMs": 1779275289236,
+          "createdAtMs": 1779541920448,
+          "updatedAtMs": 1779541920448,
           "data": {
             "cards": [
               {
@@ -515,7 +471,7 @@
               }
             ]
           },
-          "baseVersionId": "v1779275289236",
+          "baseVersionId": "v1779541920448",
           "note": "seed"
         }
       }
@@ -524,20 +480,20 @@
       "docId": "builtin:board-full",
       "kind": "board",
       "name": "标准 40 格（测试）",
-      "createdAtMs": 1779480856928,
-      "updatedAtMs": 1779480856928,
-      "publishedVersionId": "v1779480856928_4efe63fa",
-      "draftVersionId": "v1779480856928",
+      "createdAtMs": 1779541920448,
+      "updatedAtMs": 1779541920448,
+      "publishedVersionId": "v1779541920448_09d287e1",
+      "draftVersionId": "v1779541920448",
       "versionIds": [
-        "v1779480856928",
-        "v1779480856928_4efe63fa"
+        "v1779541920448",
+        "v1779541920448_09d287e1"
       ],
       "versions": {
-        "v1779480856928": {
-          "versionId": "v1779480856928",
+        "v1779541920448": {
+          "versionId": "v1779541920448",
           "status": "draft",
-          "createdAtMs": 1779480856928,
-          "updatedAtMs": 1779480856928,
+          "createdAtMs": 1779541920448,
+          "updatedAtMs": 1779541920448,
           "data": {
             "jailIndex": 10,
             "tiles": [
@@ -547,6 +503,7 @@
               {
                 "kind": "property",
                 "propertyId": "f_p01",
+                "name": "旧金山",
                 "groupId": "f_g_brown",
                 "price": 60,
                 "houseCost": 50,
@@ -565,6 +522,7 @@
               {
                 "kind": "property",
                 "propertyId": "f_p02",
+                "name": "洛杉矶",
                 "groupId": "f_g_brown",
                 "price": 60,
                 "houseCost": 50,
@@ -584,6 +542,7 @@
               {
                 "kind": "property",
                 "propertyId": "f_p03",
+                "name": "纽约",
                 "groupId": "f_g_rail",
                 "price": 200,
                 "houseCost": 100,
@@ -599,6 +558,7 @@
               {
                 "kind": "property",
                 "propertyId": "f_p04",
+                "name": "多伦多",
                 "groupId": "f_g_lightblue",
                 "price": 100,
                 "houseCost": 50,
@@ -617,6 +577,7 @@
               {
                 "kind": "property",
                 "propertyId": "f_p05",
+                "name": "温哥华",
                 "groupId": "f_g_lightblue",
                 "price": 100,
                 "houseCost": 50,
@@ -632,6 +593,7 @@
               {
                 "kind": "property",
                 "propertyId": "f_p06",
+                "name": "西雅图",
                 "groupId": "f_g_lightblue",
                 "price": 120,
                 "houseCost": 50,
@@ -650,6 +612,7 @@
               {
                 "kind": "property",
                 "propertyId": "f_p07",
+                "name": "墨西哥城",
                 "groupId": "f_g_pink",
                 "price": 140,
                 "houseCost": 100,
@@ -665,6 +628,7 @@
               {
                 "kind": "property",
                 "propertyId": "f_p08",
+                "name": "里约热内卢",
                 "groupId": "f_g_util",
                 "price": 150,
                 "houseCost": 100,
@@ -680,6 +644,7 @@
               {
                 "kind": "property",
                 "propertyId": "f_p09",
+                "name": "布宜诺斯艾利斯",
                 "groupId": "f_g_pink",
                 "price": 160,
                 "houseCost": 100,
@@ -695,6 +660,7 @@
               {
                 "kind": "property",
                 "propertyId": "f_p10",
+                "name": "伦敦",
                 "groupId": "f_g_pink",
                 "price": 180,
                 "houseCost": 100,
@@ -710,6 +676,7 @@
               {
                 "kind": "property",
                 "propertyId": "f_p11",
+                "name": "巴黎",
                 "groupId": "f_g_rail",
                 "price": 200,
                 "houseCost": 100,
@@ -725,6 +692,7 @@
               {
                 "kind": "property",
                 "propertyId": "f_p12",
+                "name": "阿姆斯特丹",
                 "groupId": "f_g_orange",
                 "price": 180,
                 "houseCost": 100,
@@ -743,6 +711,7 @@
               {
                 "kind": "property",
                 "propertyId": "f_p13",
+                "name": "柏林",
                 "groupId": "f_g_orange",
                 "price": 200,
                 "houseCost": 100,
@@ -758,6 +727,7 @@
               {
                 "kind": "property",
                 "propertyId": "f_p14",
+                "name": "罗马",
                 "groupId": "f_g_orange",
                 "price": 220,
                 "houseCost": 150,
@@ -776,6 +746,7 @@
               {
                 "kind": "property",
                 "propertyId": "f_p15",
+                "name": "马德里",
                 "groupId": "f_g_red",
                 "price": 220,
                 "houseCost": 150,
@@ -794,6 +765,7 @@
               {
                 "kind": "property",
                 "propertyId": "f_p16",
+                "name": "里斯本",
                 "groupId": "f_g_red",
                 "price": 240,
                 "houseCost": 150,
@@ -809,6 +781,7 @@
               {
                 "kind": "property",
                 "propertyId": "f_p17",
+                "name": "苏黎世",
                 "groupId": "f_g_red",
                 "price": 260,
                 "houseCost": 150,
@@ -824,6 +797,7 @@
               {
                 "kind": "property",
                 "propertyId": "f_p18",
+                "name": "斯德哥尔摩",
                 "groupId": "f_g_rail",
                 "price": 200,
                 "houseCost": 100,
@@ -839,6 +813,7 @@
               {
                 "kind": "property",
                 "propertyId": "f_p19",
+                "name": "赫尔辛基",
                 "groupId": "f_g_yellow",
                 "price": 260,
                 "houseCost": 150,
@@ -854,6 +829,7 @@
               {
                 "kind": "property",
                 "propertyId": "f_p20",
+                "name": "莫斯科",
                 "groupId": "f_g_yellow",
                 "price": 280,
                 "houseCost": 150,
@@ -869,6 +845,7 @@
               {
                 "kind": "property",
                 "propertyId": "f_p21",
+                "name": "伊斯坦布尔",
                 "groupId": "f_g_util",
                 "price": 150,
                 "houseCost": 100,
@@ -884,6 +861,7 @@
               {
                 "kind": "property",
                 "propertyId": "f_p22",
+                "name": "迪拜",
                 "groupId": "f_g_yellow",
                 "price": 300,
                 "houseCost": 200,
@@ -902,6 +880,7 @@
               {
                 "kind": "property",
                 "propertyId": "f_p23",
+                "name": "开罗",
                 "groupId": "f_g_green",
                 "price": 300,
                 "houseCost": 200,
@@ -917,6 +896,7 @@
               {
                 "kind": "property",
                 "propertyId": "f_p24",
+                "name": "内罗毕",
                 "groupId": "f_g_green",
                 "price": 320,
                 "houseCost": 200,
@@ -935,6 +915,7 @@
               {
                 "kind": "property",
                 "propertyId": "f_p25",
+                "name": "约翰内斯堡",
                 "groupId": "f_g_green",
                 "price": 350,
                 "houseCost": 200,
@@ -950,6 +931,7 @@
               {
                 "kind": "property",
                 "propertyId": "f_p26",
+                "name": "新德里",
                 "groupId": "f_g_rail",
                 "price": 200,
                 "houseCost": 100,
@@ -968,6 +950,7 @@
               {
                 "kind": "property",
                 "propertyId": "f_p27",
+                "name": "北京",
                 "groupId": "f_g_darkblue",
                 "price": 350,
                 "houseCost": 200,
@@ -987,6 +970,7 @@
               {
                 "kind": "property",
                 "propertyId": "f_p28",
+                "name": "东京",
                 "groupId": "f_g_darkblue",
                 "price": 400,
                 "houseCost": 200,
@@ -1002,11 +986,11 @@
             ]
           }
         },
-        "v1779480856928_4efe63fa": {
-          "versionId": "v1779480856928_4efe63fa",
+        "v1779541920448_09d287e1": {
+          "versionId": "v1779541920448_09d287e1",
           "status": "published",
-          "createdAtMs": 1779480856928,
-          "updatedAtMs": 1779480856928,
+          "createdAtMs": 1779541920448,
+          "updatedAtMs": 1779541920448,
           "data": {
             "tiles": [
               {
@@ -1015,6 +999,7 @@
               {
                 "kind": "property",
                 "propertyId": "f_p01",
+                "name": "旧金山",
                 "groupId": "f_g_brown",
                 "price": 60,
                 "houseCost": 50,
@@ -1033,6 +1018,7 @@
               {
                 "kind": "property",
                 "propertyId": "f_p02",
+                "name": "洛杉矶",
                 "groupId": "f_g_brown",
                 "price": 60,
                 "houseCost": 50,
@@ -1052,6 +1038,7 @@
               {
                 "kind": "property",
                 "propertyId": "f_p03",
+                "name": "纽约",
                 "groupId": "f_g_rail",
                 "price": 200,
                 "houseCost": 100,
@@ -1067,6 +1054,7 @@
               {
                 "kind": "property",
                 "propertyId": "f_p04",
+                "name": "多伦多",
                 "groupId": "f_g_lightblue",
                 "price": 100,
                 "houseCost": 50,
@@ -1085,6 +1073,7 @@
               {
                 "kind": "property",
                 "propertyId": "f_p05",
+                "name": "温哥华",
                 "groupId": "f_g_lightblue",
                 "price": 100,
                 "houseCost": 50,
@@ -1100,6 +1089,7 @@
               {
                 "kind": "property",
                 "propertyId": "f_p06",
+                "name": "西雅图",
                 "groupId": "f_g_lightblue",
                 "price": 120,
                 "houseCost": 50,
@@ -1118,6 +1108,7 @@
               {
                 "kind": "property",
                 "propertyId": "f_p07",
+                "name": "墨西哥城",
                 "groupId": "f_g_pink",
                 "price": 140,
                 "houseCost": 100,
@@ -1133,6 +1124,7 @@
               {
                 "kind": "property",
                 "propertyId": "f_p08",
+                "name": "里约热内卢",
                 "groupId": "f_g_util",
                 "price": 150,
                 "houseCost": 100,
@@ -1148,6 +1140,7 @@
               {
                 "kind": "property",
                 "propertyId": "f_p09",
+                "name": "布宜诺斯艾利斯",
                 "groupId": "f_g_pink",
                 "price": 160,
                 "houseCost": 100,
@@ -1163,6 +1156,7 @@
               {
                 "kind": "property",
                 "propertyId": "f_p10",
+                "name": "伦敦",
                 "groupId": "f_g_pink",
                 "price": 180,
                 "houseCost": 100,
@@ -1178,6 +1172,7 @@
               {
                 "kind": "property",
                 "propertyId": "f_p11",
+                "name": "巴黎",
                 "groupId": "f_g_rail",
                 "price": 200,
                 "houseCost": 100,
@@ -1193,6 +1188,7 @@
               {
                 "kind": "property",
                 "propertyId": "f_p12",
+                "name": "阿姆斯特丹",
                 "groupId": "f_g_orange",
                 "price": 180,
                 "houseCost": 100,
@@ -1211,6 +1207,7 @@
               {
                 "kind": "property",
                 "propertyId": "f_p13",
+                "name": "柏林",
                 "groupId": "f_g_orange",
                 "price": 200,
                 "houseCost": 100,
@@ -1226,6 +1223,7 @@
               {
                 "kind": "property",
                 "propertyId": "f_p14",
+                "name": "罗马",
                 "groupId": "f_g_orange",
                 "price": 220,
                 "houseCost": 150,
@@ -1244,6 +1242,7 @@
               {
                 "kind": "property",
                 "propertyId": "f_p15",
+                "name": "马德里",
                 "groupId": "f_g_red",
                 "price": 220,
                 "houseCost": 150,
@@ -1262,6 +1261,7 @@
               {
                 "kind": "property",
                 "propertyId": "f_p16",
+                "name": "里斯本",
                 "groupId": "f_g_red",
                 "price": 240,
                 "houseCost": 150,
@@ -1277,6 +1277,7 @@
               {
                 "kind": "property",
                 "propertyId": "f_p17",
+                "name": "苏黎世",
                 "groupId": "f_g_red",
                 "price": 260,
                 "houseCost": 150,
@@ -1292,6 +1293,7 @@
               {
                 "kind": "property",
                 "propertyId": "f_p18",
+                "name": "斯德哥尔摩",
                 "groupId": "f_g_rail",
                 "price": 200,
                 "houseCost": 100,
@@ -1307,6 +1309,7 @@
               {
                 "kind": "property",
                 "propertyId": "f_p19",
+                "name": "赫尔辛基",
                 "groupId": "f_g_yellow",
                 "price": 260,
                 "houseCost": 150,
@@ -1322,6 +1325,7 @@
               {
                 "kind": "property",
                 "propertyId": "f_p20",
+                "name": "莫斯科",
                 "groupId": "f_g_yellow",
                 "price": 280,
                 "houseCost": 150,
@@ -1337,6 +1341,7 @@
               {
                 "kind": "property",
                 "propertyId": "f_p21",
+                "name": "伊斯坦布尔",
                 "groupId": "f_g_util",
                 "price": 150,
                 "houseCost": 100,
@@ -1352,6 +1357,7 @@
               {
                 "kind": "property",
                 "propertyId": "f_p22",
+                "name": "迪拜",
                 "groupId": "f_g_yellow",
                 "price": 300,
                 "houseCost": 200,
@@ -1370,6 +1376,7 @@
               {
                 "kind": "property",
                 "propertyId": "f_p23",
+                "name": "开罗",
                 "groupId": "f_g_green",
                 "price": 300,
                 "houseCost": 200,
@@ -1385,6 +1392,7 @@
               {
                 "kind": "property",
                 "propertyId": "f_p24",
+                "name": "内罗毕",
                 "groupId": "f_g_green",
                 "price": 320,
                 "houseCost": 200,
@@ -1403,6 +1411,7 @@
               {
                 "kind": "property",
                 "propertyId": "f_p25",
+                "name": "约翰内斯堡",
                 "groupId": "f_g_green",
                 "price": 350,
                 "houseCost": 200,
@@ -1418,6 +1427,7 @@
               {
                 "kind": "property",
                 "propertyId": "f_p26",
+                "name": "新德里",
                 "groupId": "f_g_rail",
                 "price": 200,
                 "houseCost": 100,
@@ -1436,6 +1446,7 @@
               {
                 "kind": "property",
                 "propertyId": "f_p27",
+                "name": "北京",
                 "groupId": "f_g_darkblue",
                 "price": 350,
                 "houseCost": 200,
@@ -1455,6 +1466,7 @@
               {
                 "kind": "property",
                 "propertyId": "f_p28",
+                "name": "东京",
                 "groupId": "f_g_darkblue",
                 "price": 400,
                 "houseCost": 200,
@@ -1470,7 +1482,46 @@
             ],
             "jailIndex": 10
           },
-          "baseVersionId": "v1779480856928",
+          "baseVersionId": "v1779541920448",
+          "note": "seed"
+        }
+      }
+    },
+    "system:template-standard": {
+      "docId": "system:template-standard",
+      "kind": "template",
+      "name": "标准玩法（系统）",
+      "createdAtMs": 1779541920448,
+      "updatedAtMs": 1779541920448,
+      "publishedVersionId": "v1779541920448_1439b6a8",
+      "draftVersionId": "v1779541920448",
+      "versionIds": [
+        "v1779541920448",
+        "v1779541920448_1439b6a8"
+      ],
+      "versions": {
+        "v1779541920448": {
+          "versionId": "v1779541920448",
+          "status": "draft",
+          "createdAtMs": 1779541920448,
+          "updatedAtMs": 1779541920448,
+          "data": {
+            "rulesVersionId": "v1779541920448_f61f483f",
+            "boardVersionId": "v1779541920448_09d287e1",
+            "cardsVersionId": "v1779541920448_f3d5925f"
+          }
+        },
+        "v1779541920448_1439b6a8": {
+          "versionId": "v1779541920448_1439b6a8",
+          "status": "published",
+          "createdAtMs": 1779541920448,
+          "updatedAtMs": 1779541920448,
+          "data": {
+            "rulesVersionId": "v1779541920448_f61f483f",
+            "boardVersionId": "v1779541920448_09d287e1",
+            "cardsVersionId": "v1779541920448_f3d5925f"
+          },
+          "baseVersionId": "v1779541920448",
           "note": "seed"
         }
       }
@@ -1478,154 +1529,19 @@
   },
   "audit": [
     {
-      "id": "45835d41-30f6-4e94-9789-2162a59bffbe",
-      "atMs": 1779339206501,
-      "actorUid": "54568547",
-      "action": "admin.room.close",
-      "targetType": "room",
-      "targetId": "F9YABZ",
-      "detail": {
-        "before": {
-          "status": "lobby",
-          "startedAtMs": null,
-          "closedAtMs": null
-        },
-        "deleted": true
-      }
-    },
-    {
-      "id": "47a039c0-65df-4295-a5bc-b15202903e55",
-      "atMs": 1779339209272,
-      "actorUid": "54568547",
-      "action": "admin.room.close",
-      "targetType": "room",
-      "targetId": "SHWCVT",
-      "detail": {
-        "before": {
-          "status": "lobby",
-          "startedAtMs": null,
-          "closedAtMs": null
-        },
-        "deleted": true
-      }
-    },
-    {
-      "id": "040a711f-8ba7-4b26-a2ab-794532753d01",
-      "atMs": 1779339210395,
-      "actorUid": "54568547",
-      "action": "admin.room.close",
-      "targetType": "room",
-      "targetId": "QRYNY4",
-      "detail": {
-        "before": {
-          "status": "lobby",
-          "startedAtMs": null,
-          "closedAtMs": null
-        },
-        "deleted": true
-      }
-    },
-    {
-      "id": "0de9ed30-c0fa-43fd-8d9e-cd249a416bb7",
-      "atMs": 1779339212734,
-      "actorUid": "54568547",
-      "action": "admin.room.close",
-      "targetType": "room",
-      "targetId": "UV7XEY",
-      "detail": {
-        "before": {
-          "status": "lobby",
-          "startedAtMs": null,
-          "closedAtMs": null
-        },
-        "deleted": true
-      }
-    },
-    {
-      "id": "88a100fe-ad82-4a31-9514-cabbf12aab80",
-      "atMs": 1779479914764,
-      "actorUid": "54568547",
-      "action": "admin.room.close",
-      "targetType": "room",
-      "targetId": "UUESYN",
-      "detail": {
-        "before": {
-          "status": "lobby",
-          "startedAtMs": null,
-          "closedAtMs": null
-        },
-        "deleted": true
-      }
-    },
-    {
-      "id": "29996444-c993-4386-96af-50f0d685a144",
-      "atMs": 1779479916957,
-      "actorUid": "54568547",
-      "action": "admin.room.close",
-      "targetType": "room",
-      "targetId": "6VPMLE",
-      "detail": {
-        "before": {
-          "status": "lobby",
-          "startedAtMs": null,
-          "closedAtMs": null
-        },
-        "deleted": true
-      }
-    },
-    {
-      "id": "1884e797-724d-4837-b4aa-8d61bf4bffbf",
-      "atMs": 1779481434911,
+      "id": "08622ff9-afae-4f2d-a67f-ceec3b6d0cdb",
+      "atMs": 1779542718679,
       "actorUid": "54568547",
       "action": "admin.room.kick",
       "targetType": "room",
-      "targetId": "7FSYQU",
+      "targetId": "JB4AQE",
       "detail": {
-        "playerId": "user:54568547",
-        "beforeHostPlayerId": "user:54568547",
-        "afterHostPlayerId": "guest:5e77e3df-cb37-4c46-ad8e-7faa40fb3330",
-        "deleted": false
-      }
-    },
-    {
-      "id": "ad6167b0-907a-4001-a557-3b832907f69c",
-      "atMs": 1779481436325,
-      "actorUid": "54568547",
-      "action": "admin.room.kick",
-      "targetType": "room",
-      "targetId": "7FSYQU",
-      "detail": {
-        "playerId": "guest:5e77e3df-cb37-4c46-ad8e-7faa40fb3330",
-        "beforeHostPlayerId": "guest:5e77e3df-cb37-4c46-ad8e-7faa40fb3330",
+        "playerId": "user:dev:open",
+        "beforeHostPlayerId": "user:dev:open",
         "afterHostPlayerId": null,
         "deleted": true
       }
-    },
-    {
-      "id": "7816127d-b1c0-42d3-b5ab-723a0873a22a",
-      "atMs": 1779482235361,
-      "actorUid": "54568547",
-      "action": "admin.room.kick",
-      "targetType": "room",
-      "targetId": "3ABT9B",
-      "detail": {
-        "playerId": "guest:ff3d95d0-48f8-46d9-a992-0f66fa800a39",
-        "beforeHostPlayerId": "user:54568547",
-        "afterHostPlayerId": "user:54568547",
-        "deleted": false
-      }
-    },
-    {
-      "id": "65f91e53-fb73-4540-ab86-12c52ca5ad99",
-      "atMs": 1779482256688,
-      "actorUid": "54568547",
-      "action": "admin.room.setHost",
-      "targetType": "room",
-      "targetId": "3ABT9B",
-      "detail": {
-        "beforeHostPlayerId": "user:54568547",
-        "afterHostPlayerId": "guest:e71a5b0c-3f7a-42db-8225-faa59ef9abf7"
-      }
     }
-  ]
+  ],
+  "gameInvites": []
 }

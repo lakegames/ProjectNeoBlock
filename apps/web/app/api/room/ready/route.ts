@@ -25,6 +25,7 @@ export async function POST(req: Request) {
   const result = await updateAppData((data) => {
     const room = data.rooms[roomCode];
     if (!room) return { ok: false as const, error: 'ROOM_NOT_FOUND' as const };
+    if (room.closedAtMs) return { ok: false as const, error: 'ROOM_CLOSED' as const };
     if (room.status !== 'lobby') return { ok: false as const, error: 'GAME_ALREADY_STARTED' as const };
 
     const member = room.members.find((m) => m.playerId === actor.playerId);
@@ -39,6 +40,8 @@ export async function POST(req: Request) {
     const status =
       result.error === 'ROOM_NOT_FOUND'
         ? 404
+        : result.error === 'ROOM_CLOSED'
+          ? 410
         : result.error === 'NOT_IN_ROOM' || result.error === 'NOT_A_PLAYER'
           ? 403
           : 400;
@@ -46,4 +49,3 @@ export async function POST(req: Request) {
   }
   return NextResponse.json(result);
 }
-

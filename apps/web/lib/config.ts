@@ -1,6 +1,8 @@
-export type ConfigKind = 'rules' | 'board' | 'cards';
+export type ConfigKind = 'rules' | 'board' | 'cards' | 'template';
 
 export type ConfigStatus = 'draft' | 'published' | 'archived';
+
+export type TemplateVisibility = 'private' | 'public';
 
 export type ConfigIssue = { path: string; message: string };
 export type ConfigValidationResult<T> = { ok: true; value: T } | { ok: false; issues: ConfigIssue[] };
@@ -19,6 +21,8 @@ export type ConfigDoc = {
   docId: string;
   kind: ConfigKind;
   name: string;
+  ownerId?: string | null;
+  visibility?: TemplateVisibility;
   createdAtMs: number;
   updatedAtMs: number;
   publishedVersionId: string | null;
@@ -41,7 +45,9 @@ export type BoardTileTemplate =
   | {
       kind: 'property';
       propertyId: string;
+      name?: string;
       groupId: string;
+      groupName?: string;
       price: number;
       houseCost: number;
       rents: [number, number, number, number, number, number];
@@ -77,6 +83,12 @@ export type CardsConfig = {
   cards: CardDefTemplate[];
 };
 
+export type TemplateConfig = {
+  rulesVersionId: string;
+  boardVersionId: string;
+  cardsVersionId: string;
+};
+
 function isRecord(input: unknown): input is Record<string, unknown> {
   return typeof input === 'object' && input !== null && !Array.isArray(input);
 }
@@ -99,6 +111,22 @@ function clampNumber(v: number, min: number, max: number) {
 
 function issue(path: string, message: string): ConfigIssue {
   return { path, message };
+}
+
+export function validateTemplateConfig(input: unknown): ConfigValidationResult<TemplateConfig> {
+  if (!isRecord(input)) return { ok: false, issues: [issue('', '模板配置必须为对象')] };
+  const raw = input as Record<string, unknown>;
+  const issues: ConfigIssue[] = [];
+  const requireString = (key: keyof TemplateConfig) => {
+    const v = raw[key];
+    if (typeof v !== 'string' || !v.trim()) issues.push(issue(String(key), `${String(key)} 必须为非空字符串`));
+    return typeof v === 'string' ? v.trim() : '';
+  };
+  const rulesVersionId = requireString('rulesVersionId');
+  const boardVersionId = requireString('boardVersionId');
+  const cardsVersionId = requireString('cardsVersionId');
+  if (issues.length) return { ok: false, issues };
+  return { ok: true, value: { rulesVersionId, boardVersionId, cardsVersionId } };
 }
 
 export function validateRulesConfig(input: unknown): ConfigValidationResult<RulesConfig> {
@@ -174,7 +202,21 @@ function validateTile(input: unknown, index: number): ConfigValidationResult<Boa
 
   if (kind === 'property') {
     const propertyId = requireString('propertyId');
+    const nameRaw = raw.name;
+    let name: string | undefined = undefined;
+    if (nameRaw !== undefined) {
+      if (!isString(nameRaw) || nameRaw.trim().length === 0) issues.push(issue(`${base}.name`, 'name 必须为非空字符串'));
+      else if (nameRaw.trim().length > 32) issues.push(issue(`${base}.name`, 'name 最大长度为 32'));
+      else name = nameRaw.trim();
+    }
     const groupId = requireString('groupId');
+    const groupNameRaw = raw.groupName;
+    let groupName: string | undefined = undefined;
+    if (groupNameRaw !== undefined) {
+      if (!isString(groupNameRaw) || groupNameRaw.trim().length === 0) issues.push(issue(`${base}.groupName`, 'groupName 必须为非空字符串'));
+      else if (groupNameRaw.trim().length > 32) issues.push(issue(`${base}.groupName`, 'groupName 最大长度为 32'));
+      else groupName = groupNameRaw.trim();
+    }
     const price = requireInt('price', 0, 50_000);
     const houseCost = requireInt('houseCost', 0, 50_000);
 
@@ -192,7 +234,10 @@ function validateTile(input: unknown, index: number): ConfigValidationResult<Boa
 
     if (issues.length) return { ok: false, issues };
     const rents = rentsParsed.slice(0, 6) as [number, number, number, number, number, number];
-    return { ok: true, value: { kind: 'property', propertyId, groupId, price, houseCost, rents } };
+    return {
+      ok: true,
+      value: { kind: 'property', propertyId, ...(name ? { name } : {}), groupId, ...(groupName ? { groupName } : {}), price, houseCost, rents },
+    };
   }
 
   return { ok: false, issues: [issue(`${base}.kind`, `未知 kind: ${kind}`)] };
@@ -336,8 +381,22 @@ export function defaultBoardConfig(): BoardConfigTemplate {
 }
 
 export function fullBoardConfig(): BoardConfigTemplate {
+  const groupNameById = (groupId: string) => {
+    if (groupId === 'f_g_brown') return '棕色组';
+    if (groupId === 'f_g_lightblue') return '浅蓝组';
+    if (groupId === 'f_g_pink') return '粉色组';
+    if (groupId === 'f_g_orange') return '橙色组';
+    if (groupId === 'f_g_red') return '红色组';
+    if (groupId === 'f_g_yellow') return '黄色组';
+    if (groupId === 'f_g_green') return '绿色组';
+    if (groupId === 'f_g_darkblue') return '深蓝组';
+    if (groupId === 'f_g_rail') return '铁路组';
+    if (groupId === 'f_g_util') return '公用事业组';
+    return groupId;
+  };
   const p = (input: {
     propertyId: string;
+    name: string;
     groupId: string;
     price: number;
     houseCost: number;
@@ -345,7 +404,9 @@ export function fullBoardConfig(): BoardConfigTemplate {
   }): BoardTileTemplate => ({
     kind: 'property',
     propertyId: input.propertyId,
+    name: input.name,
     groupId: input.groupId,
+    groupName: groupNameById(input.groupId),
     price: input.price,
     houseCost: input.houseCost,
     rents: input.rents,
@@ -354,45 +415,45 @@ export function fullBoardConfig(): BoardConfigTemplate {
     jailIndex: 10,
     tiles: [
       { kind: 'start' },
-      p({ propertyId: 'f_p01', groupId: 'f_g_brown', price: 60, houseCost: 50, rents: [2, 10, 30, 90, 160, 250] }),
+      p({ propertyId: 'f_p01', name: '旧金山', groupId: 'f_g_brown', price: 60, houseCost: 50, rents: [2, 10, 30, 90, 160, 250] }),
       { kind: 'communityChest' },
-      p({ propertyId: 'f_p02', groupId: 'f_g_brown', price: 60, houseCost: 50, rents: [4, 20, 60, 180, 320, 450] }),
+      p({ propertyId: 'f_p02', name: '洛杉矶', groupId: 'f_g_brown', price: 60, houseCost: 50, rents: [4, 20, 60, 180, 320, 450] }),
       { kind: 'tax', amount: 200 },
-      p({ propertyId: 'f_p03', groupId: 'f_g_rail', price: 200, houseCost: 100, rents: [25, 50, 100, 200, 350, 500] }),
-      p({ propertyId: 'f_p04', groupId: 'f_g_lightblue', price: 100, houseCost: 50, rents: [6, 30, 90, 270, 400, 550] }),
+      p({ propertyId: 'f_p03', name: '纽约', groupId: 'f_g_rail', price: 200, houseCost: 100, rents: [25, 50, 100, 200, 350, 500] }),
+      p({ propertyId: 'f_p04', name: '多伦多', groupId: 'f_g_lightblue', price: 100, houseCost: 50, rents: [6, 30, 90, 270, 400, 550] }),
       { kind: 'chance' },
-      p({ propertyId: 'f_p05', groupId: 'f_g_lightblue', price: 100, houseCost: 50, rents: [6, 30, 90, 270, 400, 550] }),
-      p({ propertyId: 'f_p06', groupId: 'f_g_lightblue', price: 120, houseCost: 50, rents: [8, 40, 100, 300, 450, 600] }),
+      p({ propertyId: 'f_p05', name: '温哥华', groupId: 'f_g_lightblue', price: 100, houseCost: 50, rents: [6, 30, 90, 270, 400, 550] }),
+      p({ propertyId: 'f_p06', name: '西雅图', groupId: 'f_g_lightblue', price: 120, houseCost: 50, rents: [8, 40, 100, 300, 450, 600] }),
       { kind: 'jail' },
-      p({ propertyId: 'f_p07', groupId: 'f_g_pink', price: 140, houseCost: 100, rents: [10, 50, 150, 450, 625, 750] }),
-      p({ propertyId: 'f_p08', groupId: 'f_g_util', price: 150, houseCost: 100, rents: [10, 20, 30, 40, 50, 60] }),
-      p({ propertyId: 'f_p09', groupId: 'f_g_pink', price: 160, houseCost: 100, rents: [12, 60, 180, 500, 700, 900] }),
-      p({ propertyId: 'f_p10', groupId: 'f_g_pink', price: 180, houseCost: 100, rents: [14, 70, 200, 550, 750, 950] }),
-      p({ propertyId: 'f_p11', groupId: 'f_g_rail', price: 200, houseCost: 100, rents: [25, 50, 100, 200, 350, 500] }),
-      p({ propertyId: 'f_p12', groupId: 'f_g_orange', price: 180, houseCost: 100, rents: [14, 70, 200, 550, 750, 950] }),
+      p({ propertyId: 'f_p07', name: '墨西哥城', groupId: 'f_g_pink', price: 140, houseCost: 100, rents: [10, 50, 150, 450, 625, 750] }),
+      p({ propertyId: 'f_p08', name: '里约热内卢', groupId: 'f_g_util', price: 150, houseCost: 100, rents: [10, 20, 30, 40, 50, 60] }),
+      p({ propertyId: 'f_p09', name: '布宜诺斯艾利斯', groupId: 'f_g_pink', price: 160, houseCost: 100, rents: [12, 60, 180, 500, 700, 900] }),
+      p({ propertyId: 'f_p10', name: '伦敦', groupId: 'f_g_pink', price: 180, houseCost: 100, rents: [14, 70, 200, 550, 750, 950] }),
+      p({ propertyId: 'f_p11', name: '巴黎', groupId: 'f_g_rail', price: 200, houseCost: 100, rents: [25, 50, 100, 200, 350, 500] }),
+      p({ propertyId: 'f_p12', name: '阿姆斯特丹', groupId: 'f_g_orange', price: 180, houseCost: 100, rents: [14, 70, 200, 550, 750, 950] }),
       { kind: 'communityChest' },
-      p({ propertyId: 'f_p13', groupId: 'f_g_orange', price: 200, houseCost: 100, rents: [16, 80, 220, 600, 800, 1000] }),
-      p({ propertyId: 'f_p14', groupId: 'f_g_orange', price: 220, houseCost: 150, rents: [18, 90, 250, 700, 875, 1050] }),
+      p({ propertyId: 'f_p13', name: '柏林', groupId: 'f_g_orange', price: 200, houseCost: 100, rents: [16, 80, 220, 600, 800, 1000] }),
+      p({ propertyId: 'f_p14', name: '罗马', groupId: 'f_g_orange', price: 220, houseCost: 150, rents: [18, 90, 250, 700, 875, 1050] }),
       { kind: 'chance' },
-      p({ propertyId: 'f_p15', groupId: 'f_g_red', price: 220, houseCost: 150, rents: [18, 90, 250, 700, 875, 1050] }),
+      p({ propertyId: 'f_p15', name: '马德里', groupId: 'f_g_red', price: 220, houseCost: 150, rents: [18, 90, 250, 700, 875, 1050] }),
       { kind: 'chance' },
-      p({ propertyId: 'f_p16', groupId: 'f_g_red', price: 240, houseCost: 150, rents: [20, 100, 300, 750, 925, 1100] }),
-      p({ propertyId: 'f_p17', groupId: 'f_g_red', price: 260, houseCost: 150, rents: [22, 110, 330, 800, 975, 1150] }),
-      p({ propertyId: 'f_p18', groupId: 'f_g_rail', price: 200, houseCost: 100, rents: [25, 50, 100, 200, 350, 500] }),
-      p({ propertyId: 'f_p19', groupId: 'f_g_yellow', price: 260, houseCost: 150, rents: [22, 110, 330, 800, 975, 1150] }),
-      p({ propertyId: 'f_p20', groupId: 'f_g_yellow', price: 280, houseCost: 150, rents: [24, 120, 360, 850, 1025, 1200] }),
-      p({ propertyId: 'f_p21', groupId: 'f_g_util', price: 150, houseCost: 100, rents: [10, 20, 30, 40, 50, 60] }),
-      p({ propertyId: 'f_p22', groupId: 'f_g_yellow', price: 300, houseCost: 200, rents: [26, 130, 390, 900, 1100, 1275] }),
+      p({ propertyId: 'f_p16', name: '里斯本', groupId: 'f_g_red', price: 240, houseCost: 150, rents: [20, 100, 300, 750, 925, 1100] }),
+      p({ propertyId: 'f_p17', name: '苏黎世', groupId: 'f_g_red', price: 260, houseCost: 150, rents: [22, 110, 330, 800, 975, 1150] }),
+      p({ propertyId: 'f_p18', name: '斯德哥尔摩', groupId: 'f_g_rail', price: 200, houseCost: 100, rents: [25, 50, 100, 200, 350, 500] }),
+      p({ propertyId: 'f_p19', name: '赫尔辛基', groupId: 'f_g_yellow', price: 260, houseCost: 150, rents: [22, 110, 330, 800, 975, 1150] }),
+      p({ propertyId: 'f_p20', name: '莫斯科', groupId: 'f_g_yellow', price: 280, houseCost: 150, rents: [24, 120, 360, 850, 1025, 1200] }),
+      p({ propertyId: 'f_p21', name: '伊斯坦布尔', groupId: 'f_g_util', price: 150, houseCost: 100, rents: [10, 20, 30, 40, 50, 60] }),
+      p({ propertyId: 'f_p22', name: '迪拜', groupId: 'f_g_yellow', price: 300, houseCost: 200, rents: [26, 130, 390, 900, 1100, 1275] }),
       { kind: 'goToJail' },
-      p({ propertyId: 'f_p23', groupId: 'f_g_green', price: 300, houseCost: 200, rents: [26, 130, 390, 900, 1100, 1275] }),
-      p({ propertyId: 'f_p24', groupId: 'f_g_green', price: 320, houseCost: 200, rents: [28, 150, 450, 1000, 1200, 1400] }),
+      p({ propertyId: 'f_p23', name: '开罗', groupId: 'f_g_green', price: 300, houseCost: 200, rents: [26, 130, 390, 900, 1100, 1275] }),
+      p({ propertyId: 'f_p24', name: '内罗毕', groupId: 'f_g_green', price: 320, houseCost: 200, rents: [28, 150, 450, 1000, 1200, 1400] }),
       { kind: 'communityChest' },
-      p({ propertyId: 'f_p25', groupId: 'f_g_green', price: 350, houseCost: 200, rents: [35, 175, 500, 1100, 1300, 1500] }),
-      p({ propertyId: 'f_p26', groupId: 'f_g_rail', price: 200, houseCost: 100, rents: [25, 50, 100, 200, 350, 500] }),
+      p({ propertyId: 'f_p25', name: '约翰内斯堡', groupId: 'f_g_green', price: 350, houseCost: 200, rents: [35, 175, 500, 1100, 1300, 1500] }),
+      p({ propertyId: 'f_p26', name: '新德里', groupId: 'f_g_rail', price: 200, houseCost: 100, rents: [25, 50, 100, 200, 350, 500] }),
       { kind: 'chance' },
-      p({ propertyId: 'f_p27', groupId: 'f_g_darkblue', price: 350, houseCost: 200, rents: [35, 175, 500, 1100, 1300, 1500] }),
+      p({ propertyId: 'f_p27', name: '北京', groupId: 'f_g_darkblue', price: 350, houseCost: 200, rents: [35, 175, 500, 1100, 1300, 1500] }),
       { kind: 'tax', amount: 100 },
-      p({ propertyId: 'f_p28', groupId: 'f_g_darkblue', price: 400, houseCost: 200, rents: [50, 200, 600, 1400, 1700, 2000] }),
+      p({ propertyId: 'f_p28', name: '东京', groupId: 'f_g_darkblue', price: 400, houseCost: 200, rents: [50, 200, 600, 1400, 1700, 2000] }),
     ],
   };
 }
@@ -408,13 +469,23 @@ export function defaultCardsConfig(): CardsConfig {
   };
 }
 
-export function createDoc(input: { docId: string; kind: ConfigKind; name: string; nowMs: number; draftData: unknown }): ConfigDoc {
+export function createDoc(input: {
+  docId: string;
+  kind: ConfigKind;
+  name: string;
+  ownerId?: string | null;
+  visibility?: TemplateVisibility;
+  nowMs: number;
+  draftData: unknown;
+}): ConfigDoc {
   const versionId = `v${input.nowMs}`;
   const v: ConfigVersion = { versionId, status: 'draft', createdAtMs: input.nowMs, updatedAtMs: input.nowMs, data: input.draftData };
   return {
     docId: input.docId,
     kind: input.kind,
     name: input.name,
+    ...(typeof input.ownerId !== 'undefined' ? { ownerId: input.ownerId } : {}),
+    ...(typeof input.visibility !== 'undefined' ? { visibility: input.visibility } : {}),
     createdAtMs: input.nowMs,
     updatedAtMs: input.nowMs,
     publishedVersionId: null,

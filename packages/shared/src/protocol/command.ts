@@ -26,6 +26,14 @@ export type SetReadyCommand = CommandBase & {
   ready: boolean;
 };
 
+export type SendChatCommand = CommandBase & {
+  type: 'room/sendChat';
+  roomId: RoomId;
+  playerId: PlayerId;
+  text: string;
+  toPlayerId?: PlayerId;
+};
+
 export type StartGameCommand = CommandBase & {
   type: 'room/startGame';
   roomId: RoomId;
@@ -154,6 +162,13 @@ export type DeclareBankruptcyCommand = CommandBase & {
   playerId: PlayerId;
 };
 
+export type ForfeitCommand = CommandBase & {
+  type: 'game/forfeit';
+  roomId: RoomId;
+  gameId: GameId;
+  playerId: PlayerId;
+};
+
 export type DebugAddCashCommand = CommandBase & {
   type: 'debug/addCash';
   roomId: RoomId;
@@ -185,6 +200,7 @@ export type Command =
   | JoinRoomCommand
   | LeaveRoomCommand
   | SetReadyCommand
+  | SendChatCommand
   | SetRoomConfigCommand
   | StartGameCommand
   | RollDiceCommand
@@ -200,6 +216,7 @@ export type Command =
   | ProposeTradeCommand
   | RespondTradeCommand
   | DeclareBankruptcyCommand
+  | ForfeitCommand
   | DebugAddCashCommand
   | DebugAssignPropertyCommand
   | DebugSetBuildingsCommand;

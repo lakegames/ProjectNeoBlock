@@ -39,6 +39,13 @@ export type PlayerReadyChangedEvent = EventBase & {
   ready: boolean;
 };
 
+export type ChatMessageEvent = EventBase & {
+  type: 'room/chatMessage';
+  fromPlayerId: PlayerId;
+  text: string;
+  toPlayerId?: PlayerId;
+};
+
 export type RoomConfigChangedEvent = EventBase & {
   type: 'room/configChanged';
   config: {
@@ -117,6 +124,7 @@ export type Event =
   | PlayerConnectionChangedEvent
   | PlayerLeftEvent
   | PlayerReadyChangedEvent
+  | ChatMessageEvent
   | RoomConfigChangedEvent
   | GameStartedEvent
   | TurnStartedEvent

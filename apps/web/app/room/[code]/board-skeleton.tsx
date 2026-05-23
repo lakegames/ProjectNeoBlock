@@ -3,9 +3,11 @@
 import Image from 'next/image';
 import * as React from 'react';
 
-import type { Command, MatchSnapshot, ProtocolError } from '@neoblock/shared';
+import type { Command, Event, MatchSnapshot, ProtocolError } from '@neoblock/shared';
 
-import { Button, Dialog, Drawer, Input, Tooltip } from '@neoblock/ui';
+import { Button, Dialog, Drawer, Input, Popover, Tooltip } from '@neoblock/ui';
+
+import { eventsToTimelineEntries, type BoardLike, type TimelineEntry } from './timeline-mapper';
 
 export type BoardPlayer = {
   playerId: string;
@@ -17,7 +19,9 @@ type CommandInput = Command extends infer C ? (C extends unknown ? Omit<C, 'comm
 type BoardPropertyTile = {
   kind: 'property';
   propertyId: string;
+  name?: string;
   groupId: string;
+  groupName?: string;
   price: number;
   houseCost: number;
   rents: [number, number, number, number, number, number];
@@ -110,6 +114,14 @@ type CardDrawn = {
   playerId: string;
 };
 
+type ChatMessage = {
+  eventId: string;
+  createdAtMs: number;
+  fromPlayerId: string;
+  text: string;
+  toPlayerId?: string;
+};
+
 type LiveProps = {
   snapshot: MatchSnapshot;
   selfPlayerId: string;
@@ -118,6 +130,8 @@ type LiveProps = {
   lastError: ProtocolError | null;
   lastCardDrawn: CardDrawn | null;
   clearLastCard: () => void;
+  chatMessages: ChatMessage[];
+  recentEvents50: Event[];
 };
 
 type LegacyProps = { players: BoardPlayer[]; selfPlayerId?: string | null };
@@ -142,6 +156,14 @@ function hashString(input: string) {
 
 function formatMoney(amount: number) {
   return `¥${Math.max(0, Math.floor(amount)).toLocaleString('zh-CN')}`;
+}
+
+function formatClock(ms: number) {
+  const t = new Date(ms);
+  const hh = String(t.getHours()).padStart(2, '0');
+  const mm = String(t.getMinutes()).padStart(2, '0');
+  const ss = String(t.getSeconds()).padStart(2, '0');
+  return `${hh}:${mm}:${ss}`;
 }
 
 const playerColors = ['#2563eb', '#f97316', '#16a34a', '#a855f7', '#e11d48', '#0ea5e9', '#d97706', '#22c55e'];
@@ -183,55 +205,56 @@ function tileIndexAtRing(row: number, col: number, side: number) {
 
 const tileNames: string[] = [
   '起点（GO）',
-  '地块 A1',
-  '机会',
-  '地块 A2',
-  '税收',
-  '车站 1',
-  '地块 B1',
+  '旧金山',
   '命运',
-  '地块 B2',
-  '地块 B3',
+  '洛杉矶',
+  '税收',
+  '纽约',
+  '多伦多',
+  '机会',
+  '温哥华',
+  '西雅图',
   '监狱/探监',
-  '地块 C1',
-  '电力公司',
-  '地块 C2',
-  '地块 C3',
-  '车站 2',
-  '地块 D1',
-  '机会',
-  '地块 D2',
-  '地块 D3',
-  '免费停车',
-  '地块 E1',
+  '墨西哥城',
+  '里约热内卢',
+  '布宜诺斯艾利斯',
+  '伦敦',
+  '巴黎',
+  '阿姆斯特丹',
   '命运',
-  '地块 E2',
-  '地块 E3',
-  '车站 3',
-  '地块 F1',
-  '地块 F2',
-  '自来水公司',
-  '地块 F3',
+  '柏林',
+  '罗马',
+  '机会',
+  '马德里',
+  '机会',
+  '里斯本',
+  '苏黎世',
+  '斯德哥尔摩',
+  '赫尔辛基',
+  '莫斯科',
+  '伊斯坦布尔',
+  '迪拜',
   '进监狱',
-  '地块 G1',
-  '地块 G2',
-  '机会',
-  '地块 G3',
-  '车站 4',
+  '开罗',
+  '内罗毕',
   '命运',
-  '地块 H1',
+  '约翰内斯堡',
+  '新德里',
+  '机会',
+  '北京',
   '税收',
-  '地块 H2',
+  '东京',
 ];
+
+function propertyName(propertyId: string) {
+  return `地块 ${propertyId}`;
+}
 
 function buildPlayerDerived(players: BoardPlayer[]) {
   return players.map((p, i) => {
     const h = hashString(p.playerId);
-    const cash = 1200 + (h % 1400);
-    const tile = (i * 7 + (h % 11)) % 40;
     const color = playerColors[i % playerColors.length];
-    const assets = Array.from({ length: (h % 4) + 1 }, (_, k) => `资产 #${k + 1}`);
-    return { ...p, cash, tile, color, assets };
+    return { ...p, cash: 0, tile: 0, color, assets: [] };
   });
 }
 
@@ -242,12 +265,32 @@ function tileTitle(tile: BoardTile, idx: number) {
   if (tile.kind === 'tax') return `税收（${formatMoney(tile.amount)}）`;
   if (tile.kind === 'chance') return '机会';
   if (tile.kind === 'communityChest') return '命运';
-  if (tile.kind === 'property') return `地块 ${tile.propertyId}`;
+  if (tile.kind === 'property') return tile.name ?? propertyName(tile.propertyId);
   return `格子 ${idx}`;
 }
 
 function getPropertyTile(board: BoardConfig, propertyId: string) {
   return board.tiles.find((t): t is BoardPropertyTile => t.kind === 'property' && t.propertyId === propertyId) ?? null;
+}
+
+function groupColorById(groupId: string) {
+  return playerColors[hashString(groupId) % playerColors.length] ?? 'rgba(0,0,0,0.08)';
+}
+
+function calcPropertyRent(board: BoardConfig, tile: BoardPropertyTile) {
+  if (tile.mortgaged) return 0;
+
+  const buildingsRaw = tile.buildings ?? 0;
+  const buildings = Math.min(tile.rents.length - 1, Math.max(0, Math.floor(buildingsRaw)));
+  if (buildings > 0) return tile.rents[buildings] ?? 0;
+
+  const base = tile.rents[0] ?? 0;
+  const owner = tile.ownerPlayerId ?? null;
+  if (!owner) return base;
+
+  const groupTiles = board.tiles.filter((t): t is BoardPropertyTile => t.kind === 'property' && t.groupId === tile.groupId);
+  const monopoly = groupTiles.length > 0 && groupTiles.every((t) => (t.ownerPlayerId ?? null) === owner && !t.mortgaged);
+  return monopoly ? base * 2 : base;
 }
 
 export function BoardSkeleton(props: BoardSkeletonProps) {
@@ -275,15 +318,10 @@ export function BoardSkeleton(props: BoardSkeletonProps) {
       <section style={{ marginTop: 24 }}>
         <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
           <div>
-            <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--nb-color-fg, rgba(0,0,0,0.92))' }}>棋盘（渲染骨架）</div>
-            <div style={{ marginTop: 6, color: 'var(--nb-color-muted-fg, rgba(0,0,0,0.65))' }}>格子 + 棋子 + 玩家面板 + 资产/现金展示</div>
+            <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--nb-color-fg, rgba(0,0,0,0.92))' }}>棋盘</div>
           </div>
           <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
             <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="搜索格子（名称/序号）" style={{ minWidth: 240 }} />
-            <Button mode="Second">
-              掷骰（占位）
-            </Button>
-            <Button mode="Second">结束回合（占位）</Button>
           </div>
         </div>
 
@@ -298,10 +336,10 @@ export function BoardSkeleton(props: BoardSkeletonProps) {
         </div>
       ) : null}
 
-      <div style={{ marginTop: 16, display: 'flex', gap: 16, flexWrap: 'wrap', alignItems: 'start' }}>
+      <div style={{ marginTop: 16, display: 'grid', gap: 12 }}>
         <div
           style={{
-            width: 'min(72vh, 660px)',
+            width: 'min(80vh, 760px)',
             minWidth: 320,
             aspectRatio: '1',
             borderRadius: 'var(--nb-radius-lg, 16px)',
@@ -317,7 +355,7 @@ export function BoardSkeleton(props: BoardSkeletonProps) {
               const tileIndex = tileIndexAt(row, col);
               const isTile = tileIndex != null;
               const name = isTile ? tileNames[tileIndex] ?? `格子 ${tileIndex}` : null;
-              const pieces = isTile ? derived.filter((p) => p.tile === tileIndex) : [];
+              const pieces: typeof derived = [];
               const focused = search.trim() && isTile && (String(tileIndex) === search.trim() || name?.includes(search.trim()));
 
               if (!isTile) {
@@ -417,9 +455,6 @@ export function BoardSkeleton(props: BoardSkeletonProps) {
           }}
         >
           <div style={{ fontWeight: 800, color: 'var(--nb-color-fg, rgba(0,0,0,0.92))' }}>玩家面板</div>
-          <div style={{ marginTop: 8, color: 'var(--nb-color-muted-fg, rgba(0,0,0,0.65))', fontSize: 14, lineHeight: '20px' }}>
-            现金与资产为占位数据（后续接入对局快照/事件）
-          </div>
 
           <div style={{ marginTop: 12, display: 'grid', gap: 10 }}>
             {derived.map((p) => {
@@ -454,16 +489,16 @@ export function BoardSkeleton(props: BoardSkeletonProps) {
                         {isSelf ? <span style={{ marginLeft: 6, color: 'var(--nb-color-muted-fg, rgba(0,0,0,0.65))' }}>（我）</span> : null}
                       </div>
                       <div style={{ marginTop: 4, color: 'var(--nb-color-muted-fg, rgba(0,0,0,0.65))', fontSize: 13, lineHeight: '18px' }}>
-                        现金 {formatMoney(p.cash)} ｜位置 #{p.tile}
+                        对局未开始
                       </div>
                     </div>
                   </div>
 
                   <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'end' }}>
-                    <Button size="sm" mode="Second" onClick={() => setDrawerPlayerId(p.playerId)}>
-                      资产（{p.assets.length}）
+                    <Button size="sm" mode="Default" onClick={() => setDrawerPlayerId(p.playerId)}>
+                      资产
                     </Button>
-                    <Button size="sm" mode="NoBackground" onClick={() => setActivePlayerId(p.playerId)}>
+                    <Button size="sm" mode="Default" onClick={() => setActivePlayerId(p.playerId)}>
                       详情
                     </Button>
                   </div>
@@ -478,7 +513,6 @@ export function BoardSkeleton(props: BoardSkeletonProps) {
           open={!!activePlayer}
           onOpenChange={(o) => setActivePlayerId(o ? activePlayerId : null)}
           title={activePlayer ? `玩家：${activePlayer.displayName}` : undefined}
-          description={activePlayer ? `playerId: ${activePlayer.playerId}` : undefined}
           footer={
             activePlayer ? (
               <>
@@ -493,55 +527,20 @@ export function BoardSkeleton(props: BoardSkeletonProps) {
           }
         >
           {activePlayer ? (
-            <div style={{ display: 'grid', gap: 10 }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
-                <div style={{ color: 'var(--nb-color-muted-fg, rgba(0,0,0,0.65))' }}>现金</div>
-                <div style={{ fontWeight: 800, color: 'var(--nb-color-fg, rgba(0,0,0,0.92))' }}>{formatMoney(activePlayer.cash)}</div>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
-                <div style={{ color: 'var(--nb-color-muted-fg, rgba(0,0,0,0.65))' }}>当前位置</div>
-                <div style={{ fontWeight: 800, color: 'var(--nb-color-fg, rgba(0,0,0,0.92))' }}>
-                  #{activePlayer.tile} {tileNames[activePlayer.tile]}
-                </div>
-              </div>
-            </div>
+            <div style={{ color: 'var(--nb-color-muted-fg, rgba(0,0,0,0.65))' }}>对局未开始</div>
           ) : null}
         </Dialog>
 
         <Drawer open={!!drawerPlayer} onOpenChange={(o) => setDrawerPlayerId(o ? drawerPlayerId : null)} title={drawerPlayer ? `${drawerPlayer.displayName} 的资产` : undefined}>
           {drawerPlayer ? (
-            <div style={{ display: 'grid', gap: 10 }}>
-              <div style={{ color: 'var(--nb-color-muted-fg, rgba(0,0,0,0.65))' }}>占位资产列表（后续接入地产/公司/抵押等）</div>
-              <div style={{ display: 'grid', gap: 8 }}>
-                {drawerPlayer.assets.map((a) => (
-                  <div
-                    key={a}
-                    style={{
-                      padding: 12,
-                      borderRadius: 'var(--nb-radius-md, 12px)',
-                      border: '1px solid var(--nb-color-border, rgba(0,0,0,0.12))',
-                      background: 'var(--nb-color-bg, #f8fafc)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      gap: 10,
-                    }}
-                  >
-                    <div style={{ fontWeight: 700, color: 'var(--nb-color-fg, rgba(0,0,0,0.92))' }}>{a}</div>
-                    <Button size="sm" mode="NoBackground">
-                      操作（占位）
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            </div>
+            <div style={{ color: 'var(--nb-color-muted-fg, rgba(0,0,0,0.65))' }}>对局未开始</div>
           ) : null}
         </Drawer>
       </section>
     );
   }
 
-  const { snapshot, selfPlayerId, sendCommand, pending, lastError, lastCardDrawn, clearLastCard } = props;
+  const { snapshot, selfPlayerId, sendCommand, pending, lastError, lastCardDrawn, clearLastCard, chatMessages, recentEvents50 } = props;
   const room = snapshot.room;
   const game = snapshot.game;
   if (!game) return null;
@@ -550,7 +549,33 @@ export function BoardSkeleton(props: BoardSkeletonProps) {
   const board = engine?.board;
   if (!board) return null;
 
+  const boardLike: BoardLike = React.useMemo(() => {
+    const tiles = board.tiles.map((t): BoardLike['tiles'][number] => {
+      if (t.kind === 'tax') return { kind: 'tax', amount: t.amount };
+      if (t.kind === 'property') return { kind: 'property', propertyId: t.propertyId, ...(t.name ? { name: t.name } : {}) };
+      if (t.kind === 'start') return { kind: 'start' };
+      if (t.kind === 'jail') return { kind: 'jail' };
+      if (t.kind === 'goToJail') return { kind: 'goToJail' };
+      if (t.kind === 'chance') return { kind: 'chance' };
+      return { kind: 'communityChest' };
+    });
+    const cards = (board.cards ?? []).map((c) => ({ cardId: c.cardId, text: c.text }));
+    return { tiles, ...(cards.length ? { cards } : {}) };
+  }, [board.cards, board.tiles]);
+
+  const timeline: TimelineEntry[] = React.useMemo(() => {
+    const members = room.members.map((m) => ({ playerId: m.playerId, displayName: m.displayName }));
+    return eventsToTimelineEntries({ events: recentEvents50, members, board: boardLike });
+  }, [boardLike, recentEvents50, room.members]);
+
   const membersById = React.useMemo(() => new Map(room.members.map((m) => [m.playerId, m])), [room.members]);
+  const propertyLabel = React.useCallback(
+    (propertyId: string) => {
+      const t = getPropertyTile(board, propertyId);
+      return t?.name ?? propertyName(propertyId);
+    },
+    [board],
+  );
   const players = game.players.map((p) => {
     const member = membersById.get(p.playerId);
     return {
@@ -582,13 +607,47 @@ export function BoardSkeleton(props: BoardSkeletonProps) {
   const [tradeRequestProps, setTradeRequestProps] = React.useState<Record<string, boolean>>({});
 
   const [auctionBid, setAuctionBid] = React.useState('');
-  const [hiddenPrompts, setHiddenPrompts] = React.useState<Record<string, boolean>>({});
+  const promptStackStorageKey = React.useMemo(() => `nb_prompt_stack_collapsed:${room.roomId}:${selfPlayerId}`, [room.roomId, selfPlayerId]);
+  const [promptStackCollapsed, setPromptStackCollapsed] = React.useState<Record<string, boolean>>({});
+  React.useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const raw = window.localStorage.getItem(promptStackStorageKey);
+      if (!raw) {
+        setPromptStackCollapsed({});
+        return;
+      }
+      const parsed = JSON.parse(raw) as unknown;
+      if (!parsed || typeof parsed !== 'object') {
+        setPromptStackCollapsed({});
+        return;
+      }
+      const next: Record<string, boolean> = {};
+      for (const [k, v] of Object.entries(parsed as Record<string, unknown>)) {
+        if (typeof v === 'boolean') next[k] = v;
+      }
+      setPromptStackCollapsed(next);
+    } catch {
+      setPromptStackCollapsed({});
+    }
+  }, [promptStackStorageKey]);
+  const setPromptStackCollapsedFor = React.useCallback(
+    (key: string, collapsed: boolean) => {
+      setPromptStackCollapsed((s) => {
+        const next = { ...s, [key]: collapsed };
+        if (typeof window !== 'undefined') window.localStorage.setItem(promptStackStorageKey, JSON.stringify(next));
+        return next;
+      });
+    },
+    [promptStackStorageKey],
+  );
   const [debugOpen, setDebugOpen] = React.useState(false);
   const [debugTargetPlayerId, setDebugTargetPlayerId] = React.useState(selfPlayerId);
   const [debugCashDelta, setDebugCashDelta] = React.useState('0');
   const [debugPropertyId, setDebugPropertyId] = React.useState('');
   const [debugOwnerPlayerId, setDebugOwnerPlayerId] = React.useState<string>('');
   const [debugBuildings, setDebugBuildings] = React.useState('0');
+  const debugMode = debugOpen;
 
   const activePlayer = players.find((p) => p.playerId === activePlayerId) ?? null;
   const drawerPlayer = players.find((p) => p.playerId === drawerPlayerId) ?? null;
@@ -628,7 +687,8 @@ export function BoardSkeleton(props: BoardSkeletonProps) {
     return board.tiles
       .map((t, idx) => {
         if (t.kind !== 'property') return null;
-        return { propertyId: t.propertyId, label: `${t.propertyId}｜#${idx} ${tileNamesLive[idx]}` };
+        const n = t.name ?? propertyName(t.propertyId);
+        return { propertyId: t.propertyId, label: `${n}（${t.propertyId}）｜#${idx}` };
       })
       .filter((x): x is { propertyId: string; label: string } => x !== null);
   }, [board.tiles, tileNamesLive]);
@@ -657,14 +717,14 @@ export function BoardSkeleton(props: BoardSkeletonProps) {
   const buyPrompt = pendingPrompt?.kind === 'buyOrAuction' ? pendingPrompt : null;
   const auctionPrompt = pendingPrompt?.kind === 'auctionBid' ? pendingPrompt : null;
 
-  const showBuyPrompt = !!buyPrompt && buyPrompt.playerId === selfPlayerId;
-  const showAuctionPrompt = !!auctionPrompt && auctionPrompt.playerId === selfPlayerId;
-
   const trade = engine.trade;
-  const showTradePrompt = !!trade && trade.toPlayerId === selfPlayerId && game.phase === 'await_prompt';
 
   const debt = engine.debt;
-  const showDebtPrompt = !!debt && debt.debtorId === selfPlayerId && game.phase === 'await_debt';
+  type PromptStackItem =
+    | { kind: 'debt'; key: string; debt: DebtState }
+    | { kind: 'trade'; key: string; trade: TradeState }
+    | { kind: 'auctionBid'; key: string; prompt: Extract<PendingPrompt, { kind: 'auctionBid' }> }
+    | { kind: 'buyOrAuction'; key: string; prompt: Extract<PendingPrompt, { kind: 'buyOrAuction' }> };
 
   const tradeOfferCashValue = React.useMemo(() => Math.max(0, Math.floor(Number(tradeOfferCash))), [tradeOfferCash]);
   const tradeRequestCashValue = React.useMemo(() => Math.max(0, Math.floor(Number(tradeRequestCash))), [tradeRequestCash]);
@@ -687,10 +747,18 @@ export function BoardSkeleton(props: BoardSkeletonProps) {
   const tradeKey = trade ? `trade:${trade.tradeId}` : null;
   const debtKey = debt ? `debt:${debt.debtorId}` : null;
 
-  const hiddenBuy = buyKey ? hiddenPrompts[buyKey] === true : false;
-  const hiddenAuction = auctionKey ? hiddenPrompts[auctionKey] === true : false;
-  const hiddenTrade = tradeKey ? hiddenPrompts[tradeKey] === true : false;
-  const hiddenDebt = debtKey ? hiddenPrompts[debtKey] === true : false;
+  const promptStackItems: PromptStackItem[] = React.useMemo(() => {
+    const items: PromptStackItem[] = [];
+    if (debt && debtKey) items.push({ kind: 'debt', key: debtKey, debt });
+    if (trade && tradeKey && game.phase === 'await_prompt') items.push({ kind: 'trade', key: tradeKey, trade });
+    if (auctionPrompt && auctionKey) items.push({ kind: 'auctionBid', key: auctionKey, prompt: auctionPrompt });
+    if (buyPrompt && buyKey) items.push({ kind: 'buyOrAuction', key: buyKey, prompt: buyPrompt });
+    return items;
+  }, [auctionKey, auctionPrompt, buyKey, buyPrompt, debt, debtKey, game.phase, trade, tradeKey]);
+
+  React.useEffect(() => {
+    setAuctionBid('');
+  }, [auctionPrompt?.promptId]);
 
   const myProperties = React.useMemo(() => {
     if (!self) return [];
@@ -728,6 +796,68 @@ export function BoardSkeleton(props: BoardSkeletonProps) {
   const canRoll = canAct && game.phase === 'await_roll';
   const canEndTurn = canAct && game.phase === 'await_end_turn';
 
+  const [chatOpen, setChatOpen] = React.useState(false);
+  const [chatTo, setChatTo] = React.useState('');
+  const [chatText, setChatText] = React.useState('');
+  const canSendChat = !pending && !!chatText.trim() && chatText.trim().length <= 400;
+  const onSendChat = React.useCallback(() => {
+    if (!canSendChat) return;
+    const text = chatText.trim();
+    sendCommand({
+      type: 'room/sendChat',
+      roomId: room.roomId,
+      playerId: selfPlayerId,
+      text,
+      ...(chatTo ? { toPlayerId: chatTo } : {}),
+    });
+    setChatText('');
+  }, [canSendChat, chatText, chatTo, room.roomId, selfPlayerId, sendCommand]);
+
+  const chatTargets = React.useMemo(() => {
+    const list = room.members
+      .map((m) => ({ playerId: m.playerId, displayName: m.displayName }))
+      .filter((x) => x.playerId !== selfPlayerId);
+    list.sort((a, b) => a.displayName.localeCompare(b.displayName));
+    return list;
+  }, [room.members, selfPlayerId]);
+
+  const [floatingChats, setFloatingChats] = React.useState<ChatMessage[]>([]);
+  const lastFloatingIdRef = React.useRef<string | null>(null);
+  React.useEffect(() => {
+    const last = chatMessages.at(-1) ?? null;
+    if (!last) return;
+    if (last.eventId === lastFloatingIdRef.current) return;
+    lastFloatingIdRef.current = last.eventId;
+    setFloatingChats((s) => [...s, last].slice(-3));
+    const t = window.setTimeout(() => {
+      setFloatingChats((s) => s.filter((x) => x.eventId !== last.eventId));
+    }, 4_500);
+    return () => window.clearTimeout(t);
+  }, [chatMessages]);
+
+  const [diceOverlay, setDiceOverlay] = React.useState<{ dice: [number, number]; open: boolean } | null>(null);
+  const lastDiceKeyRef = React.useRef<string>('');
+  React.useEffect(() => {
+    const d = engine.lastDice;
+    if (!d) return;
+    const key = `${game.gameId}:${game.rngStep}`;
+    if (key === lastDiceKeyRef.current) return;
+    lastDiceKeyRef.current = key;
+    setDiceOverlay({ dice: d, open: false });
+    const raf = window.requestAnimationFrame(() => {
+      setDiceOverlay((s) => (s ? { ...s, open: true } : s));
+    });
+    const t1 = window.setTimeout(() => {
+      setDiceOverlay((s) => (s ? { ...s, open: false } : s));
+    }, 900);
+    const t2 = window.setTimeout(() => setDiceOverlay(null), 1_100);
+    return () => {
+      window.cancelAnimationFrame(raf);
+      window.clearTimeout(t1);
+      window.clearTimeout(t2);
+    };
+  }, [engine.lastDice, game.gameId, game.rngStep]);
+
   return (
     <section style={{ marginTop: 24 }}>
       <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
@@ -739,16 +869,16 @@ export function BoardSkeleton(props: BoardSkeletonProps) {
         </div>
         <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
           <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="搜索格子（名称/序号）" style={{ minWidth: 240 }} />
-          <Button mode="Second" onClick={onRollDice} disabled={!canRoll}>
+          <Button mode="Default" onClick={onRollDice} disabled={!canRoll}>
             {engine.lastDice ? `掷骰（上次 ${engine.lastDice[0]} + ${engine.lastDice[1]}）` : '掷骰'}
           </Button>
-          <Button mode="Second" onClick={onEndTurn} disabled={!canEndTurn}>
+          <Button mode="Default" onClick={onEndTurn} disabled={!canEndTurn}>
             结束回合
           </Button>
-          <Button mode="Second" onClick={() => setDrawerPlayerId(selfPlayerId)} disabled={isSpectator || !self}>
+          <Button mode="Default" onClick={() => setDrawerPlayerId(selfPlayerId)} disabled={isSpectator || !self}>
             我的资产
           </Button>
-          <Button mode="Second" onClick={() => setTradeOpen(true)} disabled={!canAct || game.phase !== 'await_end_turn'}>
+          <Button mode="Default" onClick={() => setTradeOpen(true)} disabled={!canAct || game.phase !== 'await_end_turn'}>
             发起交易
           </Button>
           {canUseDebug ? (
@@ -761,70 +891,23 @@ export function BoardSkeleton(props: BoardSkeletonProps) {
         </div>
       </div>
 
-      {showBuyPrompt && hiddenBuy ? (
-        <div style={{ marginTop: 12, padding: 10, borderRadius: 12, border: '1px solid rgba(0,0,0,0.12)', background: 'rgba(37,99,235,0.08)', display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div style={{ fontWeight: 700, color: 'var(--nb-color-fg, rgba(0,0,0,0.92))' }}>待处理：购买/拍卖</div>
-          <Button size="sm" mode="Second" onClick={() => buyKey && setHiddenPrompts((s) => ({ ...s, [buyKey]: false }))}>
-            打开
-          </Button>
-        </div>
-      ) : null}
-      {showAuctionPrompt && hiddenAuction ? (
-        <div style={{ marginTop: 12, padding: 10, borderRadius: 12, border: '1px solid rgba(0,0,0,0.12)', background: 'rgba(37,99,235,0.08)', display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div style={{ fontWeight: 700, color: 'var(--nb-color-fg, rgba(0,0,0,0.92))' }}>待处理：拍卖出价</div>
-          <Button size="sm" mode="Second" onClick={() => auctionKey && setHiddenPrompts((s) => ({ ...s, [auctionKey]: false }))}>
-            打开
-          </Button>
-        </div>
-      ) : null}
-      {showTradePrompt && hiddenTrade ? (
-        <div style={{ marginTop: 12, padding: 10, borderRadius: 12, border: '1px solid rgba(0,0,0,0.12)', background: 'rgba(37,99,235,0.08)', display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div style={{ fontWeight: 700, color: 'var(--nb-color-fg, rgba(0,0,0,0.92))' }}>待处理：交易请求</div>
-          <Button size="sm" mode="Second" onClick={() => tradeKey && setHiddenPrompts((s) => ({ ...s, [tradeKey]: false }))}>
-            打开
-          </Button>
-        </div>
-      ) : null}
-      {showDebtPrompt && hiddenDebt ? (
-        <div style={{ marginTop: 12, padding: 10, borderRadius: 12, border: '1px solid rgba(0,0,0,0.12)', background: 'rgba(180,35,24,0.08)', display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div style={{ fontWeight: 700, color: 'var(--nb-color-fg, rgba(0,0,0,0.92))' }}>待处理：债务</div>
-          <Button
-            size="sm"
-            mode="Second"
-            style={
-              {
-                '--nb-btn-bg': 'var(--nb-color-danger-soft)',
-                '--nb-btn-bg-hover': 'var(--nb-color-danger-soft-hover)',
-                '--nb-btn-bg-active': 'var(--nb-color-danger-soft-active)',
-                '--nb-btn-fg': 'var(--nb-color-danger)',
-                '--nb-btn-border': 'transparent',
-                '--nb-btn-border-hover': 'transparent',
-                '--nb-btn-ring': 'var(--nb-color-danger-soft)',
-              } as React.CSSProperties
-            }
-            onClick={() => debtKey && setHiddenPrompts((s) => ({ ...s, [debtKey]: false }))}
-          >
-            打开
-          </Button>
-        </div>
-      ) : null}
-
       {filteredTiles ? (
         <div style={{ marginTop: 10, display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
           <div style={{ color: 'var(--nb-color-muted-fg, rgba(0,0,0,0.65))' }}>匹配：</div>
           {filteredTiles.map((t) => (
-            <Button key={t.idx} size="sm" mode="Second" onClick={() => setSearch(String(t.idx))}>
+            <Button key={t.idx} size="sm" mode="Default" onClick={() => setSearch(String(t.idx))}>
               #{t.idx} {t.name}
             </Button>
           ))}
         </div>
       ) : null}
 
-      <div style={{ marginTop: 16, display: 'flex', gap: 16, flexWrap: 'wrap', alignItems: 'start' }}>
+      <div style={{ marginTop: 16, display: 'flex', gap: 12, alignItems: 'flex-start', flexWrap: 'wrap' }}>
         {board.tiles.length >= 12 && board.tiles.length % 4 === 0 ? (
           <div
             style={{
-              width: 'min(72vh, 660px)',
+              position: 'relative',
+              width: 'min(80vh, 760px)',
               minWidth: 320,
               aspectRatio: '1',
               borderRadius: 'var(--nb-radius-lg, 16px)',
@@ -888,7 +971,7 @@ export function BoardSkeleton(props: BoardSkeletonProps) {
                   const ownerColor = ownedBy ? (playerColorById.get(ownedBy) ?? null) : null;
                   const groupColor =
                     tile && tile.kind === 'property'
-                      ? playerColors[hashString(tile.groupId) % playerColors.length]
+                      ? groupColorById(tile.groupId)
                       : null;
                   const mortgaged = tile && tile.kind === 'property' ? !!tile.mortgaged : false;
                   const buildings = tile && tile.kind === 'property' ? Math.max(0, Math.floor(tile.buildings ?? 0)) : 0;
@@ -966,25 +1049,119 @@ export function BoardSkeleton(props: BoardSkeletonProps) {
                         </>
                       ) : null}
 
-                      <Tooltip
+                      <Popover
                         content={
-                          <span>
-                            #{tileIndex} {name}
-                          </span>
+                          <div style={{ width: 280, maxWidth: 'min(86vw, 280px)', display: 'grid', gap: 10 }}>
+                            <div style={{ fontWeight: 800, color: 'var(--nb-color-fg, rgba(0,0,0,0.92))' }}>
+                              {`#${tileIndex} `}
+                              {name}
+                            </div>
+                            {tile && tile.kind === 'property' ? (
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                <div style={{ width: 12, height: 12, borderRadius: 999, background: groupColorById(tile.groupId), border: '1px solid rgba(0,0,0,0.12)' }} />
+                                <div style={{ color: 'var(--nb-color-muted-fg, rgba(0,0,0,0.65))', fontSize: 13, lineHeight: '18px' }}>
+                                  {tile.groupName ?? tile.groupId}
+                                </div>
+                              </div>
+                            ) : null}
+                            {tile ? (
+                              <div style={{ color: 'var(--nb-color-muted-fg, rgba(0,0,0,0.65))', fontSize: 13, lineHeight: '18px' }}>
+                                {tile.kind === 'start'
+                                  ? '起点'
+                                  : tile.kind === 'jail'
+                                    ? '监狱/探监'
+                                    : tile.kind === 'goToJail'
+                                      ? '进监狱'
+                                      : tile.kind === 'tax'
+                                        ? `税收：${formatMoney((tile as { amount: number }).amount)}`
+                                        : tile.kind === 'chance'
+                                          ? '机会'
+                                          : tile.kind === 'communityChest'
+                                            ? '命运'
+                                            : tile.kind === 'property'
+                                              ? `地产${debugMode ? `：${(tile as BoardPropertyTile).propertyId}` : ''}`
+                                              : ''}
+                              </div>
+                            ) : null}
+
+                            {tile && tile.kind === 'property' ? (
+                              <>
+                                <div style={{ color: 'rgba(0,0,0,0.65)', fontSize: 13 }}>
+                                  价格 {formatMoney(tile.price)}｜房价 {formatMoney(tile.houseCost)}｜建筑 {buildings}｜{mortgaged ? '已抵押' : '未抵押'}
+                                </div>
+                                <div style={{ color: 'rgba(0,0,0,0.65)', fontSize: 13 }}>
+                                  过路费（当前） {formatMoney(calcPropertyRent(board, tile))}
+                                </div>
+                                <div style={{ color: 'rgba(0,0,0,0.65)', fontSize: 12, lineHeight: '16px' }}>
+                                  过路费表 空地 {formatMoney(tile.rents[0] ?? 0)}｜1 {formatMoney(tile.rents[1] ?? 0)}｜2 {formatMoney(tile.rents[2] ?? 0)}｜3 {formatMoney(tile.rents[3] ?? 0)}｜4 {formatMoney(tile.rents[4] ?? 0)}｜5 {formatMoney(tile.rents[5] ?? 0)}
+                                </div>
+                                <div style={{ color: 'rgba(0,0,0,0.65)', fontSize: 13 }}>
+                                  {tile.ownerPlayerId ? `归属 ${membersById.get(tile.ownerPlayerId)?.displayName ?? tile.ownerPlayerId}` : '未售出'}
+                                </div>
+                                {tile.ownerPlayerId === selfPlayerId ? (
+                                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                                    <Button
+                                      size="sm"
+                                      mode="Second"
+                                      onClick={() =>
+                                        sendCommand({ type: 'game/build', roomId: room.roomId, gameId: game.gameId, playerId: selfPlayerId, propertyId: tile.propertyId })
+                                      }
+                                      disabled={!canAct}
+                                    >
+                                      建房
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      mode="Second"
+                                      onClick={() =>
+                                        sendCommand({ type: 'game/sellBuilding', roomId: room.roomId, gameId: game.gameId, playerId: selfPlayerId, propertyId: tile.propertyId })
+                                      }
+                                      disabled={!canAct}
+                                    >
+                                      卖房
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      mode="Second"
+                                      onClick={() =>
+                                        sendCommand({ type: 'game/mortgageProperty', roomId: room.roomId, gameId: game.gameId, playerId: selfPlayerId, propertyId: tile.propertyId })
+                                      }
+                                      disabled={!canAct || mortgaged}
+                                    >
+                                      抵押
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      mode="Second"
+                                      onClick={() =>
+                                        sendCommand({ type: 'game/redeemProperty', roomId: room.roomId, gameId: game.gameId, playerId: selfPlayerId, propertyId: tile.propertyId })
+                                      }
+                                      disabled={!canAct || !mortgaged}
+                                    >
+                                      赎回
+                                    </Button>
+                                  </div>
+                                ) : null}
+                              </>
+                            ) : null}
+                          </div>
                         }
                       >
                         <div
                           tabIndex={0}
+                          role="button"
+                          aria-label={`查看地块：#${tileIndex} ${name}`}
                           style={{
                             fontSize: 11,
                             lineHeight: '14px',
                             color: 'var(--nb-color-muted-fg, rgba(0,0,0,0.65))',
                             fontWeight: tileIndex % side === 0 ? 800 : 600,
                             outline: 'none',
-                            cursor: 'default',
+                            cursor: 'pointer',
+                            userSelect: 'none',
                           }}
                         >
-                          #{tileIndex}
+                          {`#${tileIndex}`}
                           <div
                             style={{
                               marginTop: 4,
@@ -995,8 +1172,13 @@ export function BoardSkeleton(props: BoardSkeletonProps) {
                           >
                             {name}
                           </div>
+                          {tile && tile.kind === 'property' ? (
+                            <div style={{ marginTop: 2, color: 'var(--nb-color-muted-fg, rgba(0,0,0,0.65))', fontSize: 11, lineHeight: '14px' }}>
+                              {formatMoney(tile.price)}
+                            </div>
+                          ) : null}
                         </div>
-                      </Tooltip>
+                      </Popover>
 
                       {pieceColors.length ? (
                         <div
@@ -1031,6 +1213,81 @@ export function BoardSkeleton(props: BoardSkeletonProps) {
                 });
               })()}
             </div>
+
+            {diceOverlay ? (
+              <div
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  pointerEvents: 'none',
+                  zIndex: 10,
+                }}
+              >
+                <div
+                  style={{
+                    display: 'flex',
+                    gap: 16,
+                    padding: 16,
+                    borderRadius: 16,
+                    background: 'rgba(255,255,255,0.88)',
+                    border: '1px solid rgba(0,0,0,0.12)',
+                    boxShadow: '0 10px 30px rgba(15,23,42,0.18)',
+                    transform: diceOverlay.open ? 'scale(1)' : 'scale(0.92)',
+                    opacity: diceOverlay.open ? 1 : 0,
+                    transition: 'transform 160ms ease, opacity 160ms ease',
+                  }}
+                >
+                  <img src={`/lucks/Point0${diceOverlay.dice[0]}.svg`} alt="" width={64} height={64} />
+                  <img src={`/lucks/Point0${diceOverlay.dice[1]}.svg`} alt="" width={64} height={64} />
+                </div>
+              </div>
+            ) : null}
+
+            {floatingChats.length ? (
+              <div
+                style={{
+                  position: 'absolute',
+                  right: 10,
+                  bottom: 10,
+                  display: 'grid',
+                  gap: 8,
+                  pointerEvents: 'none',
+                  zIndex: 12,
+                  width: 'min(320px, 86%)',
+                }}
+              >
+                {floatingChats
+                  .slice()
+                  .reverse()
+                  .map((m) => {
+                    const fromName = membersById.get(m.fromPlayerId)?.displayName ?? m.fromPlayerId;
+                    const toName = m.toPlayerId ? membersById.get(m.toPlayerId)?.displayName ?? m.toPlayerId : null;
+                    return (
+                      <div
+                        key={m.eventId}
+                        style={{
+                          padding: '8px 10px',
+                          borderRadius: 12,
+                          background: 'rgba(15,23,42,0.92)',
+                          color: '#fff',
+                          boxShadow: '0 8px 24px rgba(15,23,42,0.24)',
+                          lineHeight: '18px',
+                          fontSize: 13,
+                        }}
+                      >
+                        <div style={{ fontWeight: 800, opacity: 0.9 }}>
+                          {fromName}
+                          {toName ? ` → ${toName}` : ''}
+                        </div>
+                        <div style={{ marginTop: 2, opacity: 0.98, wordBreak: 'break-word' }}>{m.text}</div>
+                      </div>
+                    );
+                  })}
+              </div>
+            ) : null}
           </div>
         ) : (
           <div
@@ -1050,18 +1307,25 @@ export function BoardSkeleton(props: BoardSkeletonProps) {
                 const name = tileTitle(t, idx);
                 const focused = search.trim() && (String(idx) === search.trim() || name.includes(search.trim()));
                 const pieceColors = pieces.map((p) => playerColors[(p.seatIndex ?? 0) % playerColors.length]);
+                const groupColor = t.kind === 'property' ? groupColorById(t.groupId) : null;
+                const groupLabel = t.kind === 'property' ? (t.groupName ?? t.groupId) : null;
                 return (
                   <div
                     key={idx}
                     style={{
+                      position: 'relative',
                       padding: 10,
                       borderRadius: 12,
                       border: focused ? '2px solid var(--nb-color-primary, #2563eb)' : '1px solid var(--nb-color-border, rgba(0,0,0,0.12))',
                       background: focused ? 'var(--nb-color-primary-soft, rgba(37,99,235,0.12))' : 'var(--nb-color-bg, #f8fafc)',
                       display: 'grid',
                       gap: 8,
+                      overflow: 'hidden',
                     }}
                   >
+                    {groupColor ? (
+                      <div style={{ position: 'absolute', left: 0, top: 0, right: 0, height: 6, background: groupColor }} />
+                    ) : null}
                     <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'baseline' }}>
                       <div style={{ fontWeight: 850, color: 'var(--nb-color-fg, rgba(0,0,0,0.92))' }}>#{idx}</div>
                       <Button size="sm" mode="NoBackground" onClick={() => setSearch(String(idx))}>
@@ -1069,7 +1333,17 @@ export function BoardSkeleton(props: BoardSkeletonProps) {
                       </Button>
                     </div>
 
-                    <div style={{ fontWeight: 800, color: 'var(--nb-color-fg, rgba(0,0,0,0.92))' }}>{name}</div>
+                    <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                      {groupColor ? (
+                        <div style={{ width: 10, height: 10, borderRadius: 999, background: groupColor, border: '1px solid rgba(0,0,0,0.12)' }} />
+                      ) : null}
+                      <div style={{ fontWeight: 800, color: 'var(--nb-color-fg, rgba(0,0,0,0.92))' }}>
+                        {name}
+                        {groupLabel ? (
+                          <span style={{ marginLeft: 6, color: 'var(--nb-color-muted-fg, rgba(0,0,0,0.65))', fontSize: 12, fontWeight: 700 }}>{groupLabel}</span>
+                        ) : null}
+                      </div>
+                    </div>
 
                     <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
                       {pieceColors.length ? (
@@ -1118,112 +1392,560 @@ export function BoardSkeleton(props: BoardSkeletonProps) {
 
         <aside
           style={{
-            flex: '1 1 320px',
-            minWidth: 320,
             borderRadius: 'var(--nb-radius-lg, 16px)',
             border: '1px solid var(--nb-color-border, rgba(0,0,0,0.12))',
             background: 'var(--nb-color-surface, #fff)',
-            padding: 14,
+            padding: 12,
+            flex: '1 1 340px',
+            minWidth: 320,
+            maxWidth: 420,
+            height: 'min(80vh, 760px)',
+            overflow: 'auto',
           }}
         >
-          <div style={{ fontWeight: 800, color: 'var(--nb-color-fg, rgba(0,0,0,0.92))' }}>玩家面板</div>
-          <div style={{ marginTop: 8, color: 'var(--nb-color-muted-fg, rgba(0,0,0,0.65))', fontSize: 14, lineHeight: '20px' }}>
-            点击玩家可查看详情与资产；轮到自己时可掷骰/结束回合，并在资产中建房/卖房/抵押/赎回
+          <div style={{ display: 'grid', gap: 10 }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10 }}>
+              <div style={{ fontWeight: 800, color: 'var(--nb-color-fg, rgba(0,0,0,0.92))' }}>待处理提示</div>
+              <div style={{ color: 'var(--nb-color-muted-fg, rgba(0,0,0,0.65))', fontSize: 12 }}>{promptStackItems.length} 条</div>
+            </div>
+            <div style={{ display: 'grid', gap: 10 }}>
+              {promptStackItems.length ? (
+                promptStackItems.map((item) => {
+                  const collapsed = promptStackCollapsed[item.key] === true;
+                  const toggleCollapsed = () => setPromptStackCollapsedFor(item.key, !collapsed);
+                  if (item.kind === 'trade') {
+                    const t = item.trade;
+                    const fromName = membersById.get(t.fromPlayerId)?.displayName ?? t.fromPlayerId;
+                    const toName = membersById.get(t.toPlayerId)?.displayName ?? t.toPlayerId;
+                    const isTargetSelf = t.toPlayerId === selfPlayerId;
+                    const isFromSelf = t.fromPlayerId === selfPlayerId;
+                    const canActPrompt = isTargetSelf && canRespondPrompt;
+                    const offerTitle = isTargetSelf ? '对方给我' : isFromSelf ? '我给对方' : `${fromName} 给 ${toName}`;
+                    const requestTitle = isTargetSelf ? '我给对方' : isFromSelf ? '对方给我' : `${toName} 给 ${fromName}`;
+                    const offerProps = t.offer.properties.map(propertyLabel);
+                    const requestProps = t.request.properties.map(propertyLabel);
+                    return (
+                      <div
+                        key={item.key}
+                        style={{
+                          padding: 10,
+                          borderRadius: 12,
+                          border: '1px solid rgba(0,0,0,0.08)',
+                          background: 'var(--nb-color-bg, #f8fafc)',
+                          display: 'grid',
+                          gap: 8,
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+                          <div style={{ fontWeight: 800, color: 'rgba(0,0,0,0.82)' }}>交易请求</div>
+                          <Button size="sm" mode="NoBackground" onClick={toggleCollapsed}>
+                            {collapsed ? '展开' : '收起'}
+                          </Button>
+                        </div>
+                        <div style={{ color: 'rgba(0,0,0,0.68)', fontSize: 13, lineHeight: '18px', wordBreak: 'break-word' }}>
+                          {fromName} → {toName}
+                        </div>
+                        {!isTargetSelf ? (
+                          <div style={{ color: 'var(--nb-color-muted-fg, rgba(0,0,0,0.65))', fontSize: 13, lineHeight: '18px' }}>等待{toName}处理交易请求…</div>
+                        ) : null}
+                        {!collapsed ? (
+                          <div style={{ display: 'grid', gap: 10 }}>
+                            <div style={{ display: 'grid', gap: 6 }}>
+                              <div style={{ fontWeight: 800, color: 'var(--nb-color-fg, rgba(0,0,0,0.92))' }}>{offerTitle}</div>
+                              <div style={{ color: 'var(--nb-color-muted-fg, rgba(0,0,0,0.65))', fontSize: 13 }}>现金 {formatMoney(t.offer.cash)}</div>
+                              <div style={{ color: 'var(--nb-color-muted-fg, rgba(0,0,0,0.65))', fontSize: 13 }}>
+                                地产 {offerProps.length ? offerProps.join('、') : '无'}
+                              </div>
+                            </div>
+                            <div style={{ display: 'grid', gap: 6 }}>
+                              <div style={{ fontWeight: 800, color: 'var(--nb-color-fg, rgba(0,0,0,0.92))' }}>{requestTitle}</div>
+                              <div style={{ color: 'var(--nb-color-muted-fg, rgba(0,0,0,0.65))', fontSize: 13 }}>现金 {formatMoney(t.request.cash)}</div>
+                              <div style={{ color: 'var(--nb-color-muted-fg, rgba(0,0,0,0.65))', fontSize: 13 }}>
+                                地产 {requestProps.length ? requestProps.join('、') : '无'}
+                              </div>
+                            </div>
+                            {isTargetSelf ? (
+                              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'end' }}>
+                                <Button
+                                  size="sm"
+                                  mode="Second"
+                                  onClick={() => sendCommand({ type: 'game/respondTrade', roomId: room.roomId, gameId: game.gameId, playerId: selfPlayerId, accept: false })}
+                                  disabled={!canActPrompt}
+                                >
+                                  拒绝
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  mode="Primary"
+                                  onClick={() => sendCommand({ type: 'game/respondTrade', roomId: room.roomId, gameId: game.gameId, playerId: selfPlayerId, accept: true })}
+                                  disabled={!canActPrompt}
+                                >
+                                  接受
+                                </Button>
+                              </div>
+                            ) : null}
+                          </div>
+                        ) : null}
+                      </div>
+                    );
+                  }
+                  if (item.kind === 'buyOrAuction') {
+                    const prompt = item.prompt;
+                    const actorName = membersById.get(prompt.playerId)?.displayName ?? prompt.playerId;
+                    const isTargetSelf = prompt.playerId === selfPlayerId;
+                    const canActPrompt = prompt.playerId === selfPlayerId && canRespondPrompt;
+                    return (
+                      <div
+                        key={item.key}
+                        style={{
+                          padding: 10,
+                          borderRadius: 12,
+                          border: '1px solid rgba(0,0,0,0.08)',
+                          background: 'var(--nb-color-bg, #f8fafc)',
+                          display: 'grid',
+                          gap: 8,
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+                          <div style={{ fontWeight: 800, color: 'rgba(0,0,0,0.82)' }}>购买/拍卖</div>
+                          <Button size="sm" mode="NoBackground" onClick={toggleCollapsed}>
+                            {collapsed ? '展开' : '收起'}
+                          </Button>
+                        </div>
+                        <div style={{ color: 'rgba(0,0,0,0.68)', fontSize: 13, lineHeight: '18px', wordBreak: 'break-word' }}>
+                          {actorName}：{propertyLabel(prompt.propertyId)}｜价格 {formatMoney(prompt.price)}
+                        </div>
+                        {!isTargetSelf ? (
+                          <div style={{ color: 'var(--nb-color-muted-fg, rgba(0,0,0,0.65))', fontSize: 13, lineHeight: '18px' }}>等待{actorName}…</div>
+                        ) : null}
+                        {!collapsed ? (
+                          isTargetSelf ? (
+                            <>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
+                                <div style={{ color: 'var(--nb-color-muted-fg, rgba(0,0,0,0.65))' }}>我的现金</div>
+                                <div style={{ fontWeight: 800, color: 'var(--nb-color-fg, rgba(0,0,0,0.92))' }}>{formatMoney(self?.cash ?? 0)}</div>
+                              </div>
+                              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'end' }}>
+                                <Button
+                                  size="sm"
+                                  mode="Second"
+                                  onClick={() =>
+                                    sendCommand({
+                                      type: 'game/respondPrompt',
+                                      roomId: room.roomId,
+                                      gameId: game.gameId,
+                                      playerId: selfPlayerId,
+                                      promptId: prompt.promptId,
+                                      choice: { action: 'auction' },
+                                    })
+                                  }
+                                  disabled={!canActPrompt}
+                                >
+                                  放弃并拍卖
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  mode="Primary"
+                                  onClick={() =>
+                                    sendCommand({
+                                      type: 'game/buyProperty',
+                                      roomId: room.roomId,
+                                      gameId: game.gameId,
+                                      playerId: selfPlayerId,
+                                      propertyId: prompt.propertyId,
+                                    })
+                                  }
+                                  disabled={!canActPrompt}
+                                >
+                                  购买
+                                </Button>
+                              </div>
+                            </>
+                          ) : null
+                        ) : null}
+                      </div>
+                    );
+                  }
+                  if (item.kind === 'auctionBid') {
+                    const prompt = item.prompt;
+                    const actorName = membersById.get(prompt.playerId)?.displayName ?? prompt.playerId;
+                    const isTargetSelf = prompt.playerId === selfPlayerId;
+                    const highestBidderName = prompt.highestBidderId ? membersById.get(prompt.highestBidderId)?.displayName ?? prompt.highestBidderId : null;
+                    const canActPrompt = prompt.playerId === selfPlayerId && canRespondPrompt;
+                    return (
+                      <div
+                        key={item.key}
+                        style={{
+                          padding: 10,
+                          borderRadius: 12,
+                          border: '1px solid rgba(0,0,0,0.08)',
+                          background: 'var(--nb-color-bg, #f8fafc)',
+                          display: 'grid',
+                          gap: 8,
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+                          <div style={{ fontWeight: 800, color: 'rgba(0,0,0,0.82)' }}>拍卖出价</div>
+                          <Button size="sm" mode="NoBackground" onClick={toggleCollapsed}>
+                            {collapsed ? '展开' : '收起'}
+                          </Button>
+                        </div>
+                        <div style={{ color: 'rgba(0,0,0,0.68)', fontSize: 13, lineHeight: '18px', wordBreak: 'break-word' }}>
+                          {actorName}：{propertyLabel(prompt.propertyId)}｜最低 {formatMoney(prompt.minBid)}｜最高 {formatMoney(prompt.highestBid)}
+                          {highestBidderName ? `（${highestBidderName}）` : ''}
+                        </div>
+                        {!isTargetSelf ? (
+                          <div style={{ color: 'var(--nb-color-muted-fg, rgba(0,0,0,0.65))', fontSize: 13, lineHeight: '18px' }}>等待{actorName}…</div>
+                        ) : null}
+                        {!collapsed ? (
+                          isTargetSelf ? (
+                            <>
+                              <Input
+                                value={auctionBid}
+                                onChange={(e) => setAuctionBid(e.target.value)}
+                                type="number"
+                                min={prompt.minBid}
+                                step={1}
+                                placeholder={`最低 ${prompt.minBid}`}
+                                disabled={!canActPrompt}
+                              />
+                              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'end' }}>
+                                <Button
+                                  size="sm"
+                                  mode="Second"
+                                  onClick={() =>
+                                    sendCommand({
+                                      type: 'game/respondPrompt',
+                                      roomId: room.roomId,
+                                      gameId: game.gameId,
+                                      playerId: selfPlayerId,
+                                      promptId: prompt.promptId,
+                                      choice: { pass: true },
+                                    })
+                                  }
+                                  disabled={!canActPrompt}
+                                >
+                                  弃权
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  mode="Primary"
+                                  onClick={() => {
+                                    const bid = Math.floor(Number(auctionBid));
+                                    if (!Number.isFinite(bid) || bid < prompt.minBid) return;
+                                    sendCommand({
+                                      type: 'game/respondPrompt',
+                                      roomId: room.roomId,
+                                      gameId: game.gameId,
+                                      playerId: selfPlayerId,
+                                      promptId: prompt.promptId,
+                                      choice: { bid },
+                                    });
+                                    setAuctionBid('');
+                                  }}
+                                  disabled={!canActPrompt}
+                                >
+                                  出价
+                                </Button>
+                              </div>
+                            </>
+                          ) : null
+                        ) : null}
+                      </div>
+                    );
+                  }
+                  const d = item.debt;
+                  const debtorName = membersById.get(d.debtorId)?.displayName ?? d.debtorId;
+                  const isTargetSelf = d.debtorId === selfPlayerId;
+                  const creditorLabel = d.creditor.kind === 'bank' ? '银行' : membersById.get(d.creditor.playerId)?.displayName ?? d.creditor.playerId;
+                  const canActPrompt = d.debtorId === selfPlayerId && canRespondPrompt;
+                  return (
+                    <div
+                      key={item.key}
+                      style={{
+                        padding: 10,
+                        borderRadius: 12,
+                        border: '1px solid rgba(0,0,0,0.08)',
+                        background: 'rgba(180,35,24,0.06)',
+                        display: 'grid',
+                        gap: 8,
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+                        <div style={{ fontWeight: 800, color: 'rgba(0,0,0,0.82)' }}>债务</div>
+                        <Button size="sm" mode="NoBackground" onClick={toggleCollapsed}>
+                          {collapsed ? '展开' : '收起'}
+                        </Button>
+                      </div>
+                      <div style={{ color: 'rgba(0,0,0,0.72)', fontSize: 13, lineHeight: '18px', wordBreak: 'break-word' }}>
+                        {debtorName} 欠 {creditorLabel}：{d.reason}｜金额 {formatMoney(d.amount)}
+                      </div>
+                      {!isTargetSelf ? (
+                        <div style={{ color: 'var(--nb-color-muted-fg, rgba(0,0,0,0.65))', fontSize: 13, lineHeight: '18px' }}>等待{debtorName}…</div>
+                      ) : null}
+                      {!collapsed ? (
+                        isTargetSelf ? (
+                          <>
+                            <div style={{ color: 'rgba(0,0,0,0.68)', fontSize: 13, lineHeight: '18px' }}>
+                              可通过卖房/抵押/赎回等操作调整现金，现金足够时将自动扣款并清除债务
+                            </div>
+                            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'end' }}>
+                              <Button
+                                size="sm"
+                                mode="Primary"
+                                style={
+                                  {
+                                    '--nb-btn-bg': 'var(--nb-color-danger)',
+                                    '--nb-btn-bg-hover': 'var(--nb-color-danger-hover)',
+                                    '--nb-btn-bg-active': 'var(--nb-color-danger-active)',
+                                    '--nb-btn-fg': 'var(--nb-color-danger-fg, #fff)',
+                                    '--nb-btn-border': 'transparent',
+                                    '--nb-btn-border-hover': 'transparent',
+                                    '--nb-btn-ring': 'var(--nb-color-danger-soft)',
+                                    '--nb-btn-shadow': 'inset 0 -1px 0 rgba(0, 0, 0, 0.08)',
+                                  } as React.CSSProperties
+                                }
+                                onClick={() =>
+                                  sendCommand({ type: 'game/declareBankruptcy', roomId: room.roomId, gameId: game.gameId, playerId: selfPlayerId })
+                                }
+                                disabled={!canActPrompt}
+                              >
+                                宣布破产
+                              </Button>
+                              <Button size="sm" mode="Second" onClick={() => setDrawerPlayerId(selfPlayerId)} disabled={!canActPrompt || !self}>
+                                去资产处理
+                              </Button>
+                            </div>
+                          </>
+                        ) : null
+                      ) : null}
+                    </div>
+                  );
+                })
+              ) : (
+                <div style={{ color: 'var(--nb-color-muted-fg, rgba(0,0,0,0.65))' }}>暂无待处理提示</div>
+              )}
+            </div>
           </div>
 
-          <div style={{ marginTop: 12, display: 'grid', gap: 10 }}>
-            {players.map((p) => {
-              const isSelf = p.playerId === selfPlayerId;
-              const color = playerColors[(p.seatIndex ?? 0) % playerColors.length];
-              return (
+          <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10 }}>
+            <div style={{ fontWeight: 800, color: 'var(--nb-color-fg, rgba(0,0,0,0.92))' }}>事件时间轴</div>
+            <div style={{ color: 'var(--nb-color-muted-fg, rgba(0,0,0,0.65))', fontSize: 12 }}>{timeline.length} 条</div>
+          </div>
+
+          <div style={{ marginTop: 12, display: 'grid', gap: 10, maxHeight: 'min(80vh, 760px)', overflow: 'auto', paddingRight: 4 }}>
+            {timeline.length ? (
+              timeline
+                .slice()
+                .reverse()
+                .map((e) => (
+                  <div
+                    key={e.eventId}
+                    style={{
+                      padding: '10px 10px',
+                      borderRadius: 12,
+                      border: '1px solid rgba(0,0,0,0.08)',
+                      background: 'var(--nb-color-bg, #f8fafc)',
+                      display: 'grid',
+                      gap: 4,
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10 }}>
+                      <div style={{ fontWeight: 800, color: 'rgba(0,0,0,0.82)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {e.title}
+                      </div>
+                      <div style={{ color: 'rgba(0,0,0,0.5)', fontSize: 12, flex: '0 0 auto' }}>{formatClock(e.createdAtMs)}</div>
+                    </div>
+                    <div style={{ color: 'rgba(0,0,0,0.68)', fontSize: 13, lineHeight: '18px', wordBreak: 'break-word' }}>{e.subtitle}</div>
+                  </div>
+                ))
+            ) : (
+              <div style={{ color: 'var(--nb-color-muted-fg, rgba(0,0,0,0.65))' }}>暂无事件</div>
+            )}
+          </div>
+        </aside>
+      </div>
+
+      <div
+        style={{
+          marginTop: 12,
+          borderRadius: 'var(--nb-radius-lg, 16px)',
+          border: '1px solid var(--nb-color-border, rgba(0,0,0,0.12))',
+          background: 'var(--nb-color-surface, #fff)',
+          padding: 12,
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
+          <div style={{ fontWeight: 800, color: 'var(--nb-color-fg, rgba(0,0,0,0.92))' }}>玩家</div>
+          <Popover
+            open={chatOpen}
+            onOpenChange={setChatOpen}
+            content={
+              <div style={{ width: 360, maxWidth: 'min(90vw, 360px)', display: 'grid', gap: 10 }}>
+                <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10 }}>
+                  <div style={{ fontWeight: 800, color: 'var(--nb-color-fg, rgba(0,0,0,0.92))' }}>聊天</div>
+                  <div style={{ color: 'var(--nb-color-muted-fg, rgba(0,0,0,0.65))', fontSize: 12 }}>{chatMessages.length} 条</div>
+                </div>
                 <div
-                  key={p.playerId}
                   style={{
-                    borderRadius: 'var(--nb-radius-md, 12px)',
-                    border: isSelf ? `2px solid ${color}` : '1px solid var(--nb-color-border, rgba(0,0,0,0.12))',
-                    padding: 12,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    gap: 12,
-                    opacity: p.eliminated ? 0.6 : 1,
+                    maxHeight: 260,
+                    overflow: 'auto',
+                    borderRadius: 12,
+                    border: '1px solid rgba(0,0,0,0.08)',
+                    background: 'var(--nb-color-bg, #f8fafc)',
+                    padding: 10,
+                    display: 'grid',
+                    gap: 10,
                   }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
-                    <div
-                      style={{
-                        width: 14,
-                        height: 14,
-                        borderRadius: 999,
-                        background: color,
-                        boxShadow: '0 1px 2px rgba(0,0,0,0.14)',
-                        flex: '0 0 auto',
-                      }}
-                    />
-                    {(() => {
-                      const member = membersById.get(p.playerId) ?? null;
-                      const uid = member?.userId ?? null;
-                      const pub = uid ? publicProfiles[uid] : undefined;
-                      const avatarUrl = pub?.avatarUrl ?? null;
-                      const initial = initialFor(p.displayName);
-                      return avatarUrl ? (
-                        <div style={{ position: 'relative', width: 22, height: 22, borderRadius: 999, overflow: 'hidden', flex: '0 0 auto' }}>
-                          <Image src={avatarUrl} alt="" fill sizes="22px" style={{ objectFit: 'cover' }} unoptimized />
-                        </div>
-                      ) : (
-                        <div
-                          style={{
-                            width: 22,
-                            height: 22,
-                            borderRadius: 999,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            background: 'rgba(0,0,0,0.06)',
-                            color: 'rgba(0,0,0,0.7)',
-                            fontWeight: 800,
-                            fontSize: 12,
-                            flex: '0 0 auto',
-                          }}
-                        >
-                          {initial}
+                  {chatMessages.length ? (
+                    chatMessages.slice(-40).map((m) => {
+                      const fromName = membersById.get(m.fromPlayerId)?.displayName ?? m.fromPlayerId;
+                      const toName = m.toPlayerId ? membersById.get(m.toPlayerId)?.displayName ?? m.toPlayerId : null;
+                      const time = formatClock(m.createdAtMs).slice(0, 5);
+                      return (
+                        <div key={m.eventId} style={{ display: 'grid', gap: 2 }}>
+                          <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10 }}>
+                            <div style={{ fontWeight: 800, color: 'rgba(0,0,0,0.82)' }}>
+                              {fromName}
+                              {toName ? ` → ${toName}` : ''}
+                            </div>
+                            <div style={{ color: 'rgba(0,0,0,0.5)', fontSize: 12 }}>{time}</div>
+                          </div>
+                          <div style={{ color: 'rgba(0,0,0,0.78)', lineHeight: '18px', wordBreak: 'break-word' }}>{m.text}</div>
                         </div>
                       );
-                    })()}
-                    <div style={{ minWidth: 0 }}>
-                      <div style={{ fontWeight: 800, color: 'var(--nb-color-fg, rgba(0,0,0,0.92))', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                        {p.displayName}
-                        {isSelf ? <span style={{ marginLeft: 6, color: 'var(--nb-color-muted-fg, rgba(0,0,0,0.65))' }}>（我）</span> : null}
-                      </div>
-                      <div style={{ marginTop: 4, color: 'var(--nb-color-muted-fg, rgba(0,0,0,0.65))', fontSize: 13, lineHeight: '18px' }}>
-                        现金 {formatMoney(p.cash)} ｜位置 #{p.position}
-                        {p.inJail ? `｜监狱 ${p.jailTurns}` : ''}
-                        {p.eliminated ? '｜已出局' : ''}
-                      </div>
-                    </div>
+                    })
+                  ) : (
+                    <div style={{ color: 'rgba(0,0,0,0.55)' }}>暂无消息</div>
+                  )}
+                </div>
+                <div style={{ display: 'grid', gap: 8 }}>
+                  <div style={{ display: 'grid', gap: 6 }}>
+                    <div style={{ color: 'rgba(0,0,0,0.62)', fontSize: 12 }}>发送给</div>
+                    <select
+                      value={chatTo}
+                      onChange={(e) => setChatTo(e.target.value)}
+                      style={{ padding: '10px 12px', borderRadius: 10, border: '1px solid rgba(0,0,0,0.12)' }}
+                    >
+                      <option value="">所有人</option>
+                      {chatTargets.map((m) => (
+                        <option key={m.playerId} value={m.playerId}>
+                          {m.displayName}
+                        </option>
+                      ))}
+                    </select>
                   </div>
-
-                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'end' }}>
-                    <Button size="sm" mode="Second" onClick={() => setDrawerPlayerId(p.playerId)}>
-                      资产（{p.properties.length}）
-                    </Button>
-                    <Button size="sm" mode="NoBackground" onClick={() => setActivePlayerId(p.playerId)}>
-                      详情
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                    <Input value={chatText} onChange={(e) => setChatText(e.target.value)} placeholder="输入消息" style={{ flex: '1 1 auto', minWidth: 0 }} />
+                    <Button size="sm" mode="Primary" onClick={onSendChat} disabled={!canSendChat}>
+                      发送
                     </Button>
                   </div>
                 </div>
-              );
-            })}
-          </div>
-          {lastError ? <div style={{ marginTop: 12, color: '#b42318' }}>{lastError.message}</div> : null}
-        </aside>
+              </div>
+            }
+          >
+            <Button size="sm" mode="Second">
+              聊天
+            </Button>
+          </Popover>
+        </div>
+
+        <div style={{ marginTop: 10, display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 4 }}>
+          {players.map((p) => {
+            const isSelf = p.playerId === selfPlayerId;
+            const color = playerColors[(p.seatIndex ?? 0) % playerColors.length];
+            return (
+              <div
+                key={p.playerId}
+                style={{
+                  flex: '0 0 auto',
+                  minWidth: 240,
+                  borderRadius: 'var(--nb-radius-md, 12px)',
+                  border: isSelf ? `2px solid ${color}` : '1px solid var(--nb-color-border, rgba(0,0,0,0.12))',
+                  padding: 10,
+                  background: 'var(--nb-color-bg, #f8fafc)',
+                  opacity: p.eliminated ? 0.6 : 1,
+                  display: 'grid',
+                  gap: 10,
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+                  <div
+                    style={{
+                      width: 14,
+                      height: 14,
+                      borderRadius: 999,
+                      background: color,
+                      boxShadow: '0 1px 2px rgba(0,0,0,0.14)',
+                      flex: '0 0 auto',
+                    }}
+                  />
+                  {(() => {
+                    const member = membersById.get(p.playerId) ?? null;
+                    const uid = member?.userId ?? null;
+                    const pub = uid ? publicProfiles[uid] : undefined;
+                    const avatarUrl = pub?.avatarUrl ?? null;
+                    const initial = initialFor(p.displayName);
+                    return avatarUrl ? (
+                      <div style={{ position: 'relative', width: 22, height: 22, borderRadius: 999, overflow: 'hidden', flex: '0 0 auto' }}>
+                        <Image src={avatarUrl} alt="" fill sizes="22px" style={{ objectFit: 'cover' }} unoptimized />
+                      </div>
+                    ) : (
+                      <div
+                        style={{
+                          width: 22,
+                          height: 22,
+                          borderRadius: 999,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          background: 'rgba(0,0,0,0.06)',
+                          color: 'rgba(0,0,0,0.7)',
+                          fontWeight: 800,
+                          fontSize: 12,
+                          flex: '0 0 auto',
+                        }}
+                      >
+                        {initial}
+                      </div>
+                    );
+                  })()}
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ fontWeight: 800, color: 'var(--nb-color-fg, rgba(0,0,0,0.92))', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {p.displayName}
+                      {isSelf ? <span style={{ marginLeft: 6, color: 'var(--nb-color-muted-fg, rgba(0,0,0,0.65))' }}>（我）</span> : null}
+                    </div>
+                    <div style={{ marginTop: 4, color: 'var(--nb-color-muted-fg, rgba(0,0,0,0.65))', fontSize: 13, lineHeight: '18px' }}>
+                      现金 {formatMoney(p.cash)} ｜位置 #{p.position}
+                      {p.inJail ? `｜监狱 ${p.jailTurns}` : ''}
+                      {p.eliminated ? '｜已出局' : ''}
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  <Button size="sm" mode="Second" onClick={() => setDrawerPlayerId(p.playerId)}>
+                    资产（{p.properties.length}）
+                  </Button>
+                  <Button size="sm" mode="NoBackground" onClick={() => setActivePlayerId(p.playerId)}>
+                    详情
+                  </Button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {lastError ? <div style={{ marginTop: 10, color: '#b42318' }}>{lastError.message}</div> : null}
       </div>
 
       <Dialog
         open={!!activePlayer}
         onOpenChange={(o) => setActivePlayerId(o ? activePlayerId : null)}
         title={activePlayer ? `玩家：${activePlayer.displayName}` : undefined}
-        description={activePlayer ? `playerId: ${activePlayer.playerId}` : undefined}
+        description={activePlayer && debugMode ? `playerId: ${activePlayer.playerId}` : undefined}
         footer={
           activePlayer ? (
             <>
@@ -1250,7 +1972,12 @@ export function BoardSkeleton(props: BoardSkeletonProps) {
               </div>
             </div>
             {activePlayer.properties.length ? (
-              <div style={{ color: 'var(--nb-color-muted-fg, rgba(0,0,0,0.65))', fontSize: 13 }}>地产：{activePlayer.properties.join('、')}</div>
+              <div style={{ color: 'var(--nb-color-muted-fg, rgba(0,0,0,0.65))', fontSize: 13 }}>
+                地产：
+                {activePlayer.properties
+                  .map((pid) => (debugMode ? `${propertyLabel(pid)}（${pid}）` : propertyLabel(pid)))
+                  .join('、')}
+              </div>
             ) : null}
           </div>
         ) : null}
@@ -1432,21 +2159,31 @@ export function BoardSkeleton(props: BoardSkeletonProps) {
                   const isMine = drawerPlayer.playerId === selfPlayerId;
                   const mortgageValue = Math.floor(tile.price / 2);
                   const building = tile.buildings ?? 0;
+                  const rent = calcPropertyRent(board, tile);
+                  const groupColor = groupColorById(tile.groupId);
+                  const groupLabel = tile.groupName ?? tile.groupId;
                   return (
                     <div
                       key={pid}
                       style={{
+                        position: 'relative',
                         padding: 12,
                         borderRadius: 'var(--nb-radius-md, 12px)',
                         border: '1px solid var(--nb-color-border, rgba(0,0,0,0.12))',
                         background: 'var(--nb-color-bg, #f8fafc)',
                         display: 'grid',
                         gap: 10,
+                        overflow: 'hidden',
                       }}
                     >
+                      <div style={{ position: 'absolute', left: 0, top: 0, right: 0, height: 6, background: groupColor }} />
                       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
-                        <div style={{ fontWeight: 800, color: 'var(--nb-color-fg, rgba(0,0,0,0.92))' }}>
-                          {tileTitle(tile, board.tiles.indexOf(tile))}
+                        <div style={{ display: 'flex', gap: 8, alignItems: 'center', minWidth: 0 }}>
+                          <div style={{ width: 10, height: 10, borderRadius: 999, background: groupColor, border: '1px solid rgba(0,0,0,0.12)' }} />
+                          <div style={{ fontWeight: 800, color: 'var(--nb-color-fg, rgba(0,0,0,0.92))' }}>
+                            {tileTitle(tile, board.tiles.indexOf(tile))}
+                            <span style={{ marginLeft: 6, color: 'var(--nb-color-muted-fg, rgba(0,0,0,0.65))', fontSize: 12, fontWeight: 700 }}>{groupLabel}</span>
+                          </div>
                         </div>
                         <div style={{ color: 'var(--nb-color-muted-fg, rgba(0,0,0,0.65))', fontSize: 13 }}>
                           {tile.mortgaged ? '已抵押' : '未抵押'}｜建筑 {building}
@@ -1454,6 +2191,9 @@ export function BoardSkeleton(props: BoardSkeletonProps) {
                       </div>
                       <div style={{ color: 'var(--nb-color-muted-fg, rgba(0,0,0,0.65))', fontSize: 13 }}>
                         价格 {formatMoney(tile.price)}｜房价 {formatMoney(tile.houseCost)}｜抵押值 {formatMoney(mortgageValue)}
+                      </div>
+                      <div style={{ color: 'var(--nb-color-muted-fg, rgba(0,0,0,0.65))', fontSize: 13 }}>
+                        过路费（当前） {formatMoney(rent)}
                       </div>
                       {isMine ? (
                         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -1507,198 +2247,6 @@ export function BoardSkeleton(props: BoardSkeletonProps) {
           </div>
         ) : null}
       </Drawer>
-
-      <Dialog
-        open={showBuyPrompt && !hiddenBuy}
-        onOpenChange={(o) => {
-          if (o) return;
-          if (buyKey) setHiddenPrompts((s) => ({ ...s, [buyKey]: true }));
-        }}
-        title="购买还是拍卖？"
-        description={buyPrompt ? `地块 ${buyPrompt.propertyId}｜价格 ${formatMoney(buyPrompt.price)}` : undefined}
-        footer={
-          buyPrompt ? (
-            <>
-              <Button
-                mode="Second"
-                onClick={() =>
-                  sendCommand({ type: 'game/respondPrompt', roomId: room.roomId, gameId: game.gameId, playerId: selfPlayerId, promptId: buyPrompt.promptId, choice: { action: 'auction' } })
-                }
-                disabled={!canRespondPrompt}
-              >
-                放弃并拍卖
-              </Button>
-              <Button
-                mode="Primary"
-                onClick={() =>
-                  sendCommand({ type: 'game/buyProperty', roomId: room.roomId, gameId: game.gameId, playerId: selfPlayerId, propertyId: buyPrompt.propertyId })
-                }
-                disabled={!canRespondPrompt}
-              >
-                购买
-              </Button>
-            </>
-          ) : null
-        }
-      >
-        {buyPrompt ? (
-          <div style={{ display: 'grid', gap: 10 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
-              <div style={{ color: 'var(--nb-color-muted-fg, rgba(0,0,0,0.65))' }}>我的现金</div>
-              <div style={{ fontWeight: 800, color: 'var(--nb-color-fg, rgba(0,0,0,0.92))' }}>{formatMoney(self?.cash ?? 0)}</div>
-            </div>
-          </div>
-        ) : null}
-      </Dialog>
-
-      <Dialog
-        open={showAuctionPrompt && !hiddenAuction}
-        onOpenChange={(o) => {
-          if (o) return;
-          if (auctionKey) setHiddenPrompts((s) => ({ ...s, [auctionKey]: true }));
-        }}
-        title="拍卖出价"
-        description={
-          auctionPrompt
-            ? `地块 ${auctionPrompt.propertyId}｜最低出价 ${formatMoney(auctionPrompt.minBid)}｜当前最高 ${formatMoney(auctionPrompt.highestBid)}`
-            : undefined
-        }
-        footer={
-          auctionPrompt ? (
-            <>
-              <Button
-                mode="Second"
-                onClick={() =>
-                  sendCommand({ type: 'game/respondPrompt', roomId: room.roomId, gameId: game.gameId, playerId: selfPlayerId, promptId: auctionPrompt.promptId, choice: { pass: true } })
-                }
-                disabled={!canRespondPrompt}
-              >
-                放弃出价
-              </Button>
-              <Button
-                mode="Primary"
-                onClick={() => {
-                  const bid = Math.floor(Number(auctionBid));
-                  if (!Number.isFinite(bid) || bid <= 0) return;
-                  sendCommand({ type: 'game/respondPrompt', roomId: room.roomId, gameId: game.gameId, playerId: selfPlayerId, promptId: auctionPrompt.promptId, choice: { bid } });
-                  setAuctionBid('');
-                }}
-                disabled={!canRespondPrompt}
-              >
-                出价
-              </Button>
-            </>
-          ) : null
-        }
-      >
-        {auctionPrompt ? (
-          <div style={{ display: 'grid', gap: 10 }}>
-            <Input
-              value={auctionBid}
-              onChange={(e) => setAuctionBid(e.target.value)}
-              type="number"
-              min={auctionPrompt.minBid}
-              step={1}
-              placeholder={`最低 ${auctionPrompt.minBid}`}
-            />
-          </div>
-        ) : null}
-      </Dialog>
-
-      <Dialog
-        open={showTradePrompt && !hiddenTrade}
-        onOpenChange={(o) => {
-          if (o) return;
-          if (tradeKey) setHiddenPrompts((s) => ({ ...s, [tradeKey]: true }));
-        }}
-        title="收到交易请求"
-        description={trade ? `来自：${membersById.get(trade.fromPlayerId)?.displayName ?? trade.fromPlayerId}` : undefined}
-        footer={
-          trade ? (
-            <>
-              <Button
-                mode="Second"
-                onClick={() => sendCommand({ type: 'game/respondTrade', roomId: room.roomId, gameId: game.gameId, playerId: selfPlayerId, accept: false })}
-                disabled={!canRespondPrompt}
-              >
-                拒绝
-              </Button>
-              <Button
-                mode="Primary"
-                onClick={() => sendCommand({ type: 'game/respondTrade', roomId: room.roomId, gameId: game.gameId, playerId: selfPlayerId, accept: true })}
-                disabled={!canRespondPrompt}
-              >
-                接受
-              </Button>
-            </>
-          ) : null
-        }
-      >
-        {trade ? (
-          <div style={{ display: 'grid', gap: 10 }}>
-            <div style={{ display: 'grid', gap: 6 }}>
-              <div style={{ fontWeight: 800, color: 'var(--nb-color-fg, rgba(0,0,0,0.92))' }}>对方给我</div>
-              <div style={{ color: 'var(--nb-color-muted-fg, rgba(0,0,0,0.65))', fontSize: 13 }}>现金 {formatMoney(trade.offer.cash)}</div>
-              {trade.offer.properties.length ? (
-                <div style={{ color: 'var(--nb-color-muted-fg, rgba(0,0,0,0.65))', fontSize: 13 }}>地产 {trade.offer.properties.join('、')}</div>
-              ) : null}
-            </div>
-            <div style={{ display: 'grid', gap: 6 }}>
-              <div style={{ fontWeight: 800, color: 'var(--nb-color-fg, rgba(0,0,0,0.92))' }}>我给对方</div>
-              <div style={{ color: 'var(--nb-color-muted-fg, rgba(0,0,0,0.65))', fontSize: 13 }}>现金 {formatMoney(trade.request.cash)}</div>
-              {trade.request.properties.length ? (
-                <div style={{ color: 'var(--nb-color-muted-fg, rgba(0,0,0,0.65))', fontSize: 13 }}>地产 {trade.request.properties.join('、')}</div>
-              ) : null}
-            </div>
-          </div>
-        ) : null}
-      </Dialog>
-
-      <Dialog
-        open={showDebtPrompt && !hiddenDebt}
-        onOpenChange={(o) => {
-          if (o) return;
-          if (debtKey) setHiddenPrompts((s) => ({ ...s, [debtKey]: true }));
-        }}
-        title="需要还款"
-        description={debt ? `${debt.reason}｜金额 ${formatMoney(debt.amount)}` : undefined}
-        footer={
-          debt ? (
-            <>
-              <Button
-                mode="Primary"
-                style={
-                  {
-                    '--nb-btn-bg': 'var(--nb-color-danger)',
-                    '--nb-btn-bg-hover': 'var(--nb-color-danger-hover)',
-                    '--nb-btn-bg-active': 'var(--nb-color-danger-active)',
-                    '--nb-btn-fg': 'var(--nb-color-danger-fg, #fff)',
-                    '--nb-btn-border': 'transparent',
-                    '--nb-btn-border-hover': 'transparent',
-                    '--nb-btn-ring': 'var(--nb-color-danger-soft)',
-                    '--nb-btn-shadow': 'inset 0 -1px 0 rgba(0, 0, 0, 0.08)',
-                  } as React.CSSProperties
-                }
-                onClick={() => sendCommand({ type: 'game/declareBankruptcy', roomId: room.roomId, gameId: game.gameId, playerId: selfPlayerId })}
-                disabled={!canRespondPrompt}
-              >
-                宣布破产
-              </Button>
-              <Button mode="Second" onClick={() => setDrawerPlayerId(selfPlayerId)} disabled={isSpectator || !self}>
-                去资产处理
-              </Button>
-            </>
-          ) : null
-        }
-      >
-        {debt ? (
-          <div style={{ display: 'grid', gap: 10 }}>
-            <div style={{ color: 'var(--nb-color-muted-fg, rgba(0,0,0,0.65))' }}>
-              可通过卖房/抵押/赎回等操作调整现金，现金足够时将自动扣款并清除债务
-            </div>
-          </div>
-        ) : null}
-      </Dialog>
 
       <Dialog
         open={tradeOpen}
@@ -1781,7 +2329,7 @@ export function BoardSkeleton(props: BoardSkeletonProps) {
                       onChange={(e) => setTradeOfferProps((s) => ({ ...s, [p.propertyId]: e.target.checked }))}
                     />
                     <span style={{ color: 'var(--nb-color-muted-fg, rgba(0,0,0,0.65))', fontSize: 13 }}>
-                      {p.propertyId}｜建筑 {p.buildings}｜{p.mortgaged ? '已抵押' : '未抵押'}
+                      {propertyLabel(p.propertyId)}｜建筑 {p.buildings}｜{p.mortgaged ? '已抵押' : '未抵押'}
                     </span>
                   </label>
                 ))}
@@ -1806,7 +2354,7 @@ export function BoardSkeleton(props: BoardSkeletonProps) {
                         onChange={(e) => setTradeRequestProps((s) => ({ ...s, [t.propertyId]: e.target.checked }))}
                       />
                       <span style={{ color: 'var(--nb-color-muted-fg, rgba(0,0,0,0.65))', fontSize: 13 }}>
-                        {t.propertyId}｜建筑 {t.buildings ?? 0}｜{t.mortgaged ? '已抵押' : '未抵押'}
+                        {propertyLabel(t.propertyId)}｜建筑 {t.buildings ?? 0}｜{t.mortgaged ? '已抵押' : '未抵押'}
                       </span>
                     </label>
                   ))}
@@ -1835,7 +2383,7 @@ export function BoardSkeleton(props: BoardSkeletonProps) {
       >
         {lastCardDrawn ? (
           <div style={{ display: 'grid', gap: 10 }}>
-            <div style={{ color: 'var(--nb-color-muted-fg, rgba(0,0,0,0.65))' }}>cardId: {lastCardDrawn.cardId}</div>
+            {debugMode ? <div style={{ color: 'var(--nb-color-muted-fg, rgba(0,0,0,0.65))' }}>cardId: {lastCardDrawn.cardId}</div> : null}
             <div style={{ padding: 12, borderRadius: 12, border: '1px solid var(--nb-color-border, rgba(0,0,0,0.12))', background: 'var(--nb-color-bg, #f8fafc)' }}>
               <div style={{ fontWeight: 800, color: 'var(--nb-color-fg, rgba(0,0,0,0.92))' }}>
                 {board.cards?.find((c) => c.cardId === lastCardDrawn.cardId)?.text ?? '（未知卡牌文本）'}

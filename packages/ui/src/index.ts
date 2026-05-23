@@ -12,6 +12,8 @@ export { Drawer } from './drawer';
 export type { DrawerProps, DrawerSide } from './drawer';
 export { Tooltip } from './tooltip';
 export type { TooltipProps, TooltipSide } from './tooltip';
+export { Popover } from './popover';
+export type { PopoverProps, PopoverSide } from './popover';
 export { ThemeProvider, defaultTheme, themeToVars } from './theme';
 export type { Theme, ThemeProviderProps } from './theme';
 export { Icon } from './icons';

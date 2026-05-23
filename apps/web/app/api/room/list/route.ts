@@ -1,44 +1,19 @@
 import { NextResponse } from 'next/server';
 
+import { applyRoomAutoClose, roomArchivedTtlMs } from 'lib/room-lifecycle';
 import { readAppData, updateAppData } from 'lib/store';
 
 export const runtime = 'nodejs';
 
 export async function GET() {
   const now = Date.now();
-  const lobbyTtlMs = 24 * 60 * 60 * 1000;
-  const playingTtlMs = 24 * 60 * 60 * 1000;
-  const endedTtlMs = 6 * 60 * 60 * 1000;
-  const archivedTtlMs = 30 * 24 * 60 * 60 * 1000;
+  const archivedTtlMs = roomArchivedTtlMs;
 
   await updateAppData((data) => {
     for (const [code, room] of Object.entries(data.rooms)) {
-      if (!room.members.length) {
-        delete data.rooms[code];
-        continue;
-      }
-      const closedAt = (room as { closedAtMs?: number }).closedAtMs ?? null;
-      if (closedAt !== null) {
-        if (now - closedAt > archivedTtlMs) delete data.rooms[code];
-        continue;
-      }
-      if (room.status === 'lobby' && now - room.createdAtMs > lobbyTtlMs) {
-        delete data.rooms[code];
-        continue;
-      }
-      if (room.status === 'playing') {
-        const startedAt = room.startedAtMs ?? room.createdAtMs;
-        if (now - startedAt > playingTtlMs) {
-          delete data.rooms[code];
-          continue;
-        }
-      }
-      if (room.status === 'ended') {
-        const endedAt = (room as { endedAtMs?: number }).endedAtMs ?? room.startedAtMs ?? room.createdAtMs;
-        if (now - endedAt > endedTtlMs) {
-          delete data.rooms[code];
-        }
-      }
+      applyRoomAutoClose(room, now);
+      const closedAt = room.closedAtMs ?? null;
+      if (closedAt !== null && now - closedAt > archivedTtlMs) delete data.rooms[code];
     }
   });
 

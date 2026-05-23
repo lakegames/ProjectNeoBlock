@@ -21,25 +21,17 @@ export async function POST(req: Request) {
     const room = data.rooms[roomCode];
     if (!room) return { ok: false as const, error: 'ROOM_NOT_FOUND' as const };
     if (room.hostPlayerId !== actor.playerId) return { ok: false as const, error: 'NOT_HOST' as const };
-    if (room.status === 'lobby') {
-      delete data.rooms[roomCode];
-      return { ok: true as const, deleted: true as const };
-    }
-
-    if (room.status !== 'ended') return { ok: false as const, error: 'NOT_ENDED' as const };
-
-    if (room.startedAtMs) {
-      room.closedAtMs = Date.now();
-      return { ok: true as const, deleted: false as const };
-    }
-
-    delete data.rooms[roomCode];
-    return { ok: true as const, deleted: true as const };
+    if (room.status === 'playing') return { ok: false as const, error: 'NOT_ALLOWED' as const };
+    if (!room.closedAtMs) room.closedAtMs = Date.now();
+    room.members = [];
+    room.emptySinceMs = room.closedAtMs;
+    room.status = 'lobby';
+    return { ok: true as const, deleted: false as const, closedAtMs: room.closedAtMs };
   });
 
   if (!result.ok) {
     const status =
-      result.error === 'ROOM_NOT_FOUND' ? 404 : result.error === 'NOT_HOST' ? 403 : result.error === 'NOT_ENDED' ? 400 : 400;
+      result.error === 'ROOM_NOT_FOUND' ? 404 : result.error === 'NOT_HOST' ? 403 : result.error === 'NOT_ALLOWED' ? 400 : 400;
     return NextResponse.json(result, { status });
   }
   return NextResponse.json(result);

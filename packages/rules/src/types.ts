@@ -14,7 +14,9 @@ export type BoardStartTile = {
 export type BoardPropertyTile = {
   kind: 'property';
   propertyId: string;
+  name?: string;
   groupId: string;
+  groupName?: string;
   price: number;
   houseCost: number;
   rents: [number, number, number, number, number, number];

@@ -1,131 +1,174 @@
 "use client";
 
-import Link from 'next/link';
-import { signIn, signOut, useSession } from 'next-auth/react';
+import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
-import { Button, Input, RoomCard } from '@neoblock/ui';
+import { Button, Card, Input } from '@neoblock/ui';
 
-type RoomListItem = {
-  roomCode: string;
-  status: 'lobby' | 'playing' | 'ended';
-  createdAtMs: number;
-  startedAtMs: number | null;
-  maxPlayers: number;
-  turnTimeSec: number;
-  enableAuto: boolean;
-  enableAI: boolean;
-  hostDisplayName: string;
-  playerCount: number;
-  spectatorCount: number;
-};
+import './home.css';
 
 type PublishedConfigItem = { docId: string; name: string; versionId: string; updatedAtMs: number };
 
-function validateConfig(input: { maxPlayers: number; turnTimeSec: number }) {
-  if (!Number.isInteger(input.maxPlayers) || input.maxPlayers < 2 || input.maxPlayers > 16) {
-    return '玩家上限范围：2-16（整数）';
-  }
-  if (!Number.isInteger(input.turnTimeSec) || input.turnTimeSec < 10 || input.turnTimeSec > 600) {
-    return '回合时间范围：10-600（整数秒）';
-  }
-  return null;
+type InboxInvite = {
+  id: string;
+  toUid: string;
+  fromUid: string;
+  roomCode: string;
+  createdAtMs: number;
+};
+
+function useGridLayoutState(ref: { current: HTMLElement | null }) {
+  const [state, setState] = useState({ accordionEnabled: false, narrow: false });
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+
+    let raf = 0;
+    const compute = () => {
+      const styles = getComputedStyle(el);
+      const cols = (styles.gridTemplateColumns || '')
+        .split(/\s+/)
+        .map((x) => x.trim())
+        .filter(Boolean);
+      const narrow = cols.length < 2;
+      setState({ accordionEnabled: narrow, narrow });
+    };
+
+    const computeRaf = () => {
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(compute);
+    };
+
+    compute();
+
+    const ro = new ResizeObserver(computeRaf);
+    ro.observe(el);
+    window.addEventListener('resize', computeRaf);
+
+    return () => {
+      cancelAnimationFrame(raf);
+      ro.disconnect();
+      window.removeEventListener('resize', computeRaf);
+    };
+  }, [ref]);
+
+  return state;
 }
 
 export default function Page() {
   const router = useRouter();
-  const { data, status } = useSession();
+  const { data } = useSession();
   const uid = (data?.user as { id?: string } | undefined)?.id;
 
-  const [rooms, setRooms] = useState<RoomListItem[]>([]);
-  const [roomsLoading, setRoomsLoading] = useState(false);
-  const [isAdmin, setIsAdmin] = useState(false);
+  const [publishedTemplates, setPublishedTemplates] = useState<PublishedConfigItem[]>([]);
+  const [defaultTemplateVersionId, setDefaultTemplateVersionId] = useState<string>('');
 
-  const [createMode, setCreateMode] = useState<'guest' | 'account'>('guest');
   const [createNickname, setCreateNickname] = useState('');
-  const [createMaxPlayers, setCreateMaxPlayers] = useState(4);
-  const [createTurnTimeSec, setCreateTurnTimeSec] = useState(60);
-  const [createEnableAuto, setCreateEnableAuto] = useState(false);
-  const [createEnableAI, setCreateEnableAI] = useState(false);
-  const [publishedRules, setPublishedRules] = useState<PublishedConfigItem[]>([]);
-  const [publishedBoards, setPublishedBoards] = useState<PublishedConfigItem[]>([]);
-  const [publishedCards, setPublishedCards] = useState<PublishedConfigItem[]>([]);
-  const [createRulesVersionId, setCreateRulesVersionId] = useState<string>('');
-  const [createBoardVersionId, setCreateBoardVersionId] = useState<string>('');
-  const [createCardsVersionId, setCreateCardsVersionId] = useState<string>('');
   const [createError, setCreateError] = useState<string | null>(null);
   const [createLoading, setCreateLoading] = useState(false);
 
-  const [joinMode, setJoinMode] = useState<'guest' | 'account'>('guest');
   const [joinRoomCode, setJoinRoomCode] = useState('');
   const [joinNickname, setJoinNickname] = useState('');
+  const [joinSpectate, setJoinSpectate] = useState(false);
   const [joinError, setJoinError] = useState<string | null>(null);
   const [joinLoading, setJoinLoading] = useState(false);
 
-  const canCreate = useMemo(() => {
-    if (createMode === 'account') return !!uid;
-    return !!createNickname.trim();
-  }, [createMode, createNickname, uid]);
+  const joinGridRef = useRef<HTMLDivElement | null>(null);
+  const createGridRef = useRef<HTMLDivElement | null>(null);
+  const joinGridState = useGridLayoutState(joinGridRef);
+  const createGridState = useGridLayoutState(createGridRef);
+  const joinAccordionEnabled = joinGridState.accordionEnabled;
+  const createAccordionEnabled = createGridState.accordionEnabled;
+  const [joinAccordionOpenIndex, setJoinAccordionOpenIndex] = useState(0);
+  const [createAccordionOpenIndex, setCreateAccordionOpenIndex] = useState(0);
 
+  useEffect(() => {
+    if (!joinAccordionEnabled) return;
+    setJoinAccordionOpenIndex((v) => (v < 0 ? 0 : v));
+  }, [joinAccordionEnabled]);
+
+  useEffect(() => {
+    if (!createAccordionEnabled) return;
+    setCreateAccordionOpenIndex((v) => (v < 0 ? 0 : v));
+  }, [createAccordionEnabled]);
+
+  const canCreate = useMemo(() => (uid ? true : !!createNickname.trim()), [createNickname, uid]);
   const canJoin = useMemo(() => {
     if (!joinRoomCode.trim()) return false;
-    if (joinMode === 'account') return !!uid;
+    if (uid) return true;
     return !!joinNickname.trim();
-  }, [joinMode, joinNickname, joinRoomCode, uid]);
-
-  async function refreshRooms() {
-    setRoomsLoading(true);
-    try {
-      const r = await fetch('/api/room/list', { cache: 'no-store' });
-      const json = await r.json();
-      if (!r.ok) throw new Error(json?.error || 'LIST_FAILED');
-      setRooms((json.rooms ?? []) as RoomListItem[]);
-    } catch {
-      setRooms([]);
-    } finally {
-      setRoomsLoading(false);
-    }
-  }
-
-  useEffect(() => {
-    refreshRooms();
-  }, []);
-
-  useEffect(() => {
-    setIsAdmin(false);
-    if (!uid) return;
-    fetch('/api/admin/ping', { cache: 'no-store' })
-      .then((r) => r.json().then((j) => ({ ok: r.ok, json: j })))
-      .then(({ ok }) => setIsAdmin(ok))
-      .catch(() => setIsAdmin(false));
-  }, [uid]);
+  }, [joinNickname, joinRoomCode, uid]);
 
   useEffect(() => {
     fetch('/api/config/published', { cache: 'no-store' })
       .then((r) => r.json().then((j) => ({ ok: r.ok, json: j })))
       .then(({ ok, json }) => {
         if (!ok) return;
-        const rules = (json.rules ?? []) as PublishedConfigItem[];
-        const boards = (json.boards ?? []) as PublishedConfigItem[];
-        const cards = (json.cards ?? []) as PublishedConfigItem[];
-        setPublishedRules(rules);
-        setPublishedBoards(boards);
-        setPublishedCards(cards);
-        if (!createRulesVersionId && rules[0]?.versionId) setCreateRulesVersionId(rules[0].versionId);
-        if (!createBoardVersionId && boards[0]?.versionId) setCreateBoardVersionId(boards[0].versionId);
-        if (!createCardsVersionId && cards[0]?.versionId) setCreateCardsVersionId(cards[0].versionId);
+        setPublishedTemplates((json.templates ?? []) as PublishedConfigItem[]);
+        setDefaultTemplateVersionId(typeof json.defaultTemplateVersionId === 'string' ? json.defaultTemplateVersionId : '');
       })
       .catch(() => {});
-  }, [createBoardVersionId, createCardsVersionId, createRulesVersionId]);
+  }, []);
 
-  async function createRoom() {
-    if (!canCreate || createLoading) return;
-    const err = validateConfig({ maxPlayers: createMaxPlayers, turnTimeSec: createTurnTimeSec });
-    if (err) {
-      setCreateError(err);
+  const [inboxInvites, setInboxInvites] = useState<InboxInvite[]>([]);
+  const [inboxLoading, setInboxLoading] = useState(false);
+  async function refreshInbox() {
+    setInboxLoading(true);
+    try {
+      if (!uid) {
+        setInboxInvites([]);
+        return;
+      }
+      const r = await fetch('/api/game-invite/inbox', { cache: 'no-store' });
+      const json = await r.json();
+      if (!r.ok) throw new Error(json?.error || 'INBOX_FAILED');
+      setInboxInvites((json.invites ?? []) as InboxInvite[]);
+    } catch {
+      setInboxInvites([]);
+    } finally {
+      setInboxLoading(false);
+    }
+  }
+  useEffect(() => {
+    refreshInbox();
+  }, [uid]);
+
+  const senderIdsKey = useMemo(() => {
+    const ids = [...new Set(inboxInvites.map((x) => x.fromUid).filter(Boolean))];
+    ids.sort();
+    return ids.join(',');
+  }, [inboxInvites]);
+  const [senders, setSenders] = useState<Record<string, { id: string; displayName: string; avatarUrl: string | null }>>({});
+  useEffect(() => {
+    const ids = senderIdsKey ? senderIdsKey.split(',').filter(Boolean) : [];
+    if (!ids.length) {
+      setSenders({});
       return;
     }
+    fetch(`/api/profile/public?ids=${encodeURIComponent(ids.join(','))}`, { cache: 'no-store' })
+      .then((r) => r.json().then((j) => ({ ok: r.ok, json: j })))
+      .then(({ ok, json }) => {
+        if (!ok) return;
+        const list = (json.profiles ?? []) as { id: string; displayName: string; avatarUrl: string | null }[];
+        const map: Record<string, { id: string; displayName: string; avatarUrl: string | null }> = {};
+        for (const p of list) map[p.id] = p;
+        setSenders(map);
+      })
+      .catch(() => {});
+  }, [senderIdsKey]);
+
+  const [customOpen, setCustomOpen] = useState(false);
+  const [customTemplateVersionId, setCustomTemplateVersionId] = useState('');
+  useEffect(() => {
+    if (!customOpen) return;
+    if (!customTemplateVersionId) setCustomTemplateVersionId(defaultTemplateVersionId);
+  }, [customOpen, customTemplateVersionId, defaultTemplateVersionId]);
+
+  async function createRoomWithTemplate(templateVersionId: string) {
+    if (!canCreate || createLoading) return;
+    if (!templateVersionId) return;
     setCreateLoading(true);
     setCreateError(null);
     try {
@@ -133,16 +176,14 @@ export default function Page() {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
-          mode: createMode,
+          mode: uid ? 'account' : 'guest',
           nickname: createNickname,
           config: {
-            maxPlayers: createMaxPlayers,
-            turnTimeSec: createTurnTimeSec,
-            enableAuto: createEnableAuto,
-            enableAI: createEnableAI,
-            ...(createRulesVersionId ? { rulesetVersionId: createRulesVersionId } : {}),
-            ...(createBoardVersionId ? { boardVersionId: createBoardVersionId } : {}),
-            ...(createCardsVersionId ? { cardsVersionId: createCardsVersionId } : {}),
+            maxPlayers: 4,
+            turnTimeSec: 60,
+            enableAuto: false,
+            enableAI: false,
+            templateVersionId,
           },
         }),
       });
@@ -156,23 +197,30 @@ export default function Page() {
     }
   }
 
+  async function createRoomFromCustomModal() {
+    if (!customTemplateVersionId) return;
+    setCustomOpen(false);
+    await createRoomWithTemplate(customTemplateVersionId);
+  }
+
   async function joinRoom() {
     if (!canJoin || joinLoading) return;
     setJoinLoading(true);
     setJoinError(null);
     try {
-      const r = await fetch('/api/room/join', {
+      const roomCode = joinRoomCode.trim().toUpperCase();
+      const r = await fetch(joinSpectate ? '/api/room/spectate' : '/api/room/join', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
-          roomCode: joinRoomCode,
+          roomCode,
           nickname: joinNickname,
-          mode: joinMode,
+          ...(joinSpectate ? {} : { mode: uid ? 'account' : 'guest' }),
         }),
       });
       const json = await r.json();
       if (!r.ok) throw new Error(json?.error || 'JOIN_FAILED');
-      router.push(`/room/${encodeURIComponent(json.roomCode)}`);
+      router.push(`/room/${encodeURIComponent(roomCode)}${joinSpectate ? '?spectate=1' : ''}`);
     } catch (e) {
       setJoinError(String((e as Error).message || e));
     } finally {
@@ -181,257 +229,334 @@ export default function Page() {
   }
 
   return (
-    <main>
-      <h1 style={{ margin: 0 }}>NeoBlock</h1>
-      <p style={{ marginTop: 8, color: 'rgba(0,0,0,0.65)' }}>
-        Task3：大厅、房间参数、准备/开局、观战（最小 UI）
-      </p>
-
-      <div style={{ marginTop: 16, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-        <Link href="/login">
-          <Button>登录</Button>
-        </Link>
-        <Link href="/profile">
-          <Button>账号资料</Button>
-        </Link>
-        <Link href="/invite">
-          <Button>邀请好友</Button>
-        </Link>
-        <Link href="/config">
-          <Button>配置管理</Button>
-        </Link>
-        <Link href="/join">
-          <Button>加入房间</Button>
-        </Link>
-        {isAdmin ? (
-          <Link href="/admin">
-            <Button>Admin</Button>
-          </Link>
-        ) : null}
-      </div>
-
-      <div style={{ marginTop: 20, padding: 12, border: '1px solid rgba(0,0,0,0.08)', borderRadius: 12 }}>
-        <div style={{ fontWeight: 600 }}>会话</div>
-        <div style={{ marginTop: 8, color: 'rgba(0,0,0,0.7)' }}>
-          {status === 'loading' ? '加载中…' : data?.user ? `已登录：${data.user.name ?? data.user.email ?? '用户'}` : '未登录'}
-        </div>
-        <div style={{ marginTop: 12, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-          <Button onClick={() => signIn(undefined, { callbackUrl: '/' })} disabled={!!data?.user}>
-            去登录
-          </Button>
-          <Button onClick={() => signOut({ callbackUrl: '/' })} disabled={!data?.user}>
-            退出登录
-          </Button>
-        </div>
-      </div>
-
-      <div style={{ marginTop: 20, padding: 12, border: '1px solid rgba(0,0,0,0.08)', borderRadius: 12 }}>
-        <div style={{ fontWeight: 600 }}>创建房间</div>
-        <div style={{ marginTop: 10, display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
-          <label style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-            <input
-              type="radio"
-              checked={createMode === 'guest'}
-              onChange={() => setCreateMode('guest')}
-              name="createMode"
-            />
-            匿名创建
-          </label>
-          <label style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-            <input
-              type="radio"
-              checked={createMode === 'account'}
-              onChange={() => setCreateMode('account')}
-              name="createMode"
-              disabled={!uid}
-            />
-            账号创建（需登录）
-          </label>
-        </div>
-
-        <div style={{ marginTop: 10, display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
-          <Input
-            value={createNickname}
-            onChange={(e) => setCreateNickname(e.target.value)}
-            placeholder={createMode === 'guest' ? '匿名昵称（必填）' : '昵称（可选）'}
-            disabled={createMode === 'account' && !uid}
-            style={{
-              minWidth: 240,
-            }}
-          />
-          <select
-            value={createRulesVersionId}
-            onChange={(e) => setCreateRulesVersionId(e.target.value)}
-            style={{
-              padding: '10px 12px',
-              borderRadius: 10,
-              border: '1px solid rgba(0,0,0,0.12)',
-              background: '#fff',
-              minWidth: 220,
-            }}
-          >
-            {publishedRules.length ? null : <option value="">暂无已发布规则</option>}
-            {publishedRules.map((x) => (
-              <option key={x.versionId} value={x.versionId}>
-                规则：{x.name}（{x.versionId}）
-              </option>
-            ))}
-          </select>
-          <select
-            value={createBoardVersionId}
-            onChange={(e) => setCreateBoardVersionId(e.target.value)}
-            style={{
-              padding: '10px 12px',
-              borderRadius: 10,
-              border: '1px solid rgba(0,0,0,0.12)',
-              background: '#fff',
-              minWidth: 220,
-            }}
-          >
-            {publishedBoards.length ? null : <option value="">暂无已发布棋盘</option>}
-            {publishedBoards.map((x) => (
-              <option key={x.versionId} value={x.versionId}>
-                棋盘：{x.name}（{x.versionId}）
-              </option>
-            ))}
-          </select>
-          <select
-            value={createCardsVersionId}
-            onChange={(e) => setCreateCardsVersionId(e.target.value)}
-            style={{
-              padding: '10px 12px',
-              borderRadius: 10,
-              border: '1px solid rgba(0,0,0,0.12)',
-              background: '#fff',
-              minWidth: 220,
-            }}
-          >
-            {publishedCards.length ? null : <option value="">暂无已发布卡牌</option>}
-            {publishedCards.map((x) => (
-              <option key={x.versionId} value={x.versionId}>
-                卡牌：{x.name}（{x.versionId}）
-              </option>
-            ))}
-          </select>
-          <Input
-            value={String(createMaxPlayers)}
-            onChange={(e) => setCreateMaxPlayers(Number(e.target.value))}
-            type="number"
-            min={2}
-            max={16}
-            step={1}
-            style={{
-              width: 160,
-            }}
-          />
-          <Input
-            value={String(createTurnTimeSec)}
-            onChange={(e) => setCreateTurnTimeSec(Number(e.target.value))}
-            type="number"
-            min={10}
-            max={600}
-            step={1}
-            style={{
-              width: 160,
-            }}
-          />
-          <label style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-            <input type="checkbox" checked={createEnableAuto} onChange={(e) => setCreateEnableAuto(e.target.checked)} />
-            托管
-          </label>
-          <label style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-            <input type="checkbox" checked={createEnableAI} onChange={(e) => setCreateEnableAI(e.target.checked)} />
-            AI
-          </label>
-          <Button onClick={createRoom} disabled={!canCreate || createLoading}>
-            {createLoading ? '创建中…' : '创建并进入'}
-          </Button>
-        </div>
-        <div style={{ marginTop: 8, color: 'rgba(0,0,0,0.6)' }}>
-          玩家上限（2-16）｜回合时间（秒，10-600）
-        </div>
-        {createError ? <div style={{ marginTop: 10, color: '#b42318' }}>{createError}</div> : null}
-      </div>
-
-      <div style={{ marginTop: 20, padding: 12, border: '1px solid rgba(0,0,0,0.08)', borderRadius: 12 }}>
-        <div style={{ fontWeight: 600 }}>加入房间（玩家）</div>
-        <div style={{ marginTop: 10, display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
-          <label style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-            <input type="radio" checked={joinMode === 'guest'} onChange={() => setJoinMode('guest')} name="joinMode" />
-            匿名加入
-          </label>
-          <label style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-            <input
-              type="radio"
-              checked={joinMode === 'account'}
-              onChange={() => setJoinMode('account')}
-              name="joinMode"
-              disabled={!uid}
-            />
-            账号加入（需登录）
-          </label>
-        </div>
-        <div style={{ marginTop: 10, display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
-          <Input
-            value={joinRoomCode}
-            onChange={(e) => setJoinRoomCode(e.target.value)}
-            placeholder="房间码（例如 ABC123）"
-            style={{
-              minWidth: 240,
-            }}
-          />
-          <Input
-            value={joinNickname}
-            onChange={(e) => setJoinNickname(e.target.value)}
-            placeholder={joinMode === 'guest' ? '匿名昵称（必填）' : '昵称（可选）'}
-            disabled={joinMode === 'account' && !uid}
-            style={{
-              minWidth: 240,
-            }}
-          />
-          <Button onClick={joinRoom} disabled={!canJoin || joinLoading}>
-            {joinLoading ? '加入中…' : '加入并进入'}
-          </Button>
-        </div>
-        {joinError ? <div style={{ marginTop: 10, color: '#b42318' }}>{joinError}</div> : null}
-      </div>
-
-      <div style={{ marginTop: 20, padding: 12, border: '1px solid rgba(0,0,0,0.08)', borderRadius: 12 }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
-          <div style={{ fontWeight: 600 }}>房间列表（最近30条）</div>
-          <Button onClick={refreshRooms} disabled={roomsLoading}>
-            {roomsLoading ? '刷新中…' : '刷新'}
-          </Button>
-        </div>
-        <div style={{ marginTop: 10 }}>
-          {rooms.length ? (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 12 }}>
-              {rooms.map((r) => (
-                <RoomCard
-                  key={r.roomCode}
-                  {...r}
-                  actions={
-                    <>
-                      <Link href={`/room/${encodeURIComponent(r.roomCode)}`}>
-                        <Button size="sm" mode="Second">
-                          查看
-                        </Button>
-                      </Link>
-                      <Link href={`/room/${encodeURIComponent(r.roomCode)}?spectate=1`}>
-                        <Button size="sm" mode="NoBackground">
-                          观战
-                        </Button>
-                      </Link>
-                    </>
-                  }
-                />
-              ))}
+    <main className="nb-home">
+      <div className="nb-home__body">
+        <section className="nb-home__col nb-home__col--join">
+          <div className="nb-home__panel">
+            <div>
+              <h2 className="nb-home__title">加入房间</h2>
+              <div className="nb-home__subtitle">快捷加入房间</div>
             </div>
-          ) : (
-            <div style={{ color: 'rgba(0,0,0,0.65)' }}>暂无房间</div>
-          )}
-        </div>
+
+            <div
+              ref={joinGridRef}
+              className={[
+                'nb-home__grid2',
+                joinAccordionEnabled ? 'nb-home__grid2--accordion' : null,
+                !joinGridState.narrow ? 'nb-home__grid2--wide' : null,
+              ]
+                .filter(Boolean)
+                .join(' ')}
+            >
+              <Card
+                className={['nb-home__card', joinAccordionEnabled && joinAccordionOpenIndex === 0 ? 'is-open' : null].filter(Boolean).join(' ')}
+                style={{ background: '#fbf3f1' }}
+              >
+                <button
+                  type="button"
+                  className="nb-home__accordion-trigger"
+                  aria-expanded={joinAccordionEnabled ? joinAccordionOpenIndex === 0 : true}
+                  onClick={() => {
+                    if (!joinAccordionEnabled) return;
+                    setJoinAccordionOpenIndex(0);
+                  }}
+                >
+                  通过房间码加入
+                </button>
+                <div className="nb-home__accordion-content">
+                  <div className="nb-home__field">
+                    <Input
+                      value={joinRoomCode}
+                      onChange={(e) => setJoinRoomCode(e.target.value.toUpperCase())}
+                      placeholder="房间码"
+                      style={{ width: '100%' }}
+                    />
+                    {!uid ? (
+                      <Input
+                        value={joinNickname}
+                        onChange={(e) => setJoinNickname(e.target.value)}
+                        placeholder="昵称"
+                        style={{ width: '100%' }}
+                      />
+                    ) : null}
+                    <label style={{ display: 'flex', gap: 8, alignItems: 'center', color: 'rgba(0,0,0,0.65)', fontSize: 14 }}>
+                      <input type="checkbox" checked={joinSpectate} onChange={(e) => setJoinSpectate(e.target.checked)} />
+                      以观战身份加入房间
+                    </label>
+                  </div>
+                  <div className="nb-home__actions">
+                    <Button mode="Primary" onClick={joinRoom} disabled={!canJoin || joinLoading}>
+                      {joinLoading ? '加入中…' : '加入房间'}
+                    </Button>
+                  </div>
+                  {joinError ? <div style={{ marginTop: 10, color: '#b42318' }}>{joinError}</div> : null}
+                </div>
+              </Card>
+
+              <Card
+                className={['nb-home__card', joinAccordionEnabled && joinAccordionOpenIndex === 1 ? 'is-open' : null].filter(Boolean).join(' ')}
+                style={{ background: '#fbf3f1' }}
+              >
+                <button
+                  type="button"
+                  className="nb-home__accordion-trigger"
+                  aria-expanded={joinAccordionEnabled ? joinAccordionOpenIndex === 1 : true}
+                  onClick={() => {
+                    if (!joinAccordionEnabled) return;
+                    setJoinAccordionOpenIndex(1);
+                  }}
+                >
+                  和好友同玩
+                </button>
+                <div className="nb-home__accordion-content">
+                  {inboxLoading ? (
+                    <div style={{ color: 'rgba(0,0,0,0.65)' }}>加载中…</div>
+                  ) : inboxInvites.length ? (
+                    <div style={{ marginTop: 6, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      {inboxInvites.slice(0, 3).map((x) => {
+                        const sender = senders[x.fromUid];
+                        const shownName = sender?.displayName || x.fromUid;
+                        return (
+                          <div
+                            key={x.id}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              gap: 10,
+                              padding: '10px 12px',
+                              borderRadius: 12,
+                              border: '1px solid rgba(0,0,0,0.08)',
+                              background: '#fff',
+                            }}
+                          >
+                            <div style={{ minWidth: 0 }}>
+                              <div style={{ fontWeight: 700, color: 'rgba(0,0,0,0.85)' }}>{shownName}</div>
+                              <div style={{ marginTop: 2, color: 'rgba(0,0,0,0.65)', fontSize: 12 }}>
+                                邀请你加入房间 {x.roomCode}
+                              </div>
+                            </div>
+                            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                              <Button
+                                mode="Primary"
+                                size="sm"
+                                onClick={async () => {
+                                  try {
+                                    await fetch('/api/game-invite/read', {
+                                      method: 'POST',
+                                      headers: { 'content-type': 'application/json' },
+                                      body: JSON.stringify({ id: x.id }),
+                                    });
+                                  } finally {
+                                    router.push(`/room/${encodeURIComponent(x.roomCode)}`);
+                                  }
+                                }}
+                              >
+                                加入
+                              </Button>
+                              <Button
+                                mode="Second"
+                                size="sm"
+                                onClick={async () => {
+                                  await fetch('/api/game-invite/dismiss', {
+                                    method: 'POST',
+                                    headers: { 'content-type': 'application/json' },
+                                    body: JSON.stringify({ id: x.id }),
+                                  });
+                                  setInboxInvites((list) => list.filter((m) => m.id !== x.id));
+                                }}
+                              >
+                                忽略
+                              </Button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                      {inboxInvites.length > 3 ? (
+                        <div style={{ color: 'rgba(0,0,0,0.65)', fontSize: 12 }}>还有 {inboxInvites.length - 3} 条未处理邀请…</div>
+                      ) : null}
+                    </div>
+                  ) : (
+                    <div style={{ marginTop: 8 }}>
+                      <div style={{ color: 'rgba(0,0,0,0.65)' }}>暂无邀请</div>
+                      <div style={{ marginTop: 10, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                        <Button mode="NoBackground" size="sm" onClick={refreshInbox} disabled={inboxLoading}>
+                          {inboxLoading ? '刷新中…' : '刷新邀请'}
+                        </Button>
+                        <Button mode="NoBackground" size="sm" onClick={() => router.push('/invite')}>
+                          去好友页
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                  {inboxInvites.length ? (
+                    <div style={{ marginTop: 10, display: 'flex', gap: 10 }}>
+                      <Button mode="NoBackground" size="sm" onClick={refreshInbox} disabled={inboxLoading}>
+                        {inboxLoading ? '刷新中…' : '刷新邀请'}
+                      </Button>
+                      <Button mode="NoBackground" size="sm" onClick={() => router.push('/invite')}>
+                        去好友页
+                      </Button>
+                    </div>
+                  ) : null}
+                </div>
+              </Card>
+            </div>
+          </div>
+        </section>
+
+        <section className="nb-home__col nb-home__col--create">
+          <div className="nb-home__panel">
+            <div>
+              <h2 className="nb-home__title">创建房间</h2>
+              <div className="nb-home__subtitle">和朋友们一起开玩</div>
+            </div>
+
+            <div
+              ref={createGridRef}
+              className={[
+                'nb-home__grid2',
+                createAccordionEnabled ? 'nb-home__grid2--accordion' : null,
+                !createGridState.narrow ? 'nb-home__grid2--wide' : null,
+              ]
+                .filter(Boolean)
+                .join(' ')}
+            >
+              <Card
+                className={['nb-home__card', createAccordionEnabled && createAccordionOpenIndex === 0 ? 'is-open' : null].filter(Boolean).join(' ')}
+                style={{ background: '#ffffff' }}
+              >
+                <button
+                  type="button"
+                  className="nb-home__accordion-trigger"
+                  aria-expanded={createAccordionEnabled ? createAccordionOpenIndex === 0 : true}
+                  onClick={() => {
+                    if (!createAccordionEnabled) return;
+                    setCreateAccordionOpenIndex(0);
+                  }}
+                >
+                  快速创建
+                </button>
+                <div className="nb-home__accordion-content">
+                  <div style={{ color: 'rgba(0,0,0,0.65)', fontSize: 14, lineHeight: '20px' }}>
+                    使用标准大富翁规则和 40 格地块游戏
+                  </div>
+                  {!uid ? (
+                    <div style={{ marginTop: 10 }}>
+                      <Input
+                        value={createNickname}
+                        onChange={(e) => setCreateNickname(e.target.value)}
+                        placeholder="昵称"
+                        style={{ width: '100%' }}
+                      />
+                    </div>
+                  ) : null}
+                  <div className="nb-home__actions">
+                    <Button
+                      mode="Primary"
+                      onClick={() => createRoomWithTemplate(defaultTemplateVersionId)}
+                      disabled={!canCreate || createLoading || !defaultTemplateVersionId}
+                    >
+                      {createLoading ? '创建中…' : '创建房间'}
+                    </Button>
+                  </div>
+                  {createError ? <div style={{ marginTop: 10, color: '#b42318' }}>{createError}</div> : null}
+                </div>
+              </Card>
+
+              <Card
+                className={['nb-home__card', createAccordionEnabled && createAccordionOpenIndex === 1 ? 'is-open' : null].filter(Boolean).join(' ')}
+                style={{ background: '#ffffff' }}
+              >
+                <button
+                  type="button"
+                  className="nb-home__accordion-trigger"
+                  aria-expanded={createAccordionEnabled ? createAccordionOpenIndex === 1 : true}
+                  onClick={() => {
+                    if (!createAccordionEnabled) return;
+                    setCreateAccordionOpenIndex(1);
+                  }}
+                >
+                  自定义
+                </button>
+                <div className="nb-home__accordion-content">
+                  <div style={{ color: 'rgba(0,0,0,0.65)', fontSize: 14, lineHeight: '20px' }}>
+                    管理模板，以及规则/棋盘/卡牌 配置
+                  </div>
+                  <div className="nb-home__actions">
+                    <Button mode="Primary" onClick={() => setCustomOpen(true)}>
+                      选择模板
+                    </Button>
+                  </div>
+                </div>
+              </Card>
+            </div>
+          </div>
+        </section>
       </div>
+
+      {customOpen ? (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.35)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 20,
+            zIndex: 50,
+          }}
+          onClick={() => setCustomOpen(false)}
+        >
+          <div style={{ width: 'min(720px, 100%)' }} onClick={(e) => e.stopPropagation()}>
+            <Card style={{ background: '#fff' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+                <div style={{ fontWeight: 800, fontSize: 18 }}>选择模板</div>
+                <Button mode="Second" onClick={() => setCustomOpen(false)}>
+                  关闭
+                </Button>
+              </div>
+              <div style={{ marginTop: 10, color: 'rgba(0,0,0,0.65)', fontSize: 14, lineHeight: '20px' }}>
+                可直接用模板创建房间，或去“游戏自定义”制作/发布模板
+              </div>
+              <div style={{ marginTop: 12 }}>
+                <select
+                  value={customTemplateVersionId}
+                  onChange={(e) => setCustomTemplateVersionId(e.target.value)}
+                  style={{
+                    padding: '10px 12px',
+                    borderRadius: 12,
+                    border: '1px solid rgba(0,0,0,0.12)',
+                    background: '#fff',
+                    width: '100%',
+                  }}
+                >
+                  <option value="">选择模板</option>
+                  {publishedTemplates.map((t) => (
+                    <option key={t.versionId} value={t.versionId}>
+                      {t.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              {!uid ? (
+                <div style={{ marginTop: 10 }}>
+                  <Input value={createNickname} onChange={(e) => setCreateNickname(e.target.value)} placeholder="昵称" style={{ width: '100%' }} />
+                </div>
+              ) : null}
+              <div style={{ marginTop: 12, display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+                <Button mode="Primary" onClick={createRoomFromCustomModal} disabled={!customTemplateVersionId || !canCreate || createLoading}>
+                  {createLoading ? '创建中…' : '用该模板创建'}
+                </Button>
+                <Button mode="Second" onClick={() => router.push('/config?tab=template')}>
+                  去游戏自定义
+                </Button>
+              </div>
+            </Card>
+          </div>
+        </div>
+      ) : null}
     </main>
   );
 }

@@ -41,9 +41,6 @@ export default function InviteAcceptPage() {
       <p style={{ marginTop: 8, color: 'rgba(0,0,0,0.65)' }}>邀请码：{code || '-'}</p>
 
       <div style={{ marginTop: 16, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-        <Link href="/">
-          <Button>返回首页</Button>
-        </Link>
         <Link href="/invite">
           <Button>返回邀请页</Button>
         </Link>
@@ -66,7 +63,7 @@ export default function InviteAcceptPage() {
               <Button onClick={accept} disabled={!code || status === 'loading' || status === 'ok'}>
                 {status === 'loading' ? '处理中…' : status === 'ok' ? '已接受' : '接受邀请'}
               </Button>
-              <Button onClick={() => router.push('/profile')}>查看好友列表</Button>
+              <Button onClick={() => router.push(`/invite/${code}?profile=1`)}>查看好友列表</Button>
             </div>
           </div>
         )}
@@ -75,4 +72,3 @@ export default function InviteAcceptPage() {
     </main>
   );
 }
-

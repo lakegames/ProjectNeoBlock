@@ -1,0 +1,4 @@
+- [x] 站内点击“去登录”直接打开登录弹窗（不再触发 `/login` 拦截路由导航）
+- [x] 关闭登录弹窗不触发 App Router 崩溃（无 `initialTree is not iterable`）
+- [x] 直接访问 `/login` 仍可作为整页正常使用（含刷新）
+- [x] 开发态反复打开/关闭并触发 Fast Refresh，不出现 `initialTree is not iterable` 崩溃

@@ -5,6 +5,7 @@ import { NextResponse } from 'next/server';
 
 import { authOptions } from 'lib/auth';
 import { encodeGuestIdentity, guestCookieName, type GuestIdentity } from 'lib/identity';
+import { roomEmptyCloseMs } from 'lib/room-lifecycle';
 import { normalizeDisplayName, normalizeRoomCode } from 'lib/room';
 import { updateAppData, type RoomMember } from 'lib/store';
 
@@ -37,6 +38,7 @@ export async function POST(req: Request) {
   const roomCodeRaw = body?.roomCode;
   const nicknameRaw = body?.nickname;
   const mode = body?.mode ?? 'guest';
+  const nowMs = Date.now();
 
   if (!roomCodeRaw) return NextResponse.json({ error: 'INVALID_ROOM_CODE' }, { status: 400 });
   const roomCode = normalizeRoomCode(roomCodeRaw);
@@ -50,13 +52,18 @@ export async function POST(req: Request) {
     const result = await updateAppData((data) => {
       const room = data.rooms[roomCode];
       if (!room) return { ok: false as const, error: 'ROOM_NOT_FOUND' as const };
+      if (room.closedAtMs) return { ok: false as const, error: 'ROOM_CLOSED' as const };
+      if (room.members.length === 0 && room.emptySinceMs && nowMs - room.emptySinceMs >= roomEmptyCloseMs) {
+        room.closedAtMs = nowMs;
+        return { ok: false as const, error: 'ROOM_CLOSED' as const };
+      }
+      if (room.emptySinceMs) delete room.emptySinceMs;
       if (room.status !== 'lobby') return { ok: false as const, error: 'GAME_ALREADY_STARTED' as const };
 
       const profile = data.profiles[uid];
       const displayName = normalizeDisplayName(nicknameRaw || profile?.displayName || session?.user?.name || uid) || uid;
       const playerId = `user:${uid}`;
 
-      const now = Date.now();
       const isExisting = room.members.some((m) => m.playerId === playerId && !m.isSpectator);
       const playerCount = room.members.filter((m) => !m.isSpectator).length;
       if (!isExisting && playerCount >= room.config.maxPlayers)
@@ -68,14 +75,17 @@ export async function POST(req: Request) {
         existing.isSpectator = false;
       } else {
         room.members.unshift(
-          makePlayerMember({ playerId, userId: uid, displayName, joinedAtMs: now }),
+          makePlayerMember({ playerId, userId: uid, displayName, joinedAtMs: nowMs }),
         );
       }
       room.members = room.members.slice(0, 64);
       return { ok: true as const, roomCode };
     });
 
-    if (!result.ok) return NextResponse.json(result, { status: result.error === 'ROOM_NOT_FOUND' ? 404 : 400 });
+    if (!result.ok) {
+      const status = result.error === 'ROOM_NOT_FOUND' ? 404 : result.error === 'ROOM_CLOSED' ? 410 : 400;
+      return NextResponse.json(result, { status });
+    }
     return NextResponse.json(result);
   }
 
@@ -87,19 +97,27 @@ export async function POST(req: Request) {
   const result = await updateAppData((data) => {
     const room = data.rooms[roomCode];
     if (!room) return { ok: false as const, error: 'ROOM_NOT_FOUND' as const };
+    if (room.closedAtMs) return { ok: false as const, error: 'ROOM_CLOSED' as const };
+    if (room.members.length === 0 && room.emptySinceMs && nowMs - room.emptySinceMs >= roomEmptyCloseMs) {
+      room.closedAtMs = nowMs;
+      return { ok: false as const, error: 'ROOM_CLOSED' as const };
+    }
+    if (room.emptySinceMs) delete room.emptySinceMs;
     if (room.status !== 'lobby') return { ok: false as const, error: 'GAME_ALREADY_STARTED' as const };
 
     const playerId = `guest:${guest.id}`;
-    const now = Date.now();
     const playerCount = room.members.filter((m) => !m.isSpectator).length;
     if (playerCount >= room.config.maxPlayers) return { ok: false as const, error: 'ROOM_FULL' as const };
 
-    room.members.unshift(makePlayerMember({ playerId, displayName: guest.nickname, joinedAtMs: now }));
+    room.members.unshift(makePlayerMember({ playerId, displayName: guest.nickname, joinedAtMs: nowMs }));
     room.members = room.members.slice(0, 64);
     return { ok: true as const, roomCode };
   });
 
-  if (!result.ok) return NextResponse.json(result, { status: result.error === 'ROOM_NOT_FOUND' ? 404 : 400 });
+  if (!result.ok) {
+    const status = result.error === 'ROOM_NOT_FOUND' ? 404 : result.error === 'ROOM_CLOSED' ? 410 : 400;
+    return NextResponse.json(result, { status });
+  }
 
   const res = NextResponse.json(result);
   res.cookies.set(guestCookieName, encodeGuestIdentity(guest), {

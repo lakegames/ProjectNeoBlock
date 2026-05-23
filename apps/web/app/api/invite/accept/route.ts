@@ -18,12 +18,21 @@ export async function POST(req: Request) {
   const result = await updateAppData((data) => {
     const invite = data.invites[code];
     if (!invite) return { ok: false as const, error: 'NOT_FOUND' as const };
-    if (invite.usedBy) return { ok: false as const, error: 'ALREADY_USED' as const };
+    const nowMs = Date.now();
+    const expiresAtMs = invite.expiresAt && Number.isFinite(Date.parse(invite.expiresAt)) ? Date.parse(invite.expiresAt) : null;
+    if (expiresAtMs !== null && nowMs > expiresAtMs) return { ok: false as const, error: 'EXPIRED' as const };
+
+    const maxUses = typeof invite.maxUses === 'number' && Number.isFinite(invite.maxUses) ? Math.trunc(invite.maxUses) : 1;
+    const uses = typeof invite.uses === 'number' && Number.isFinite(invite.uses) ? Math.trunc(invite.uses) : invite.usedBy ? 1 : 0;
+    if (uses >= maxUses) return { ok: false as const, error: 'ALREADY_USED' as const };
     if (invite.inviterId === uid) return { ok: false as const, error: 'CANNOT_ACCEPT_SELF' as const };
 
     const now = new Date().toISOString();
-    invite.usedBy = uid;
-    invite.usedAt = now;
+    invite.uses = uses + 1;
+    if (maxUses === 1) {
+      invite.usedBy = uid;
+      invite.usedAt = now;
+    }
 
     data.friends[invite.inviterId] = Array.from(
       new Set([...(data.friends[invite.inviterId] ?? []), uid]),

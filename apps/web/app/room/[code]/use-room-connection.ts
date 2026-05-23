@@ -25,6 +25,50 @@ type CardDrawn = {
   playerId: string;
 };
 
+export type ChatMessage = {
+  eventId: string;
+  createdAtMs: number;
+  fromPlayerId: string;
+  toPlayerId?: string;
+  text: string;
+};
+
+export type RoomConnectionDebugDump = {
+  kind: 'neoblock-debug';
+  version: 1;
+  at: string;
+  roomCode: string;
+  mode: 'player' | 'spectator';
+  url: string | null;
+  userAgent: string | null;
+  actor: Actor | null;
+  connected: boolean;
+  connecting: boolean;
+  pending: null | { commandId: string; clientSeq: number; command: Command; retries: number };
+  lastError: ProtocolError | null;
+  snapshot: MatchSnapshot | null;
+  recentCommands: Command[];
+  recentEvents: Event[];
+  chatMessages: ChatMessage[];
+};
+
+export type UseRoomConnectionResult = {
+  actor: Actor | null;
+  identifyGuest: (nickname: string) => Promise<Actor>;
+  snapshot: MatchSnapshot | null;
+  connected: boolean;
+  connecting: boolean;
+  lastError: ProtocolError | null;
+  sendCommand: (command: CommandInput) => void;
+  pending: boolean;
+  lastCardDrawn: CardDrawn | null;
+  clearLastCard: () => void;
+  getDebugDump: () => RoomConnectionDebugDump;
+  chatMessages: ChatMessage[];
+  recentEvents50: Event[];
+  recentEvents200: Event[];
+};
+
 function uuid() {
   if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) return crypto.randomUUID();
   return `c_${Math.random().toString(16).slice(2)}_${Date.now()}`;
@@ -61,7 +105,7 @@ export function useRoomConnection(options: {
   roomCode: string;
   mode: 'player' | 'spectator';
   initialNickname?: string;
-}) {
+}): UseRoomConnectionResult {
   const roomCode = options.roomCode.trim().toUpperCase();
 
   const [actor, setActor] = React.useState<Actor | null>(null);
@@ -70,11 +114,19 @@ export function useRoomConnection(options: {
   const [connecting, setConnecting] = React.useState(false);
   const [lastError, setLastError] = React.useState<ProtocolError | null>(null);
   const [lastCardDrawn, setLastCardDrawn] = React.useState<CardDrawn | null>(null);
+  const [chatMessages, setChatMessages] = React.useState<ChatMessage[]>([]);
+  const [recentEvents200, setRecentEvents200] = React.useState<Event[]>([]);
+  const [recentEvents50, setRecentEvents50] = React.useState<Event[]>([]);
 
   const wsRef = React.useRef<WebSocket | null>(null);
   const connectRef = React.useRef<(a: Actor) => void>(() => {});
   const reconnectTimerRef = React.useRef<number | null>(null);
   const reconnectAttemptRef = React.useRef(0);
+
+  const actorRef = React.useRef<Actor | null>(null);
+  React.useEffect(() => {
+    actorRef.current = actor;
+  }, [actor]);
 
   const lastEventSeqRef = React.useRef<number>(0);
   const nextClientSeqRef = React.useRef<number>(0);
@@ -132,7 +184,29 @@ export function useRoomConnection(options: {
       }
 
       if (parsed.events.length) {
-        recentEventsRef.current = [...recentEventsRef.current, ...parsed.events].slice(-200);
+        const next200 = [...recentEventsRef.current, ...parsed.events].slice(-200);
+        recentEventsRef.current = next200;
+        setRecentEvents200(next200);
+        setRecentEvents50(next200.slice(-50));
+      }
+
+      const nextChats: ChatMessage[] = [];
+      const selfId = actorRef.current?.playerId ?? null;
+      for (const e of parsed.events) {
+        if (e.type !== 'room/chatMessage') continue;
+        const ce = e as Extract<Event, { type: 'room/chatMessage' }>;
+        if (ce.toPlayerId && selfId && ce.fromPlayerId !== selfId && ce.toPlayerId !== selfId) continue;
+        if (ce.toPlayerId && !selfId) continue;
+        nextChats.push({
+          eventId: ce.eventId,
+          createdAtMs: ce.createdAtMs,
+          fromPlayerId: ce.fromPlayerId,
+          text: ce.text,
+          ...(ce.toPlayerId ? { toPlayerId: ce.toPlayerId } : {}),
+        });
+      }
+      if (nextChats.length) {
+        setChatMessages((s) => [...s, ...nextChats].slice(-60));
       }
 
       const pending = pendingRef.current;
@@ -253,13 +327,29 @@ export function useRoomConnection(options: {
     (async () => {
       const a = await fetchActor();
       if (cancelled) return;
-      if (a) setActor(a);
-      else setActor(null);
+      if (options.mode === 'player') {
+        if (a?.kind === 'user') setActor(a);
+        else setActor(null);
+        return;
+      }
+
+      if (a) {
+        setActor(a);
+        return;
+      }
+
+      try {
+        const g = await ensureGuest(options.initialNickname ?? '观众');
+        if (cancelled) return;
+        setActor(g);
+      } catch {
+        setActor(null);
+      }
     })();
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [options.initialNickname, options.mode]);
 
   React.useEffect(() => {
     if (!actor || !roomCode) return;
@@ -322,8 +412,9 @@ export function useRoomConnection(options: {
       snapshot,
       recentCommands: recentCommandsRef.current,
       recentEvents: recentEventsRef.current,
+      chatMessages,
     };
-  }, [actor, connected, connecting, lastError, options.mode, roomCode, snapshot]);
+  }, [actor, chatMessages, connected, connecting, lastError, options.mode, roomCode, snapshot]);
 
   return {
     actor,
@@ -337,5 +428,8 @@ export function useRoomConnection(options: {
     lastCardDrawn,
     clearLastCard,
     getDebugDump,
+    chatMessages,
+    recentEvents50,
+    recentEvents200,
   };
 }

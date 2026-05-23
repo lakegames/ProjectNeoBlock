@@ -127,6 +127,17 @@ export function validateCommand(input: unknown): ValidationResult<Command> {
       requireBoolean('ready');
       break;
     }
+    case 'room/sendChat': {
+      requireString('roomId');
+      requireString('playerId');
+      const text = input.text;
+      if (!isString(text) || text.length === 0) issues.push(issue('text', 'text 必须为非空字符串'));
+      else if (text.length > 400) issues.push(issue('text', 'text 最大长度为 400'));
+      const toPlayerId = input.toPlayerId;
+      if (!(toPlayerId === undefined || (isString(toPlayerId) && toPlayerId.length > 0)))
+        issues.push(issue('toPlayerId', 'toPlayerId 必须为非空字符串'));
+      break;
+    }
     case 'room/startGame': {
       requireString('roomId');
       requireString('playerId');
@@ -244,6 +255,12 @@ export function validateCommand(input: unknown): ValidationResult<Command> {
       break;
     }
     case 'game/declareBankruptcy': {
+      requireString('roomId');
+      requireString('gameId');
+      requireString('playerId');
+      break;
+    }
+    case 'game/forfeit': {
       requireString('roomId');
       requireString('gameId');
       requireString('playerId');

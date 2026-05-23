@@ -13,12 +13,13 @@ export const metadata = {
   description: 'NeoBlock monorepo',
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({ children, modal }: { children: React.ReactNode; modal?: React.ReactNode }) {
   return (
     <html lang="zh-CN" data-theme="light" suppressHydrationWarning>
       <body suppressHydrationWarning>
         <Providers>
           <AppShell>{children}</AppShell>
+          {modal ?? null}
         </Providers>
       </body>
     </html>

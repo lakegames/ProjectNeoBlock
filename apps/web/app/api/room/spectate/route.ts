@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 
 import { encodeGuestIdentity, guestCookieName } from 'lib/identity';
+import { roomEmptyCloseMs } from 'lib/room-lifecycle';
 import { normalizeRoomCode, resolveActor } from 'lib/room';
 import { updateAppData } from 'lib/store';
 
@@ -21,15 +22,21 @@ export async function POST(req: Request) {
   const actor = await resolveActor({ allowGuestCreate: true, nickname: body?.nickname || '观众' });
   if (!actor) return NextResponse.json({ error: 'UNAUTHORIZED' }, { status: 401 });
 
-  const now = Date.now();
+  const nowMs = Date.now();
   const result = await updateAppData((data) => {
     const room = data.rooms[roomCode];
     if (!room) return { ok: false as const, error: 'ROOM_NOT_FOUND' as const };
+    if (room.closedAtMs) return { ok: false as const, error: 'ROOM_CLOSED' as const };
+    if (room.members.length === 0 && room.emptySinceMs && nowMs - room.emptySinceMs >= roomEmptyCloseMs) {
+      room.closedAtMs = nowMs;
+      return { ok: false as const, error: 'ROOM_CLOSED' as const };
+    }
+    if (room.emptySinceMs) delete room.emptySinceMs;
 
     const existing = room.members.find((m) => m.playerId === actor.playerId);
     if (existing) {
       existing.displayName = actor.displayName;
-      if (existing.isSpectator) existing.joinedAtMs = now;
+      if (existing.isSpectator) existing.joinedAtMs = nowMs;
       return { ok: true as const, room };
     }
 
@@ -39,13 +46,16 @@ export async function POST(req: Request) {
       displayName: actor.displayName,
       isSpectator: true,
       ready: false,
-      joinedAtMs: now,
+      joinedAtMs: nowMs,
     });
     room.members = room.members.slice(0, 64);
     return { ok: true as const, room };
   });
 
-  if (!result.ok) return NextResponse.json(result, { status: result.error === 'ROOM_NOT_FOUND' ? 404 : 400 });
+  if (!result.ok) {
+    const status = result.error === 'ROOM_NOT_FOUND' ? 404 : result.error === 'ROOM_CLOSED' ? 410 : 400;
+    return NextResponse.json(result, { status });
+  }
 
   const res = NextResponse.json(result);
   if (actor.kind === 'guest' && actor.newGuest) {
@@ -58,4 +68,3 @@ export async function POST(req: Request) {
   }
   return res;
 }
-

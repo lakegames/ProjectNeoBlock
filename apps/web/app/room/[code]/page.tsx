@@ -4,8 +4,11 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useSession } from 'next-auth/react';
 
-import { Button, Input } from '@neoblock/ui';
+import { Button, Dialog, Input, Popover, Tooltip } from '@neoblock/ui';
+
+import { clearActiveGame, writeActiveGame } from '../../../lib/active-game';
 
 import { BoardSkeleton } from './board-skeleton';
 import { useRoomConnection } from './use-room-connection';
@@ -505,12 +508,58 @@ export default function RoomPage() {
   const searchParams = useSearchParams();
   const wantSpectate = searchParams.get('spectate') === '1';
 
-  const [guestNickname, setGuestNickname] = useState('');
   const [joinError, setJoinError] = useState<string | null>(null);
+  const [joinLoading, setJoinLoading] = useState(false);
+  const [roomCodeCopied, setRoomCodeCopied] = useState(false);
+  const [shareCopied, setShareCopied] = useState(false);
+  const [leaveConfirmOpen, setLeaveConfirmOpen] = useState(false);
+  const [leaveConfirmLoading, setLeaveConfirmLoading] = useState(false);
+  const [spectatorsOpen, setSpectatorsOpen] = useState(false);
   const [debugCopied, setDebugCopied] = useState(false);
   const [debugError, setDebugError] = useState<string | null>(null);
 
-  const { actor, identifyGuest, snapshot, connected, connecting, lastError, sendCommand, pending, lastCardDrawn, clearLastCard, getDebugDump } =
+  const { data } = useSession();
+  const uid = (data?.user as { id?: string } | undefined)?.id ?? null;
+  const [friends, setFriends] = useState<string[]>([]);
+  useEffect(() => {
+    setFriends([]);
+    if (!uid) return;
+    fetch('/api/profile', { cache: 'no-store' })
+      .then((r) => r.json().then((j) => ({ ok: r.ok, json: j })))
+      .then(({ ok, json }) => {
+        if (!ok) return;
+        setFriends((json.friends ?? []) as string[]);
+      })
+      .catch(() => {});
+  }, [uid]);
+
+  const [publishedTemplates, setPublishedTemplates] = useState<PublishedConfigItem[]>([]);
+  const [defaultTemplateVersionId, setDefaultTemplateVersionId] = useState<string>('');
+  useEffect(() => {
+    fetch('/api/config/published', { cache: 'no-store' })
+      .then((r) => r.json().then((j) => ({ ok: r.ok, json: j })))
+      .then(({ ok, json }) => {
+        if (!ok) return;
+        setPublishedTemplates((json.templates ?? []) as PublishedConfigItem[]);
+        setDefaultTemplateVersionId(typeof json.defaultTemplateVersionId === 'string' ? json.defaultTemplateVersionId : '');
+      })
+      .catch(() => {});
+  }, []);
+
+  const {
+    actor,
+    snapshot,
+    connected,
+    connecting,
+    lastError,
+    sendCommand,
+    pending,
+    lastCardDrawn,
+    clearLastCard,
+    getDebugDump,
+    chatMessages,
+    recentEvents50,
+  } =
     useRoomConnection({
       roomCode,
       mode: wantSpectate ? 'spectator' : 'player',
@@ -524,6 +573,15 @@ export default function RoomPage() {
     if (!actor || !room) return null;
     return room.members.find((m) => m.playerId === actor.playerId) ?? null;
   }, [actor, room]);
+
+  useEffect(() => {
+    if (!roomCode) return;
+    if (game?.status === 'playing' && selfMember && !selfMember.isSpectator) {
+      writeActiveGame(roomCode);
+    } else if (selfMember && !selfMember.isSpectator) {
+      clearActiveGame();
+    }
+  }, [game?.status, roomCode, selfMember]);
 
   const players = useMemo(() => (room?.members ?? []).filter((m) => !m.isSpectator), [room?.members]);
   const spectators = useMemo(() => (room?.members ?? []).filter((m) => m.isSpectator), [room?.members]);
@@ -555,21 +613,95 @@ export default function RoomPage() {
 
   const isHost = !!room && !!actor && actor.playerId === room.hostPlayerId && !selfMember?.isSpectator;
 
+  const [webRoomAvailable, setWebRoomAvailable] = useState(true);
+  const [webTemplateVersionId, setWebTemplateVersionId] = useState<string>('');
+  async function refreshWebTemplate() {
+    if (!roomCode || !webRoomAvailable) return;
+    try {
+      const r = await fetch(`/api/room/state?roomCode=${encodeURIComponent(roomCode)}`, { cache: 'no-store' });
+      const json = (await r.json().catch(() => null)) as
+        | { error?: unknown; room?: { config?: { templateVersionId?: unknown } } }
+        | null;
+      if (!r.ok) {
+        const err = typeof json?.error === 'string' ? json.error : '';
+        if (err === 'ROOM_NOT_FOUND' || err === 'ROOM_CLOSED') setWebRoomAvailable(false);
+        return;
+      }
+      const v = json?.room?.config?.templateVersionId;
+      setWebTemplateVersionId(typeof v === 'string' ? v : '');
+    } catch {
+    }
+  }
+  useEffect(() => {
+    setWebTemplateVersionId('');
+    void refreshWebTemplate();
+  }, [roomCode]);
+
+  const [selectedTemplateVersionId, setSelectedTemplateVersionId] = useState('');
+  useEffect(() => {
+    if (webTemplateVersionId) {
+      const canSelect = publishedTemplates.some((t) => t.versionId === webTemplateVersionId);
+      setSelectedTemplateVersionId(canSelect ? webTemplateVersionId : '');
+      return;
+    }
+    if (!selectedTemplateVersionId && publishedTemplates[0]?.versionId) setSelectedTemplateVersionId(publishedTemplates[0].versionId);
+  }, [defaultTemplateVersionId, publishedTemplates, selectedTemplateVersionId, webTemplateVersionId]);
+
+  const currentTemplateLabel = useMemo(() => {
+    if (!webTemplateVersionId) return '';
+    if (defaultTemplateVersionId && webTemplateVersionId === defaultTemplateVersionId) return '标准玩法';
+    const hit = publishedTemplates.find((t) => t.versionId === webTemplateVersionId);
+    return hit ? hit.name : webTemplateVersionId;
+  }, [defaultTemplateVersionId, publishedTemplates, webTemplateVersionId]);
+
+  const [applyTemplateLoading, setApplyTemplateLoading] = useState(false);
+  const [applyTemplateError, setApplyTemplateError] = useState<string | null>(null);
+  async function applyTemplate() {
+    if (!roomCode || !selectedTemplateVersionId || applyTemplateLoading) return;
+    setApplyTemplateLoading(true);
+    setApplyTemplateError(null);
+    try {
+      const r = await fetch('/api/room/config', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ roomCode, config: { templateVersionId: selectedTemplateVersionId } }),
+      });
+      const json = await r.json();
+      if (!r.ok) throw new Error(json?.error || 'APPLY_TEMPLATE_FAILED');
+      await refreshWebTemplate();
+      await syncRoomConfigToWs();
+    } catch (e) {
+      setApplyTemplateError(String((e as Error).message || e));
+    } finally {
+      setApplyTemplateLoading(false);
+    }
+  }
+
   const [syncError, setSyncError] = useState<string | null>(null);
   const [startRequested, setStartRequested] = useState(false);
   const lastSyncKeyRef = useRef('');
   const desiredConfigRef = useRef<null | { maxPlayers: number | null; boardPreset: 'default' | 'full' | null }>(null);
   async function syncRoomConfigToWs() {
     if (!roomCode || !room || !actor || !isHost) return;
+    if (!webRoomAvailable) return;
     if (room.status !== 'lobby') return;
     if (pending) return;
     setSyncError(null);
     try {
       const stateResp = await fetch(`/api/room/state?roomCode=${encodeURIComponent(roomCode)}`, { cache: 'no-store' });
       const stateJson = (await stateResp.json().catch(() => null)) as
-        | { room?: { config?: { maxPlayers?: unknown; boardVersionId?: unknown } } }
+        | { error?: unknown; room?: { config?: { maxPlayers?: unknown; boardVersionId?: unknown } } }
         | null;
-      if (!stateResp.ok) throw new Error((stateJson as { error?: string } | null)?.error || 'ROOM_STATE_FAILED');
+      if (!stateResp.ok) {
+        const err = typeof stateJson?.error === 'string' ? stateJson.error : '';
+        if (err === 'ROOM_NOT_FOUND' || err === 'ROOM_CLOSED') {
+          setWebRoomAvailable(false);
+          desiredConfigRef.current = null;
+          lastSyncKeyRef.current = 'no-web-room';
+          return;
+        }
+        throw new Error(err || 'ROOM_STATE_FAILED');
+      }
 
       const maxPlayersRaw = stateJson?.room?.config?.maxPlayers;
       const maxPlayers = typeof maxPlayersRaw === 'number' && Number.isFinite(maxPlayersRaw) ? Math.trunc(maxPlayersRaw) : null;
@@ -611,10 +743,11 @@ export default function RoomPage() {
 
   useEffect(() => {
     if (!room || !actor || !isHost) return;
+    if (!webRoomAvailable) return;
     if (room.status !== 'lobby') return;
     if (pending) return;
     void syncRoomConfigToWs();
-  }, [actor, isHost, pending, room?.roomId, room?.status]);
+  }, [actor, isHost, pending, room?.roomId, room?.status, webRoomAvailable]);
 
   useEffect(() => {
     if (!startRequested) return;
@@ -648,29 +781,30 @@ export default function RoomPage() {
     return null;
   }, [isHost, room, selfMember]);
 
-  const canIdentify = useMemo(() => !!guestNickname.trim(), [guestNickname]);
-  useEffect(() => setJoinError(null), [guestNickname]);
-
-  const [didMarkEnded, setDidMarkEnded] = useState(false);
+  const markedEndedGameIdRef = useRef<string | null>(null);
   useEffect(() => {
+    const gid = game?.gameId ?? null;
+    if (!gid) return;
     if (!roomCode || !actor || !room) return;
     if (!isHost || !isGameEnded) return;
-    if (didMarkEnded) return;
-    setDidMarkEnded(true);
+    if (markedEndedGameIdRef.current === gid) return;
+    markedEndedGameIdRef.current = gid;
     fetch('/api/room/mark-ended', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ roomCode }),
+      body: JSON.stringify({ roomCode, gameId: gid }),
     }).catch(() => {});
-  }, [actor, didMarkEnded, isGameEnded, isHost, room, roomCode]);
+  }, [actor, game?.gameId, isGameEnded, isHost, room, roomCode]);
 
-  const [leaveLoading, setLeaveLoading] = useState(false);
   const [leaveError, setLeaveError] = useState<string | null>(null);
-  async function leaveRoom() {
-    if (!roomCode || leaveLoading) return;
-    setLeaveLoading(true);
+  async function confirmLeaveRoom() {
+    if (!roomCode || leaveConfirmLoading) return;
+    setLeaveConfirmLoading(true);
     setLeaveError(null);
     try {
+      if (game?.status === 'playing' && actor && room && selfMember && !selfMember.isSpectator) {
+        sendCommand({ type: 'game/forfeit', roomId: room.roomId, gameId: game.gameId, playerId: actor.playerId });
+      }
       const r = await fetch('/api/room/leave', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
@@ -678,11 +812,13 @@ export default function RoomPage() {
       });
       const json = await r.json();
       if (!r.ok) throw new Error(json?.error || 'LEAVE_FAILED');
+      clearActiveGame();
       router.push('/');
     } catch (e) {
       setLeaveError(String((e as Error).message || e));
     } finally {
-      setLeaveLoading(false);
+      setLeaveConfirmLoading(false);
+      setLeaveConfirmOpen(false);
     }
   }
 
@@ -708,127 +844,390 @@ export default function RoomPage() {
     }
   }
 
-  async function joinAsGuest() {
-    if (!canIdentify) return;
+  async function joinAsAccount() {
+    if (joinLoading) return;
+    setJoinError(null);
+    if (!uid) {
+      router.push('/login');
+      return;
+    }
+    if (!roomCode) return;
+    setJoinLoading(true);
     try {
-      await identifyGuest(guestNickname);
+      const r = await fetch('/api/room/join', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ roomCode, mode: 'account' }),
+      });
+      const json = await r.json().catch(() => null);
+      if (!r.ok) throw new Error((json as { error?: string } | null)?.error || 'JOIN_FAILED');
+      const sp = new URLSearchParams(searchParams.toString());
+      sp.delete('spectate');
+      const q = sp.toString();
+      router.replace(q ? `/room/${encodeURIComponent(roomCode)}?${q}` : `/room/${encodeURIComponent(roomCode)}`);
     } catch (e) {
       setJoinError(String((e as Error).message || e));
+    } finally {
+      setJoinLoading(false);
+    }
+  }
+
+  const roomUserIds = useMemo(() => {
+    const set = new Set<string>();
+    for (const m of room?.members ?? []) {
+      const id = m.userId;
+      if (!id) continue;
+      set.add(id);
+      const tail = id.split(':').at(-1);
+      if (tail) set.add(tail);
+    }
+    return set;
+  }, [room?.members]);
+  const inviteCandidates = useMemo(() => friends.filter((x) => x && !roomUserIds.has(x)), [friends, roomUserIds]);
+  const [inviteToUid, setInviteToUid] = useState('');
+  const [inviteSending, setInviteSending] = useState(false);
+  const [inviteError, setInviteError] = useState<string | null>(null);
+  const [inviteOk, setInviteOk] = useState(false);
+  async function sendGameInvite() {
+    if (!uid || !actor || !room || !inviteToUid || inviteSending) return;
+    setInviteSending(true);
+    setInviteError(null);
+    setInviteOk(false);
+    try {
+      const r = await fetch('/api/game-invite/send', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ toUid: inviteToUid, roomCode }),
+      });
+      const json = await r.json().catch(() => null);
+      if (!r.ok) throw new Error((json as { error?: string } | null)?.error || 'SEND_FAILED');
+      setInviteOk(true);
+      window.setTimeout(() => setInviteOk(false), 1500);
+    } catch (e) {
+      setInviteError(String((e as Error).message || e));
+    } finally {
+      setInviteSending(false);
     }
   }
 
   return (
     <main style={{ padding: 24, maxWidth: room?.status === 'playing' ? 1240 : 820 }}>
-      <h1 style={{ margin: 0 }}>房间 {roomCode || '-'}</h1>
-      <p style={{ marginTop: 8, color: 'rgba(0,0,0,0.65)' }}>
-        对局交互：掷骰/购买/拍卖/交易/建房/抵押/卡牌展示；并补齐弹窗与关键按钮的键盘可访问性
-      </p>
-
-      <div style={{ marginTop: 16, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-        <Link href="/">
-          <Button>返回首页</Button>
-        </Link>
-        <Link href="/join">
-          <Button>作为玩家加入</Button>
-        </Link>
-        <Link href={`/room/${encodeURIComponent(roomCode)}?spectate=1`}>
-          <Button>观战链接</Button>
-        </Link>
-        <Button
-          mode="Second"
-          onClick={async () => {
-            setDebugError(null);
-            setDebugCopied(false);
-            try {
-              const dump = getDebugDump();
-              const text = JSON.stringify(dump, null, 2);
-              await navigator.clipboard.writeText(text);
-              setDebugCopied(true);
-              window.setTimeout(() => setDebugCopied(false), 1500);
-            } catch (e) {
-              setDebugError(String((e as Error).message || e));
-            }
-          }}
-          disabled={pending}
-        >
-          {debugCopied ? '已复制' : '复制调试信息'}
-        </Button>
-        {actor && room ? (
-          <Button onClick={leaveRoom} disabled={leaveLoading || pending}>
-            {leaveLoading ? '离开中…' : '离开房间'}
-          </Button>
-        ) : null}
-      </div>
-
-      <div style={{ marginTop: 20, padding: 12, border: '1px solid rgba(0,0,0,0.08)', borderRadius: 12 }}>
-        <div style={{ fontWeight: 600 }}>房间信息</div>
-        {room ? (
-          <div style={{ marginTop: 10, color: 'rgba(0,0,0,0.7)' }}>
-            状态：{room.status} ｜房主：{host?.displayName ?? room.hostPlayerId} ｜玩家 {players.length}/{room.config.maxPlayers} ｜观战{' '}
-            {spectators.length} ｜连接 {connecting ? '连接中…' : connected ? '已连接' : '未连接'}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, minWidth: 0 }}>
+          <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--nb-color-fg, rgba(0,0,0,0.92))' }}>房间</div>
+          <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--nb-color-muted-fg, rgba(0,0,0,0.65))', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            {roomCode || '-'}
           </div>
-        ) : (
-          <div style={{ marginTop: 10, color: 'rgba(0,0,0,0.65)' }}>房间不存在或尚未加载</div>
-        )}
-      </div>
-
-      <div style={{ marginTop: 20, padding: 12, border: '1px solid rgba(0,0,0,0.08)', borderRadius: 12 }}>
-        <div style={{ fontWeight: 600 }}>我的状态</div>
-        <div style={{ marginTop: 10, color: 'rgba(0,0,0,0.7)' }}>
-          {actor ? (
-            <>
-              {selfMember?.isSpectator ? '观战' : '玩家'}：{actor.displayName}（{actor.playerId}）
-              {!selfMember?.isSpectator && room?.status === 'lobby' ? <span> ｜{selfMember?.ready ? '已准备' : '未准备'}</span> : null}
-              {isHost ? <span> ｜房主</span> : null}
-            </>
-          ) : (
-            <>未加入（可作为玩家加入或观战）</>
-          )}
         </div>
 
-        {!actor ? (
-          <div style={{ marginTop: 12, display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
-            <Input value={guestNickname} onChange={(e) => setGuestNickname(e.target.value)} placeholder="游客昵称（必填）" style={{ minWidth: 240 }} />
-            <Button onClick={joinAsGuest} disabled={!canIdentify}>
-              以游客身份进入
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+          {room?.status === 'lobby' && !wantSpectate && (!selfMember || selfMember.isSpectator) ? (
+            <Button mode="Primary" onClick={joinAsAccount} loading={joinLoading} disabled={pending}>
+              加入游戏
             </Button>
-            {joinError ? <div style={{ color: '#b42318' }}>{joinError}</div> : null}
-          </div>
-        ) : (
-          <div style={{ marginTop: 12, display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+          ) : null}
+
+          <Button
+            size="sm"
+            mode="Second"
+            onClick={async () => {
+              setRoomCodeCopied(false);
+              try {
+                await navigator.clipboard.writeText(roomCode);
+                setRoomCodeCopied(true);
+                window.setTimeout(() => setRoomCodeCopied(false), 1500);
+              } catch {
+              }
+            }}
+          >
+            {roomCodeCopied ? '已复制' : '复制房间号'}
+          </Button>
+
+          <Tooltip content={shareCopied ? '已复制链接' : '分享/复制链接'}>
             <Button
-              onClick={() => {
-                if (!room || !selfMember) return;
-                sendCommand({ type: 'room/setReady', roomId: room.roomId, playerId: actor.playerId, ready: !selfMember.ready });
+              type="button"
+              size="md"
+              mode="NoBackground-Custom"
+              aria-label="分享房间链接"
+              iconLeft={{ name: 'symbol_link', mode: 'default', thickness: 'Bold' }}
+              onClick={async () => {
+                setShareCopied(false);
+                try {
+                  const url = typeof window !== 'undefined' ? `${window.location.origin}/room/${encodeURIComponent(roomCode)}` : '';
+                  if (url && typeof navigator !== 'undefined' && 'share' in navigator) {
+                    const share = navigator.share as unknown as (data: { url: string }) => Promise<void>;
+                    await share({ url });
+                    return;
+                  }
+                  if (url) await navigator.clipboard.writeText(url);
+                  setShareCopied(true);
+                  window.setTimeout(() => setShareCopied(false), 1500);
+                } catch {
+                }
               }}
-              disabled={!canReady || pending}
             >
-              {pending ? '处理中…' : selfMember?.ready ? '取消准备' : '准备'}
             </Button>
-            <Button
-              onClick={() => {
-                if (!room) return;
-                setStartRequested(true);
-                void syncRoomConfigToWs();
-              }}
-              disabled={!!startDisabledReason || pending}
-            >
-              {pending ? '开局中…' : startDisabledReason ? `开局（${startDisabledReason}）` : '房主开局'}
-            </Button>
-            {isHost && (room?.status === 'lobby' || isGameEnded) ? (
-              <Button onClick={closeRoom} disabled={closeLoading}>
-                {closeLoading ? '关闭中…' : '关闭房间'}
+          </Tooltip>
+
+          {room?.status === 'playing' ? (
+            selfMember ? (
+              <Popover
+                open={spectatorsOpen}
+                onOpenChange={setSpectatorsOpen}
+                content={
+                  spectators.length ? (
+                    <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'grid', gap: 8 }}>
+                      {spectators.map((p) => (
+                        <li key={p.playerId} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+                          <div style={{ display: 'flex', gap: 8, alignItems: 'center', minWidth: 0 }}>
+                            {p.userId ? (
+                              <Image
+                                src={`https://api.dicebear.com/7.x/lorelei/svg?seed=${encodeURIComponent(p.userId)}`}
+                                alt=""
+                                width={22}
+                                height={22}
+                                style={{ borderRadius: 999 }}
+                              />
+                            ) : (
+                              <div
+                                style={{
+                                  width: 22,
+                                  height: 22,
+                                  borderRadius: 999,
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  background: 'rgba(0,0,0,0.06)',
+                                  color: 'rgba(0,0,0,0.7)',
+                                  fontWeight: 800,
+                                  fontSize: 12,
+                                  flex: '0 0 auto',
+                                }}
+                              >
+                                {p.displayName.trim().slice(0, 1).toUpperCase()}
+                              </div>
+                            )}
+                            <div style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.displayName}</div>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <div style={{ color: 'rgba(0,0,0,0.65)' }}>暂无观战</div>
+                  )
+                }
+              >
+                <Button size="sm" mode="Second">
+                  观战（{spectators.length}）
+                </Button>
+              </Popover>
+            ) : (
+              <Button
+                size="sm"
+                mode="Second"
+                onClick={() => router.push(`/room/${encodeURIComponent(roomCode)}?spectate=1`)}
+              >
+                观战
               </Button>
-            ) : null}
-          </div>
-        )}
-        {lastError ? <div style={{ marginTop: 10, color: '#b42318' }}>{lastError.message}</div> : null}
-        {syncError ? <div style={{ marginTop: 10, color: '#b42318' }}>{syncError}</div> : null}
-        {debugError ? <div style={{ marginTop: 10, color: '#b42318' }}>{debugError}</div> : null}
-        {leaveError ? <div style={{ marginTop: 10, color: '#b42318' }}>{leaveError}</div> : null}
-        {closeError ? <div style={{ marginTop: 10, color: '#b42318' }}>{closeError}</div> : null}
+            )
+          ) : (
+            <Button
+              size="sm"
+              mode="Second"
+              onClick={() => {
+                const sp = new URLSearchParams(searchParams.toString());
+                if (wantSpectate) sp.delete('spectate');
+                else sp.set('spectate', '1');
+                const q = sp.toString();
+                router.push(q ? `/room/${encodeURIComponent(roomCode)}?${q}` : `/room/${encodeURIComponent(roomCode)}`);
+              }}
+            >
+              {wantSpectate ? '退出观战' : '观战'}
+            </Button>
+          )}
+
+          <Button
+            size="sm"
+            mode="Second"
+            onClick={async () => {
+              setDebugError(null);
+              setDebugCopied(false);
+              try {
+                const dump = getDebugDump();
+                const text = JSON.stringify(dump, null, 2);
+                await navigator.clipboard.writeText(text);
+                setDebugCopied(true);
+                window.setTimeout(() => setDebugCopied(false), 1500);
+              } catch (e) {
+                setDebugError(String((e as Error).message || e));
+              }
+            }}
+            disabled={pending}
+          >
+            {debugCopied ? '已复制' : '复制调试'}
+          </Button>
+
+          <Button size="sm" mode="Second" onClick={() => setLeaveConfirmOpen(true)} disabled={pending || leaveConfirmLoading}>
+            离开
+          </Button>
+        </div>
       </div>
 
+      {room?.status !== 'playing' ? (
+        <div style={{ marginTop: 20, padding: 12, border: '1px solid rgba(0,0,0,0.08)', borderRadius: 12 }}>
+          <div style={{ fontWeight: 600 }}>房间信息</div>
+          {room ? (
+            <div style={{ marginTop: 10, color: 'rgba(0,0,0,0.7)' }}>
+              状态：{room.status} ｜房主：{host?.displayName ?? room.hostPlayerId} ｜玩家 {players.length}/{room.config.maxPlayers} ｜观战{' '}
+              {spectators.length} ｜连接 {connecting ? '连接中…' : connected ? '已连接' : '未连接'}
+            </div>
+          ) : (
+            <div style={{ marginTop: 10, color: 'rgba(0,0,0,0.65)' }}>房间不存在或尚未加载</div>
+          )}
+        </div>
+      ) : null}
+
+      {room?.status === 'lobby' && isHost ? (
+        <div style={{ marginTop: 20, padding: 12, border: '1px solid rgba(0,0,0,0.08)', borderRadius: 12 }}>
+          <div style={{ fontWeight: 600 }}>房间模板</div>
+          <div style={{ marginTop: 10, display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+            <select
+              value={selectedTemplateVersionId}
+              onChange={(e) => setSelectedTemplateVersionId(e.target.value)}
+              style={{
+                padding: '10px 12px',
+                borderRadius: 12,
+                border: '1px solid rgba(0,0,0,0.12)',
+                background: '#fff',
+                minWidth: 320,
+              }}
+              disabled={applyTemplateLoading || pending}
+            >
+              <option value="">选择模板</option>
+              {publishedTemplates.map((t) => (
+                <option key={t.versionId} value={t.versionId}>
+                  {t.name}
+                </option>
+              ))}
+            </select>
+            <Button mode="Primary" onClick={applyTemplate} disabled={!selectedTemplateVersionId || applyTemplateLoading || pending}>
+              {applyTemplateLoading ? '应用中…' : '应用模板'}
+            </Button>
+          </div>
+          {applyTemplateError ? <div style={{ marginTop: 10, color: '#b42318' }}>{applyTemplateError}</div> : null}
+          {webTemplateVersionId ? (
+            <div style={{ marginTop: 8, color: 'rgba(0,0,0,0.65)' }}>
+              当前模板：{currentTemplateLabel || '标准玩法'}
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+
+      {room?.status !== 'playing' ? (
+        <div style={{ marginTop: 20, padding: 12, border: '1px solid rgba(0,0,0,0.08)', borderRadius: 12 }}>
+          <div style={{ fontWeight: 600 }}>我的状态</div>
+          <div style={{ marginTop: 10, color: 'rgba(0,0,0,0.7)' }}>
+            {actor ? (
+              <>
+                {selfMember?.isSpectator ? '观战' : '玩家'}：{actor.displayName}
+                {!selfMember?.isSpectator && room?.status === 'lobby' ? <span> ｜{selfMember?.ready ? '已准备' : '未准备'}</span> : null}
+                {isHost ? <span> ｜房主</span> : null}
+              </>
+            ) : wantSpectate ? (
+              <>观战中…</>
+            ) : (
+              <>未加入</>
+            )}
+          </div>
+
+          {!actor && !wantSpectate ? (
+            <div style={{ marginTop: 12, display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+              <Button mode="Primary" onClick={joinAsAccount} loading={joinLoading}>
+                登录并加入
+              </Button>
+              {joinError ? <div style={{ color: '#b42318' }}>{joinError}</div> : null}
+            </div>
+          ) : actor ? (
+            <div style={{ marginTop: 12, display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+              <Button
+                onClick={() => {
+                  if (!room || !selfMember) return;
+                  sendCommand({ type: 'room/setReady', roomId: room.roomId, playerId: actor.playerId, ready: !selfMember.ready });
+                }}
+                disabled={!canReady || pending}
+              >
+                {pending ? '处理中…' : selfMember?.ready ? '取消准备' : '准备'}
+              </Button>
+              <Button
+                onClick={() => {
+                  if (!room) return;
+                  setStartRequested(true);
+                  void syncRoomConfigToWs();
+                }}
+                disabled={!!startDisabledReason || pending}
+              >
+                {pending ? '开局中…' : startDisabledReason ? `开局（${startDisabledReason}）` : '房主开局'}
+              </Button>
+              {isHost && (room?.status === 'lobby' || isGameEnded) ? (
+                <Button onClick={closeRoom} disabled={closeLoading}>
+                  {closeLoading ? '关闭中…' : '关闭房间'}
+                </Button>
+              ) : null}
+            </div>
+          ) : null}
+          {lastError ? <div style={{ marginTop: 10, color: '#b42318' }}>{lastError.message}</div> : null}
+          {syncError ? <div style={{ marginTop: 10, color: '#b42318' }}>{syncError}</div> : null}
+          {debugError ? <div style={{ marginTop: 10, color: '#b42318' }}>{debugError}</div> : null}
+          {leaveError ? <div style={{ marginTop: 10, color: '#b42318' }}>{leaveError}</div> : null}
+          {closeError ? <div style={{ marginTop: 10, color: '#b42318' }}>{closeError}</div> : null}
+        </div>
+      ) : null}
+
+      {room?.status !== 'playing' ? (
+        <div style={{ marginTop: 20, padding: 12, border: '1px solid rgba(0,0,0,0.08)', borderRadius: 12 }}>
+          <div style={{ fontWeight: 600 }}>邀请好友加入房间</div>
+          {!uid ? (
+            <div style={{ marginTop: 10, color: 'rgba(0,0,0,0.65)' }}>请先登录</div>
+          ) : !actor ? (
+            <div style={{ marginTop: 10, color: 'rgba(0,0,0,0.65)' }}>加入房间后可邀请好友</div>
+          ) : !room || room.status === 'ended' ? (
+            <div style={{ marginTop: 10, color: 'rgba(0,0,0,0.65)' }}>房间不可用</div>
+          ) : inviteCandidates.length ? (
+            <div style={{ marginTop: 10, display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+              <select
+                value={inviteToUid}
+                onChange={(e) => setInviteToUid(e.target.value)}
+                style={{
+                  padding: '10px 12px',
+                  borderRadius: 12,
+                  border: '1px solid rgba(0,0,0,0.12)',
+                  background: '#fff',
+                  minWidth: 260,
+                }}
+                disabled={inviteSending || pending}
+              >
+                <option value="">选择好友</option>
+                {inviteCandidates.map((f) => (
+                  <option key={f} value={f}>
+                    {f}
+                  </option>
+                ))}
+              </select>
+              <Button mode="Primary" onClick={sendGameInvite} disabled={!inviteToUid || inviteSending || pending}>
+                {inviteSending ? '发送中…' : inviteOk ? '已发送' : '发送邀请'}
+              </Button>
+              <Button mode="Second" onClick={() => router.push('/invite')}>
+                去好友页查看消息
+              </Button>
+              {inviteError ? <div style={{ color: '#b42318' }}>{inviteError}</div> : null}
+            </div>
+          ) : (
+            <div style={{ marginTop: 10, color: 'rgba(0,0,0,0.65)' }}>暂无可邀请好友（好友页先添加好友）</div>
+          )}
+        </div>
+      ) : null}
+
+      {room?.status !== 'playing' ? (
       <div style={{ marginTop: 20, padding: 12, border: '1px solid rgba(0,0,0,0.08)', borderRadius: 12 }}>
         <div style={{ fontWeight: 600 }}>玩家列表</div>
         <div style={{ marginTop: 10 }}>
@@ -880,7 +1279,9 @@ export default function RoomPage() {
           )}
         </div>
       </div>
+      ) : null}
 
+      {room?.status !== 'playing' ? (
       <div style={{ marginTop: 20, padding: 12, border: '1px solid rgba(0,0,0,0.08)', borderRadius: 12 }}>
         <div style={{ fontWeight: 600 }}>观战列表</div>
         <div style={{ marginTop: 10 }}>
@@ -928,6 +1329,29 @@ export default function RoomPage() {
           )}
         </div>
       </div>
+      ) : null}
+
+      <Dialog
+        open={leaveConfirmOpen}
+        onOpenChange={setLeaveConfirmOpen}
+        title="离开房间"
+        footer={
+          <>
+            <Button mode="Second" onClick={() => setLeaveConfirmOpen(false)} disabled={leaveConfirmLoading}>
+              取消
+            </Button>
+            <Button mode="Primary" onClick={confirmLeaveRoom} loading={leaveConfirmLoading}>
+              确认离开
+            </Button>
+          </>
+        }
+      >
+        <div style={{ color: 'rgba(0,0,0,0.7)', lineHeight: '22px' }}>
+          {room?.status === 'playing'
+            ? '确定退出房间吗？退出后你的资产将会归属银行。'
+            : '确定退出房间吗？退出后需要重新加入房间才能继续游玩。'}
+        </div>
+      </Dialog>
 
       {room?.status === 'playing' && game && actor && snapshot ? (
         <BoardSkeleton
@@ -938,6 +1362,8 @@ export default function RoomPage() {
           lastError={lastError}
           lastCardDrawn={lastCardDrawn}
           clearLastCard={clearLastCard}
+          chatMessages={chatMessages}
+          recentEvents50={recentEvents50}
         />
       ) : null}
     </main>

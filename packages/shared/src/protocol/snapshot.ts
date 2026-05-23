@@ -33,6 +33,7 @@ export type RoomSnapshot = {
   status: 'lobby' | 'playing' | 'ended';
   hostPlayerId: PlayerId;
   createdAtMs: number;
+  closedAtMs?: number;
   config: RoomConfigSnapshot;
   members: RoomMemberSnapshot[];
 };

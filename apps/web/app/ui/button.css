@@ -82,8 +82,8 @@
   --nb-btn-bg-hover: var(--nb-color-muted-hover, rgba(0, 0, 0, 0.09));
   --nb-btn-bg-active: var(--nb-color-muted-active, rgba(0, 0, 0, 0.12));
   --nb-btn-fg: var(--nb-color-fg, rgba(0, 0, 0, 0.92));
-  --nb-btn-border: var(--nb-color-border, rgba(0, 0, 0, 0.12));
-  --nb-btn-border-hover: var(--nb-color-border-strong, rgba(0, 0, 0, 0.2));
+  --nb-btn-border: none;
+  --nb-btn-border-hover: none;
   --nb-btn-ring: var(--nb-color-primary-soft, var(--nb-color-ring));
 }
 

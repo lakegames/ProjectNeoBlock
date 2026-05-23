@@ -1,6 +1,12 @@
 import { NextResponse } from 'next/server';
 
-import { ensureSeedConfigs, resolvePublishedVersionId } from 'lib/config-service';
+import {
+  canViewTemplate,
+  ensureSeedConfigs,
+  resolvePublishedVersionId,
+  resolveTemplateByPublishedVersionId,
+  resolveTemplateDocByPublishedVersionId,
+} from 'lib/config-service';
 import { normalizeRoomCode, validateRoomConfig, resolveActor } from 'lib/room';
 import { updateAppData, type RoomConfig } from 'lib/store';
 
@@ -20,12 +26,14 @@ export async function POST(req: Request) {
 
   const actor = await resolveActor({ allowGuestCreate: false });
   if (!actor) return NextResponse.json({ error: 'UNAUTHORIZED' }, { status: 401 });
+  const uid = actor.kind === 'user' ? actor.userId : null;
 
   const nowMs = Date.now();
   const result = await updateAppData((data) => {
     ensureSeedConfigs(data, nowMs);
     const room = data.rooms[roomCode];
     if (!room) return { ok: false as const, error: 'ROOM_NOT_FOUND' as const };
+    if (room.closedAtMs) return { ok: false as const, error: 'ROOM_CLOSED' as const };
     if (room.status !== 'lobby') return { ok: false as const, error: 'GAME_ALREADY_STARTED' as const };
     if (room.hostPlayerId !== actor.playerId) return { ok: false as const, error: 'NOT_HOST' as const };
 
@@ -48,6 +56,23 @@ export async function POST(req: Request) {
       return { ok: true as const, versionId: resolved };
     };
 
+    const templateVersionId = vr.value.templateVersionId;
+    if (templateVersionId) {
+      const tplDoc = resolveTemplateDocByPublishedVersionId(data, templateVersionId);
+      if (!tplDoc) return { ok: false as const, error: 'TEMPLATE_NOT_FOUND' as const, versionId: templateVersionId };
+      if (!canViewTemplate(tplDoc, uid)) return { ok: false as const, error: 'TEMPLATE_FORBIDDEN' as const, versionId: templateVersionId };
+      const tpl = resolveTemplateByPublishedVersionId(data, templateVersionId);
+      if (!tpl) return { ok: false as const, error: 'TEMPLATE_NOT_FOUND' as const, versionId: templateVersionId };
+      room.config = {
+        ...vr.value,
+        templateVersionId,
+        rulesetVersionId: tpl.rulesVersionId,
+        boardVersionId: tpl.boardVersionId,
+        cardsVersionId: tpl.cardsVersionId,
+      };
+      return { ok: true as const, room };
+    }
+
     const rulesV = requirePublishedVersion('rules', vr.value.rulesetVersionId);
     if (!rulesV.ok) return rulesV;
     const boardV = requirePublishedVersion('board', vr.value.boardVersionId);
@@ -62,7 +87,9 @@ export async function POST(req: Request) {
   if (!result.ok) {
     let status = 400;
     if (result.error === 'ROOM_NOT_FOUND') status = 404;
+    else if (result.error === 'ROOM_CLOSED') status = 410;
     else if (result.error === 'NOT_HOST') status = 403;
+    else if (result.error === 'TEMPLATE_FORBIDDEN') status = 403;
     return NextResponse.json(result, { status });
   }
   return NextResponse.json(result);

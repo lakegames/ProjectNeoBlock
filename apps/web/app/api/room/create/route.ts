@@ -4,7 +4,13 @@ import { getServerSession } from 'next-auth/next';
 import { NextResponse } from 'next/server';
 
 import { authOptions } from 'lib/auth';
-import { ensureSeedConfigs, resolvePublishedVersionId } from 'lib/config-service';
+import {
+  canViewTemplate,
+  ensureSeedConfigs,
+  resolvePublishedVersionId,
+  resolveTemplateByPublishedVersionId,
+  resolveTemplateDocByPublishedVersionId,
+} from 'lib/config-service';
 import { encodeGuestIdentity, guestCookieName, type GuestIdentity } from 'lib/identity';
 import { generateRoomCode, normalizeDisplayName, validateRoomConfig } from 'lib/room';
 import { updateAppData, type Room, type RoomConfig, type RoomMember } from 'lib/store';
@@ -71,12 +77,30 @@ export async function POST(req: Request) {
       return { ok: true as const, versionId: resolved };
     };
 
-    const rulesV = requirePublishedVersion('rules', configResult.value.rulesetVersionId);
-    if (!rulesV.ok) return rulesV;
-    const boardV = requirePublishedVersion('board', configResult.value.boardVersionId);
-    if (!boardV.ok) return boardV;
-    const cardsV = requirePublishedVersion('cards', configResult.value.cardsVersionId);
-    if (!cardsV.ok) return cardsV;
+    const templateVersionId = configResult.value.templateVersionId;
+    let rulesVersionId: string;
+    let boardVersionId: string;
+    let cardsVersionId: string;
+    if (templateVersionId) {
+      const tplDoc = resolveTemplateDocByPublishedVersionId(data, templateVersionId);
+      if (!tplDoc) return { ok: false as const, error: 'TEMPLATE_NOT_FOUND' as const, versionId: templateVersionId };
+      if (!canViewTemplate(tplDoc, uid)) return { ok: false as const, error: 'TEMPLATE_FORBIDDEN' as const, versionId: templateVersionId };
+      const tpl = resolveTemplateByPublishedVersionId(data, templateVersionId);
+      if (!tpl) return { ok: false as const, error: 'TEMPLATE_NOT_FOUND' as const, versionId: templateVersionId };
+      rulesVersionId = tpl.rulesVersionId;
+      boardVersionId = tpl.boardVersionId;
+      cardsVersionId = tpl.cardsVersionId;
+    } else {
+      const rulesV = requirePublishedVersion('rules', configResult.value.rulesetVersionId);
+      if (!rulesV.ok) return rulesV;
+      const boardV = requirePublishedVersion('board', configResult.value.boardVersionId);
+      if (!boardV.ok) return boardV;
+      const cardsV = requirePublishedVersion('cards', configResult.value.cardsVersionId);
+      if (!cardsV.ok) return cardsV;
+      rulesVersionId = rulesV.versionId;
+      boardVersionId = boardV.versionId;
+      cardsVersionId = cardsV.versionId;
+    }
 
     let code = generateRoomCode();
     while (data.rooms[code]) code = generateRoomCode();
@@ -113,9 +137,10 @@ export async function POST(req: Request) {
       createdAtMs,
       config: {
         ...configResult.value,
-        rulesetVersionId: rulesV.versionId,
-        boardVersionId: boardV.versionId,
-        cardsVersionId: cardsV.versionId,
+        ...(templateVersionId ? { templateVersionId } : {}),
+        rulesetVersionId: rulesVersionId,
+        boardVersionId,
+        cardsVersionId,
       },
       members: [member],
     };
@@ -125,7 +150,12 @@ export async function POST(req: Request) {
   });
 
   if (!result.ok) {
-    const status = result.error === 'CONFIG_VERSION_NOT_FOUND' ? 400 : 500;
+    const status =
+      result.error === 'TEMPLATE_FORBIDDEN'
+        ? 403
+        : result.error === 'CONFIG_VERSION_NOT_FOUND' || result.error === 'TEMPLATE_NOT_FOUND'
+          ? 400
+          : 500;
     return NextResponse.json(result, { status });
   }
 

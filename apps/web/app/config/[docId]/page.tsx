@@ -6,7 +6,7 @@ import { useEffect, useMemo, useState } from 'react';
 
 import { Button, Input } from '@neoblock/ui';
 
-import { validateBoardConfig, validateCardsConfig, validateRulesConfig, type ConfigIssue } from 'lib/config';
+import { validateBoardConfig, validateCardsConfig, validateRulesConfig, validateTemplateConfig, type ConfigIssue, type TemplateConfig } from 'lib/config';
 
 type VersionSummary = {
   versionId: string;
@@ -20,8 +20,10 @@ type VersionSummary = {
 type ConfigDocResponse = {
   doc: {
     docId: string;
-    kind: 'rules' | 'board' | 'cards';
+    kind: 'rules' | 'board' | 'cards' | 'template';
     name: string;
+    visibility?: 'private' | 'public';
+    canEdit?: boolean;
     createdAtMs: number;
     updatedAtMs: number;
     publishedVersionId: string | null;
@@ -32,11 +34,21 @@ type ConfigDocResponse = {
   published: { versionId: string; data: unknown; updatedAtMs: number } | null;
 };
 
+type PublishedConfigItem = { docId: string; name: string; versionId: string; updatedAtMs: number };
+
 function formatTime(ms: number) {
   return new Date(ms).toLocaleString('zh-CN');
 }
 
-function Preview({ kind, data }: { kind: 'rules' | 'board' | 'cards'; data: unknown }) {
+function Preview({
+  kind,
+  data,
+  nameForVersionId,
+}: {
+  kind: 'rules' | 'board' | 'cards' | 'template';
+  data: unknown;
+  nameForVersionId: (kind: 'rules' | 'board' | 'cards', versionId: string) => string;
+}) {
   const summary = useMemo(() => {
     if (kind === 'rules') {
       const r = validateRulesConfig(data);
@@ -49,6 +61,16 @@ function Preview({ kind, data }: { kind: 'rules' | 'board' | 'cards'; data: unkn
         `抵押利率：${v.mortgageInterestRate}`,
         `银行房子：${v.bankHouses}`,
         `银行旅馆：${v.bankHotels}`,
+      ];
+    }
+    if (kind === 'template') {
+      const r = validateTemplateConfig(data);
+      if (!r.ok) return null;
+      const v = r.value;
+      return [
+        `规则：${nameForVersionId('rules', v.rulesVersionId)}（${v.rulesVersionId}）`,
+        `棋盘：${nameForVersionId('board', v.boardVersionId)}（${v.boardVersionId}）`,
+        `卡牌：${nameForVersionId('cards', v.cardsVersionId)}（${v.cardsVersionId}）`,
       ];
     }
     if (kind === 'board') {
@@ -133,6 +155,10 @@ export default function ConfigDocPage() {
   const [rollbackLoading, setRollbackLoading] = useState(false);
   const [rollbackError, setRollbackError] = useState<string | null>(null);
 
+  const [templateVisibility, setTemplateVisibility] = useState<'private' | 'public'>('public');
+  const [visibilitySaving, setVisibilitySaving] = useState(false);
+  const [visibilityError, setVisibilityError] = useState<string | null>(null);
+
   const [rulesForm, setRulesForm] = useState({
     initialCash: 1500,
     startSalary: 200,
@@ -141,8 +167,38 @@ export default function ConfigDocPage() {
     bankHouses: 32,
     bankHotels: 12,
   });
+  const [templateForm, setTemplateForm] = useState<TemplateConfig>({
+    rulesVersionId: '',
+    boardVersionId: '',
+    cardsVersionId: '',
+  });
   const [jsonText, setJsonText] = useState('');
   const [jsonParseError, setJsonParseError] = useState<string | null>(null);
+  const [publishedRules, setPublishedRules] = useState<PublishedConfigItem[]>([]);
+  const [publishedBoards, setPublishedBoards] = useState<PublishedConfigItem[]>([]);
+  const [publishedCards, setPublishedCards] = useState<PublishedConfigItem[]>([]);
+
+  useEffect(() => {
+    fetch('/api/config/published', { cache: 'no-store' })
+      .then((r) => r.json().then((j) => ({ ok: r.ok, json: j })))
+      .then(({ ok, json }) => {
+        if (!ok) return;
+        setPublishedRules((json.rules ?? []) as PublishedConfigItem[]);
+        setPublishedBoards((json.boards ?? []) as PublishedConfigItem[]);
+        setPublishedCards((json.cards ?? []) as PublishedConfigItem[]);
+      })
+      .catch(() => {});
+  }, []);
+
+  const nameForVersionId = useMemo(() => {
+    const rules = new Map(publishedRules.map((x) => [x.versionId, x.name]));
+    const boards = new Map(publishedBoards.map((x) => [x.versionId, x.name]));
+    const cards = new Map(publishedCards.map((x) => [x.versionId, x.name]));
+    return (k: 'rules' | 'board' | 'cards', versionId: string) => {
+      const hit = k === 'rules' ? rules.get(versionId) : k === 'board' ? boards.get(versionId) : cards.get(versionId);
+      return hit ?? '-';
+    };
+  }, [publishedBoards, publishedCards, publishedRules]);
 
   async function refresh() {
     if (!docId) return;
@@ -153,10 +209,17 @@ export default function ConfigDocPage() {
       const json = (await r.json()) as ConfigDocResponse;
       if (!r.ok) throw new Error((json as unknown as { error?: string }).error || 'LOAD_FAILED');
       setData(json);
+      if (json.doc.kind === 'template') {
+        setTemplateVisibility(json.doc.visibility === 'private' ? 'private' : 'public');
+        setVisibilityError(null);
+      }
 
       if (json.doc.kind === 'rules') {
         const vr = validateRulesConfig(json.draft?.data ?? null);
         if (vr.ok) setRulesForm(vr.value);
+      } else if (json.doc.kind === 'template') {
+        const vr = validateTemplateConfig(json.draft?.data ?? null);
+        if (vr.ok) setTemplateForm(vr.value);
       } else if (json.doc.kind === 'board') {
         setJsonText(JSON.stringify(json.draft?.data ?? null, null, 2));
       } else {
@@ -178,6 +241,8 @@ export default function ConfigDocPage() {
   }, [docId]);
 
   const kind = data?.doc.kind ?? null;
+  const canEdit = kind === 'template' ? data?.doc.canEdit !== false : true;
+  const draftEditable = kind === 'template' ? canEdit : true;
   const publishedData = data?.published?.data ?? null;
 
   const rollbackCandidates = useMemo(() => {
@@ -188,6 +253,7 @@ export default function ConfigDocPage() {
   const draftValidation = useMemo(() => {
     if (!kind) return null;
     if (kind === 'rules') return validateRulesConfig(rulesForm);
+    if (kind === 'template') return validateTemplateConfig(templateForm);
     if (jsonParseError) return { ok: false as const, issues: [{ path: 'json', message: jsonParseError }] };
     try {
       const parsed = JSON.parse(jsonText);
@@ -195,10 +261,30 @@ export default function ConfigDocPage() {
     } catch (e) {
       return { ok: false as const, issues: [{ path: 'json', message: String((e as Error).message || e) }] };
     }
-  }, [jsonParseError, jsonText, kind, rulesForm]);
+  }, [jsonParseError, jsonText, kind, rulesForm, templateForm]);
+
+  async function updateVisibility(next: 'private' | 'public') {
+    if (!data?.doc.docId || visibilitySaving) return;
+    setVisibilitySaving(true);
+    setVisibilityError(null);
+    try {
+      const r = await fetch('/api/config/visibility', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ docId: data.doc.docId, visibility: next }),
+      });
+      const json = await r.json();
+      if (!r.ok) throw new Error(json?.error || 'VISIBILITY_UPDATE_FAILED');
+      await refresh();
+    } catch (e) {
+      setVisibilityError(String((e as Error).message || e));
+    } finally {
+      setVisibilitySaving(false);
+    }
+  }
 
   useEffect(() => {
-    if (!kind || kind === 'rules') return;
+    if (!kind || kind === 'rules' || kind === 'template') return;
     try {
       JSON.parse(jsonText);
       setJsonParseError(null);
@@ -299,7 +385,29 @@ export default function ConfigDocPage() {
         </section>
       ) : null}
 
-      {kind ? (
+      {data && kind === 'template' ? (
+        <section style={{ marginTop: 20, padding: 12, border: '1px solid rgba(0,0,0,0.08)', borderRadius: 12 }}>
+          <div style={{ fontWeight: 800 }}>模板设置</div>
+          <label style={{ marginTop: 12, display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+            <input
+              type="checkbox"
+              checked={templateVisibility === 'public'}
+              onChange={(e) => {
+                const next = e.target.checked ? 'public' : 'private';
+                setTemplateVisibility(next);
+                updateVisibility(next);
+              }}
+              disabled={!canEdit || visibilitySaving}
+            />
+            <div style={{ fontWeight: 700 }}>公开可见</div>
+            <div style={{ color: 'rgba(0,0,0,0.65)' }}>开启后，其他用户可在“游戏自定义”和“创建房间”中看到并使用此模板</div>
+          </label>
+          {!canEdit ? <div style={{ marginTop: 10, color: 'rgba(0,0,0,0.65)' }}>只读：仅创建者可修改模板设置与草稿</div> : null}
+          {visibilityError ? <div style={{ marginTop: 10, color: '#b42318' }}>{visibilityError}</div> : null}
+        </section>
+      ) : null}
+
+      {kind && (kind !== 'template' || canEdit) ? (
         <section style={{ marginTop: 20, padding: 12, border: '1px solid rgba(0,0,0,0.08)', borderRadius: 12 }}>
           <div style={{ fontWeight: 800 }}>草稿编辑</div>
           <div style={{ marginTop: 8, color: 'rgba(0,0,0,0.65)' }}>保存只更新草稿；发布会从草稿生成不可变快照</div>
@@ -308,15 +416,15 @@ export default function ConfigDocPage() {
             <div style={{ marginTop: 12, display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))' }}>
               <label style={{ display: 'grid', gap: 6 }}>
                 <div style={{ color: 'rgba(0,0,0,0.7)', fontWeight: 600 }}>初始现金</div>
-                <Input value={String(rulesForm.initialCash)} onChange={(e) => setRulesForm((s) => ({ ...s, initialCash: Number(e.target.value) }))} type="number" />
+                <Input value={String(rulesForm.initialCash)} onChange={(e) => setRulesForm((s) => ({ ...s, initialCash: Number(e.target.value) }))} type="number" disabled={!draftEditable} />
               </label>
               <label style={{ display: 'grid', gap: 6 }}>
                 <div style={{ color: 'rgba(0,0,0,0.7)', fontWeight: 600 }}>过起点工资</div>
-                <Input value={String(rulesForm.startSalary)} onChange={(e) => setRulesForm((s) => ({ ...s, startSalary: Number(e.target.value) }))} type="number" />
+                <Input value={String(rulesForm.startSalary)} onChange={(e) => setRulesForm((s) => ({ ...s, startSalary: Number(e.target.value) }))} type="number" disabled={!draftEditable} />
               </label>
               <label style={{ display: 'grid', gap: 6 }}>
                 <div style={{ color: 'rgba(0,0,0,0.7)', fontWeight: 600 }}>监狱罚金</div>
-                <Input value={String(rulesForm.jailFine)} onChange={(e) => setRulesForm((s) => ({ ...s, jailFine: Number(e.target.value) }))} type="number" />
+                <Input value={String(rulesForm.jailFine)} onChange={(e) => setRulesForm((s) => ({ ...s, jailFine: Number(e.target.value) }))} type="number" disabled={!draftEditable} />
               </label>
               <label style={{ display: 'grid', gap: 6 }}>
                 <div style={{ color: 'rgba(0,0,0,0.7)', fontWeight: 600 }}>抵押利率（0-1）</div>
@@ -325,22 +433,67 @@ export default function ConfigDocPage() {
                   onChange={(e) => setRulesForm((s) => ({ ...s, mortgageInterestRate: Number(e.target.value) }))}
                   type="number"
                   step="0.01"
+                  disabled={!draftEditable}
                 />
               </label>
               <label style={{ display: 'grid', gap: 6 }}>
                 <div style={{ color: 'rgba(0,0,0,0.7)', fontWeight: 600 }}>银行房子</div>
-                <Input value={String(rulesForm.bankHouses)} onChange={(e) => setRulesForm((s) => ({ ...s, bankHouses: Number(e.target.value) }))} type="number" />
+                <Input value={String(rulesForm.bankHouses)} onChange={(e) => setRulesForm((s) => ({ ...s, bankHouses: Number(e.target.value) }))} type="number" disabled={!draftEditable} />
               </label>
               <label style={{ display: 'grid', gap: 6 }}>
                 <div style={{ color: 'rgba(0,0,0,0.7)', fontWeight: 600 }}>银行旅馆</div>
-                <Input value={String(rulesForm.bankHotels)} onChange={(e) => setRulesForm((s) => ({ ...s, bankHotels: Number(e.target.value) }))} type="number" />
+                <Input value={String(rulesForm.bankHotels)} onChange={(e) => setRulesForm((s) => ({ ...s, bankHotels: Number(e.target.value) }))} type="number" disabled={!draftEditable} />
               </label>
+            </div>
+          ) : kind === 'template' ? (
+            <div style={{ marginTop: 12, display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+              <select
+                value={templateForm.rulesVersionId}
+                onChange={(e) => setTemplateForm((s) => ({ ...s, rulesVersionId: e.target.value }))}
+                style={{ padding: '10px 12px', borderRadius: 12, border: '1px solid rgba(0,0,0,0.12)', background: '#fff', minWidth: 280 }}
+                disabled={!draftEditable}
+              >
+                <option value="">规则（已发布版本）</option>
+                {publishedRules.map((x) => (
+                  <option key={x.versionId} value={x.versionId}>
+                    {x.name}（{x.versionId}）
+                  </option>
+                ))}
+              </select>
+              <select
+                value={templateForm.boardVersionId}
+                onChange={(e) => setTemplateForm((s) => ({ ...s, boardVersionId: e.target.value }))}
+                style={{ padding: '10px 12px', borderRadius: 12, border: '1px solid rgba(0,0,0,0.12)', background: '#fff', minWidth: 280 }}
+                disabled={!draftEditable}
+              >
+                <option value="">棋盘（已发布版本）</option>
+                {publishedBoards.map((x) => (
+                  <option key={x.versionId} value={x.versionId}>
+                    {x.name}（{x.versionId}）
+                  </option>
+                ))}
+              </select>
+              <select
+                value={templateForm.cardsVersionId}
+                onChange={(e) => setTemplateForm((s) => ({ ...s, cardsVersionId: e.target.value }))}
+                style={{ padding: '10px 12px', borderRadius: 12, border: '1px solid rgba(0,0,0,0.12)', background: '#fff', minWidth: 280 }}
+                disabled={!draftEditable}
+              >
+                <option value="">卡牌（已发布版本）</option>
+                {publishedCards.map((x) => (
+                  <option key={x.versionId} value={x.versionId}>
+                    {x.name}（{x.versionId}）
+                  </option>
+                ))}
+              </select>
+              <div style={{ color: 'rgba(0,0,0,0.65)' }}>提示：模板只能引用当前“已发布版本”</div>
             </div>
           ) : (
             <div style={{ marginTop: 12 }}>
               <textarea
                 value={jsonText}
                 onChange={(e) => setJsonText(e.target.value)}
+                disabled={!draftEditable}
                 style={{
                   width: '100%',
                   minHeight: 320,
@@ -357,10 +510,10 @@ export default function ConfigDocPage() {
           )}
 
           <div style={{ marginTop: 14, display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
-            <Button onClick={saveDraft} disabled={saving}>
+            <Button onClick={saveDraft} disabled={saving || !draftEditable}>
               {saving ? '保存中…' : '保存草稿'}
             </Button>
-            <Button onClick={publish} disabled={publishing || !data?.doc.docId}>
+            <Button onClick={publish} disabled={publishing || !data?.doc.docId || !draftEditable}>
               {publishing ? '发布中…' : '发布'}
             </Button>
           </div>
@@ -378,7 +531,13 @@ export default function ConfigDocPage() {
 
           <div style={{ marginTop: 16 }}>
             <div style={{ fontWeight: 800 }}>草稿预览</div>
-            <div style={{ marginTop: 10 }}>{draftValidation && draftValidation.ok ? <Preview kind={kind} data={draftValidation.value} /> : <div style={{ color: '#b42318' }}>草稿未通过校验</div>}</div>
+            <div style={{ marginTop: 10 }}>
+              {draftValidation && draftValidation.ok ? (
+                <Preview kind={kind} data={draftValidation.value} nameForVersionId={nameForVersionId} />
+              ) : (
+                <div style={{ color: '#b42318' }}>草稿未通过校验</div>
+              )}
+            </div>
           </div>
         </section>
       ) : null}
@@ -389,12 +548,19 @@ export default function ConfigDocPage() {
           <div style={{ marginTop: 8, color: 'rgba(0,0,0,0.65)' }}>
             当前发布：{data.doc.publishedVersionId ?? '-'} {data.published ? `（更新于 ${formatTime(data.published.updatedAtMs)}）` : ''}
           </div>
-          <div style={{ marginTop: 10 }}>{publishedData ? <Preview kind={data.doc.kind} data={publishedData} /> : <div style={{ color: 'rgba(0,0,0,0.65)' }}>暂无发布版本</div>}</div>
+          <div style={{ marginTop: 10 }}>
+            {publishedData ? (
+              <Preview kind={data.doc.kind} data={publishedData} nameForVersionId={nameForVersionId} />
+            ) : (
+              <div style={{ color: 'rgba(0,0,0,0.65)' }}>暂无发布版本</div>
+            )}
+          </div>
 
           <div style={{ marginTop: 16, display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
             <select
               value={rollbackTarget}
               onChange={(e) => setRollbackTarget(e.target.value)}
+              disabled={!draftEditable}
               style={{
                 padding: '10px 12px',
                 borderRadius: 12,
@@ -410,7 +576,7 @@ export default function ConfigDocPage() {
                 </option>
               ))}
             </select>
-            <Button onClick={rollback} disabled={!rollbackTarget || rollbackLoading}>
+            <Button onClick={rollback} disabled={!rollbackTarget || rollbackLoading || !draftEditable}>
               {rollbackLoading ? '回滚中…' : '回滚为当前发布'}
             </Button>
           </div>

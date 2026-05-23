@@ -27,8 +27,8 @@ export async function POST(req: Request) {
     if (before === after) return { ok: false as const, error: 'NOT_IN_ROOM' as const };
 
     if (room.members.length === 0) {
-      delete data.rooms[roomCode];
-      return { ok: true as const, deleted: true as const };
+      if (!room.emptySinceMs) room.emptySinceMs = Date.now();
+      return { ok: true as const, deleted: false as const };
     }
 
     if (room.hostPlayerId === actor.playerId) {

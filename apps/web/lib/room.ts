@@ -111,7 +111,7 @@ export function validateRoomConfig(input: unknown): RoomConfigValidationResult {
   const enableAuto = typeof raw.enableAuto === 'boolean' ? raw.enableAuto : false;
   const enableAI = typeof raw.enableAI === 'boolean' ? raw.enableAI : false;
 
-  const parseVersionId = (key: 'rulesetVersionId' | 'boardVersionId' | 'cardsVersionId') => {
+  const parseVersionId = (key: 'templateVersionId' | 'rulesetVersionId' | 'boardVersionId' | 'cardsVersionId') => {
     const v = raw[key];
     if (v === undefined) return undefined;
     if (typeof v !== 'string') {
@@ -126,6 +126,7 @@ export function validateRoomConfig(input: unknown): RoomConfigValidationResult {
     return trimmed;
   };
 
+  const templateVersionId = parseVersionId('templateVersionId');
   const rulesetVersionId = parseVersionId('rulesetVersionId');
   const boardVersionId = parseVersionId('boardVersionId');
   const cardsVersionId = parseVersionId('cardsVersionId');
@@ -138,6 +139,7 @@ export function validateRoomConfig(input: unknown): RoomConfigValidationResult {
       turnTimeSec,
       enableAuto,
       enableAI,
+      ...(templateVersionId ? { templateVersionId } : {}),
       ...(rulesetVersionId ? { rulesetVersionId } : {}),
       ...(boardVersionId ? { boardVersionId } : {}),
       ...(cardsVersionId ? { cardsVersionId } : {}),

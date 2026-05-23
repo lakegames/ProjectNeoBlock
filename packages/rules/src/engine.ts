@@ -289,7 +289,8 @@ function validateGameCommand(match: MatchState, command: Command) {
     command.type === 'game/sellBuilding' ||
     command.type === 'game/proposeTrade' ||
     command.type === 'game/respondTrade' ||
-    command.type === 'game/declareBankruptcy'
+    command.type === 'game/declareBankruptcy' ||
+    command.type === 'game/forfeit'
   )
     return;
   throw new Error('UNSUPPORTED_COMMAND');
@@ -1231,6 +1232,51 @@ export function handleCommand(match: MatchState, command: Command, nowMs: number
     return { state: nextState, events: finalEvents };
   }
 
+  if (command.type === 'game/forfeit') {
+    requireGame();
+    const player = match.game.players[command.playerId];
+    if (!player) throw new Error('PLAYER_NOT_FOUND');
+    if (player.eliminated) throw new Error('ELIMINATED');
+
+    let cursor = match;
+    const events: Event[] = [];
+    {
+      const r = allocEvent(cursor, nowMs, causedBy);
+      cursor = r.match;
+      events.push({
+        ...r.base,
+        type: 'game/engine',
+        gameId: match.game.gameId,
+        name: 'player/forfeited',
+        data: { playerId: command.playerId },
+      });
+    }
+
+    const afterForfeit = applyEvents(match, events);
+    const active = activePlayerIds(afterForfeit.game);
+    if (active.length > 1 && command.playerId === match.game.currentPlayerId) {
+      const nextPlayerId = findNextActivePlayer(afterForfeit.game, command.playerId);
+      const round =
+        nextPlayerId === afterForfeit.game.turnOrder[0] ? afterForfeit.game.round + 1 : afterForfeit.game.round;
+      const r = allocEvent(cursor, nowMs, causedBy);
+      cursor = r.match;
+      events.push({
+        ...r.base,
+        type: 'game/turnStarted',
+        gameId: match.game.gameId,
+        currentPlayerId: nextPlayerId,
+        round,
+        phase: 'await_roll',
+      });
+    }
+
+    const after = applyEvents(match, events);
+    const endEvents = deriveEndEvents(after, cursor, nowMs);
+    const finalEvents = [...events, ...endEvents.events];
+    const nextState = applyEvents(match, finalEvents);
+    return { state: nextState, events: finalEvents };
+  }
+
   if (command.type === 'game/endTurn') {
     requireGame();
     requireCurrentPlayer(command.playerId);
@@ -1914,6 +1960,58 @@ export function applyEvent(match: MatchState, event: Event): MatchState {
     if (event.name === 'debt/cleared') {
       delete game.debt;
       game.phase = 'await_end_turn';
+      return next;
+    }
+    if (event.name === 'player/forfeited') {
+      const data = event.data as { playerId: PlayerId };
+      const playerId = data.playerId;
+      const forfeited = game.players[playerId];
+      if (!forfeited || forfeited.eliminated) return next;
+
+      if (game.pendingPrompt?.playerId === playerId) delete game.pendingPrompt;
+      if (game.trade && (game.trade.fromPlayerId === playerId || game.trade.toPlayerId === playerId)) delete game.trade;
+      if (game.debt?.debtorId === playerId) delete game.debt;
+      if (game.auction?.activeBidders.includes(playerId)) {
+        game.auction.activeBidders = game.auction.activeBidders.filter((x) => x !== playerId);
+        if (game.auction.currentBidderIndex >= game.auction.activeBidders.length) game.auction.currentBidderIndex = 0;
+        if (game.auction.highestBidderId === playerId) {
+          delete game.auction.highestBidderId;
+          game.auction.highestBid = 0;
+        }
+      }
+
+      let liquidation = 0;
+      for (const pid of [...forfeited.properties]) {
+        const tile = getPropertyTile(game, pid);
+        if (!tile) continue;
+        const buildings = tile.buildings ?? 0;
+        if (buildings > 0) {
+          liquidation += buildings * Math.floor(tile.houseCost / 2);
+          if (buildings === 5) {
+            game.bank.hotels += 1;
+            game.bank.houses += 4;
+          } else {
+            game.bank.houses += buildings;
+          }
+        }
+        tile.buildings = 0;
+      }
+
+      forfeited.cash += liquidation;
+      forfeited.cash = 0;
+
+      for (const pid of [...forfeited.properties]) {
+        const tile = getPropertyTile(game, pid);
+        if (!tile) continue;
+        delete tile.ownerPlayerId;
+        tile.mortgaged = false;
+        tile.buildings = 0;
+      }
+
+      forfeited.properties = [];
+      forfeited.eliminated = true;
+      if (game.currentPlayerId === playerId) game.phase = 'await_end_turn';
+      else if (game.phase === 'await_debt' && !game.debt) game.phase = 'await_end_turn';
       return next;
     }
     if (event.name === 'bankruptcy/declared') {
