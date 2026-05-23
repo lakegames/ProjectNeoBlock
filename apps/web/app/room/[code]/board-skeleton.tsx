@@ -252,7 +252,6 @@ function propertyName(propertyId: string) {
 
 function buildPlayerDerived(players: BoardPlayer[]) {
   return players.map((p, i) => {
-    const h = hashString(p.playerId);
     const color = playerColors[i % playerColors.length];
     return { ...p, cash: 0, tile: 0, color, assets: [] };
   });

@@ -51,6 +51,7 @@ export default function HistoryPage() {
       if (!r.ok) throw new Error((json as { error?: string } | null)?.error || 'HIDE_FAILED');
       await refresh();
     } catch {
+      void 0;
     } finally {
       setDeletingId(null);
     }

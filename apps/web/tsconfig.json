@@ -3,6 +3,12 @@
   "compilerOptions": {
     "baseUrl": ".",
     "paths": {
+      "@neoblock/shared": [
+        "../../packages/shared/src"
+      ],
+      "@neoblock/shared/*": [
+        "../../packages/shared/src/*"
+      ],
       "@neoblock/ui": [
         "../../packages/ui/src"
       ],

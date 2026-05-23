@@ -8,7 +8,7 @@ import { updateAppData } from 'lib/store';
 
 export const runtime = 'nodejs';
 
-export async function GET(_req: Request) {
+export async function GET() {
   const session = await getServerSession(authOptions);
   const uid = (session?.user as { id?: string } | undefined)?.id;
   if (!uid) return NextResponse.json({ error: 'UNAUTHORIZED' }, { status: 401 });

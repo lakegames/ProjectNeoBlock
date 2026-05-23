@@ -630,6 +630,7 @@ export default function RoomPage() {
       const v = json?.room?.config?.templateVersionId;
       setWebTemplateVersionId(typeof v === 'string' ? v : '');
     } catch {
+      void 0;
     }
   }
   useEffect(() => {
@@ -937,6 +938,7 @@ export default function RoomPage() {
                 setRoomCodeCopied(true);
                 window.setTimeout(() => setRoomCodeCopied(false), 1500);
               } catch {
+                void 0;
               }
             }}
           >
@@ -963,6 +965,7 @@ export default function RoomPage() {
                   setShareCopied(true);
                   window.setTimeout(() => setShareCopied(false), 1500);
                 } catch {
+                  void 0;
                 }
               }}
             >
