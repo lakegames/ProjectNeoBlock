@@ -27,9 +27,14 @@
   - [ ] 线上：`/api/profile` 与 `/api/game-invite/inbox` 不再 500
   - [ ] 线上：未携带代理密钥直接访问 Server 的 AppData API 返回 403
 
+- [x] Task 7: 修复 Vercel 构建阻塞（ESLint）
+  - [x] 修复 `apps/web/app/api/room/create` 与 `apps/web/app/api/room/join` 中 `newGuest` 处理的 `no-unused-vars` 报错
+  - [x] 触发 Vercel 构建确认通过
+
 # Task Dependencies
 - Task 2 depends on Task 1
 - Task 3 depends on Task 2
 - Task 4 depends on Task 1, Task 2, Task 3
 - Task 5 depends on Task 3, Task 4
 - Task 6 depends on Task 5
+- Task 7 depends on Task 4

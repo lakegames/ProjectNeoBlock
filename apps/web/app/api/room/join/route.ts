@@ -11,7 +11,8 @@ export async function POST(req: Request) {
   const newGuest = payload?.newGuest;
 
   if (newGuest && typeof newGuest.id === 'string' && typeof newGuest.nickname === 'string') {
-    const { newGuest: _, ...rest } = payload as { newGuest: GuestIdentity } & Record<string, unknown>;
+    const { newGuest: removedNewGuest, ...rest } = payload as { newGuest: GuestIdentity } & Record<string, unknown>;
+    void removedNewGuest;
     const res = NextResponse.json(rest, { status });
     res.cookies.set(guestCookieName, encodeGuestIdentity(newGuest), {
       httpOnly: true,
@@ -23,7 +24,8 @@ export async function POST(req: Request) {
   }
 
   if (payload && typeof payload === 'object' && 'newGuest' in payload) {
-    const { newGuest: _, ...rest } = payload as Record<string, unknown>;
+    const { newGuest: removedNewGuest, ...rest } = payload as Record<string, unknown>;
+    void removedNewGuest;
     return NextResponse.json(rest, { status });
   }
 
