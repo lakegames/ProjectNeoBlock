@@ -1,20 +1,22 @@
-import { NextResponse } from 'next/server';
+import { NextResponse } from "next/server";
 
-import { requireAdmin } from 'lib/admin-auth';
-import { readAppData } from 'lib/store';
+import { requireAdmin } from "lib/admin-auth";
+import { readAppData } from "lib/store";
 
-export const runtime = 'nodejs';
+export const runtime = "nodejs";
 
 export async function GET(req: Request) {
   const auth = await requireAdmin(req);
   if (!auth.ok) return auth.res;
 
   const url = new URL(req.url);
-  const includeClosed = url.searchParams.get('includeClosed') === '1';
+  const includeClosed = url.searchParams.get("includeClosed") === "1";
 
   const data = await readAppData();
   const rooms = Object.values(data.rooms)
-    .filter((r) => (includeClosed ? true : !(r as { closedAtMs?: number }).closedAtMs))
+    .filter((r) =>
+      includeClosed ? true : !(r as { closedAtMs?: number }).closedAtMs,
+    )
     .map((r) => {
       const players = r.members.filter((m) => !m.isSpectator);
       const spectators = r.members.filter((m) => m.isSpectator);
@@ -43,4 +45,3 @@ export async function GET(req: Request) {
 
   return NextResponse.json({ rooms, org: auth.org, uid: auth.uid });
 }
-

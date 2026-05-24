@@ -26,6 +26,7 @@
   - [ ] SubTask 6.2: 手工核对：按钮/输入框/RoomCard 与 Figma 截图一致（关键尺寸、圆角、阴影、字体层级）
 
 # Task Dependencies
+
 - Task 3 depends on Task 2
 - Task 4 depends on Task 2
 - Task 5 depends on Task 3, Task 4

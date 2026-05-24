@@ -1,4 +1,5 @@
 # Tasks
+
 - [x] Task 1: 梳理需要迁移的 Web API 清单与兼容边界
   - [x] 列出所有依赖 `updateAppData`/`lib/store.ts` 的 `apps/web/app/api/**/*` 路由
   - [x] 标记“必须覆盖（影响创建/加入/资料/邀请/配置/历史）”与“可后置（admin/debug 等）”
@@ -32,6 +33,7 @@
   - [x] 触发 Vercel 构建确认通过
 
 # Task Dependencies
+
 - Task 2 depends on Task 1
 - Task 3 depends on Task 2
 - Task 4 depends on Task 1, Task 2, Task 3

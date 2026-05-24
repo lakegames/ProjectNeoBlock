@@ -1,11 +1,11 @@
 "use client";
 
-import { useRouter } from 'next/navigation';
-import { useCallback, useState } from 'react';
+import { useRouter } from "next/navigation";
+import { useCallback, useState } from "react";
 
-import { Dialog } from '@neoblock/ui';
+import { Dialog } from "@neoblock/ui";
 
-import LoginView from '../../login/login-view';
+import LoginView from "../../login/login-view";
 
 export default function LoginModalClient() {
   const router = useRouter();
@@ -16,11 +16,11 @@ export default function LoginModalClient() {
       setOpen(nextOpen);
       if (!nextOpen) {
         const canGoBack =
-          typeof window !== 'undefined' &&
-          typeof window.history.state?.idx === 'number' &&
+          typeof window !== "undefined" &&
+          typeof window.history.state?.idx === "number" &&
           window.history.state.idx > 0;
         if (canGoBack) router.back();
-        else router.replace('/');
+        else router.replace("/");
       }
     },
     [router],

@@ -92,7 +92,7 @@
   - `requireInRoom()`、`requireClientSeq()`、`requireSelfPlayer(command.playerId)`
   - 创建并 append `room/chatMessage` 事件（带 causedBy.commandId 以清理 pending）
   - `broadcast(room, { kind:'events', roomId, gameId: room.game?.gameId ?? null, fromSeqExclusive, events:[e] })`
-  - `broadcast(room, { kind:'snapshot', snapshot: buildSnapshot(room) })`（保持与其他 room/* 一致）
+  - `broadcast(room, { kind:'snapshot', snapshot: buildSnapshot(room) })`（保持与其他 room/\* 一致）
 
 ### 4) Web：useRoomConnection 增加 chat buffer；BoardSkeleton 接入聊天 UI
 

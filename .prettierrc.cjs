@@ -1,1 +1,1 @@
-module.exports = require('@neoblock/rules/prettier');
+module.exports = require("@neoblock/rules/prettier");

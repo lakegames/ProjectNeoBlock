@@ -1,5 +1,5 @@
 module.exports = {
-  extends: [require.resolve('./base.cjs')],
+  extends: [require.resolve("./base.cjs")],
   env: {
     node: true,
   },

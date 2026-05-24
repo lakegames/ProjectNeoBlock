@@ -1,1 +1,1 @@
-export * from '../../dist/protocol/event.js';
+export * from "../../dist/protocol/event.js";

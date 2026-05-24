@@ -15,7 +15,7 @@
 ### 导航与登录
 
 - 全站 TabsBar 在 [app-shell.tsx](file:///e:/code/ProjectNeoBlock/apps/web/app/app-shell.tsx#L185-L293) 内硬编码渲染 tabItems，无法按路由定制（例如房间页隐藏 tab item）。
-- 登录模态已实现：路由 `/login` 通过 parallel route `@modal/(.)login` 展示 [login-modal-client.tsx](file:///e:/code/ProjectNeoBlock/apps/web/app/@modal/(.)login/login-modal-client.tsx)；可用 `router.push('/login')` 触发。
+- 登录模态已实现：路由 `/login` 通过 parallel route `@modal/(.)login` 展示 [login-modal-client.tsx](<file:///e:/code/ProjectNeoBlock/apps/web/app/@modal/(.)login/login-modal-client.tsx>)；可用 `router.push('/login')` 触发。
 
 ### 房间页（WS 版）
 

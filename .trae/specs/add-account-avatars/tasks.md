@@ -1,4 +1,5 @@
 # Tasks
+
 - [x] Task 1: 扩展 Profile 数据模型以支持头像
   - [x] 更新 apps/web/lib/store.ts 的 Profile 类型与读写兼容策略（旧数据字段缺失时按空处理）
 
@@ -35,5 +36,6 @@
   - [x] /api/profile 与 /api/profile/public 返回结构包含 customAvatarDataUrl（或等价信号）并保持不泄露敏感字段
 
 # Task Dependencies
+
 - Task 5 依赖 Task 2/3
 - Task 6 依赖 Task 4（房间/全局展示）与 Task 2/3（管理员/本人头像）

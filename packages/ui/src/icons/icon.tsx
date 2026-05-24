@@ -1,9 +1,15 @@
-import * as React from 'react';
+import * as React from "react";
 
-import { icons } from './generated/registry';
-import type { IconKey, IconMode, IconName, IconThickness, IconVariant } from './generated/registry';
+import { icons } from "./generated/registry";
+import type {
+  IconKey,
+  IconMode,
+  IconName,
+  IconThickness,
+  IconVariant,
+} from "./generated/registry";
 
-export type IconProps = Omit<React.SVGProps<SVGSVGElement>, 'name'> & {
+export type IconProps = Omit<React.SVGProps<SVGSVGElement>, "name"> & {
   id?: IconKey;
   name?: IconName;
   mode?: IconMode;
@@ -11,7 +17,14 @@ export type IconProps = Omit<React.SVGProps<SVGSVGElement>, 'name'> & {
   variant?: IconVariant;
 };
 
-export function Icon({ id, name, mode, thickness, variant, ...props }: IconProps) {
+export function Icon({
+  id,
+  name,
+  mode,
+  thickness,
+  variant,
+  ...props
+}: IconProps) {
   const resolvedMode = mode ?? variant;
   const resolvedId =
     id ??
@@ -21,9 +34,22 @@ export function Icon({ id, name, mode, thickness, variant, ...props }: IconProps
         ? `${name}--${resolvedMode}`
         : undefined);
   const Component =
-    resolvedId && resolvedId in icons ? (icons as Record<string, React.ComponentType<React.SVGProps<SVGSVGElement>>>)[resolvedId] : null;
+    resolvedId && resolvedId in icons
+      ? (
+          icons as Record<
+            string,
+            React.ComponentType<React.SVGProps<SVGSVGElement>>
+          >
+        )[resolvedId]
+      : null;
 
   if (!Component) return null;
 
-  return <Component aria-hidden={props['aria-label'] ? undefined : true} focusable="false" {...props} />;
+  return (
+    <Component
+      aria-hidden={props["aria-label"] ? undefined : true}
+      focusable="false"
+      {...props}
+    />
+  );
 }

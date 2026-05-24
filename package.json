@@ -23,7 +23,7 @@
     "test:e2e": "npm -w @neoblock/server run test:e2e"
   },
   "devDependencies": {
-    "@next/eslint-plugin-next": "^14.2.35",
+    "@next/eslint-plugin-next": "^16.2.6",
     "@svgr/cli": "^8.1.0",
     "@types/node": "^24.0.0",
     "@types/react": "^18.3.24",
@@ -37,11 +37,12 @@
     "eslint-plugin-import": "^2.31.0",
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-hooks": "^5.2.0",
-    "prettier": "^3.5.3",
+    "prettier": "3.8.3",
     "tsx": "^4.19.4",
     "typescript": "^5.9.0"
   },
   "dependencies": {
-    "dotenv": "^17.4.2"
+    "dotenv": "^17.4.2",
+    "next": "16.2.6"
   }
 }

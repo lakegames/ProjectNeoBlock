@@ -1,7 +1,7 @@
-import { getServerSession } from 'next-auth/next';
+import { getServerSession } from "next-auth/next";
 
-import { authOptions } from 'lib/auth';
-import { getGuestIdentity } from 'lib/identity';
+import { authOptions } from "lib/auth";
+import { getGuestIdentity } from "lib/identity";
 
 type ProxyResult = {
   status: number;
@@ -13,7 +13,7 @@ function readEnv(name: string) {
 }
 
 function shouldHaveBody(method: string) {
-  return method !== 'GET' && method !== 'HEAD';
+  return method !== "GET" && method !== "HEAD";
 }
 
 async function readBody(req: Request) {
@@ -29,12 +29,23 @@ function pickHeader(src: Headers, key: string) {
   return v ? v : null;
 }
 
-export async function proxyAppDataApi(req: Request, apiPathname: string): Promise<ProxyResult> {
-  const baseUrl = readEnv('NEOBLOCK_SERVER_HTTP_URL');
-  if (!baseUrl) return { status: 500, body: { error: 'NEOBLOCK_SERVER_HTTP_URL_NOT_CONFIGURED' } };
+export async function proxyAppDataApi(
+  req: Request,
+  apiPathname: string,
+): Promise<ProxyResult> {
+  const baseUrl = readEnv("NEOBLOCK_SERVER_HTTP_URL");
+  if (!baseUrl)
+    return {
+      status: 500,
+      body: { error: "NEOBLOCK_SERVER_HTTP_URL_NOT_CONFIGURED" },
+    };
 
-  const proxyKey = readEnv('NEOBLOCK_PROXY_KEY');
-  if (!proxyKey) return { status: 500, body: { error: 'NEOBLOCK_PROXY_KEY_NOT_CONFIGURED' } };
+  const proxyKey = readEnv("NEOBLOCK_PROXY_KEY");
+  if (!proxyKey)
+    return {
+      status: 500,
+      body: { error: "NEOBLOCK_PROXY_KEY_NOT_CONFIGURED" },
+    };
 
   const incomingUrl = new URL(req.url);
   const upstreamUrl = new URL(apiPathname, baseUrl);
@@ -45,26 +56,27 @@ export async function proxyAppDataApi(req: Request, apiPathname: string): Promis
   const guest = uid ? null : getGuestIdentity();
 
   const headers = new Headers();
-  const contentType = pickHeader(req.headers, 'content-type');
-  if (contentType) headers.set('content-type', contentType);
-  const accept = pickHeader(req.headers, 'accept');
-  if (accept) headers.set('accept', accept);
-  const origin = pickHeader(req.headers, 'origin');
-  if (origin) headers.set('origin', origin);
+  const contentType = pickHeader(req.headers, "content-type");
+  if (contentType) headers.set("content-type", contentType);
+  const accept = pickHeader(req.headers, "accept");
+  if (accept) headers.set("accept", accept);
+  const origin = pickHeader(req.headers, "origin");
+  if (origin) headers.set("origin", origin);
 
-  headers.set('x-neoblock-proxy-key', proxyKey);
+  headers.set("x-neoblock-proxy-key", proxyKey);
 
   if (uid) {
-    headers.set('x-neoblock-actor-uid', uid);
+    headers.set("x-neoblock-actor-uid", uid);
     const displayName = (session?.user?.name ?? uid).toString();
-    headers.set('x-neoblock-actor-display-name', displayName);
-    const githubAvatarUrl = session?.user?.image?.toString() ?? '';
-    if (githubAvatarUrl) headers.set('x-neoblock-actor-github-avatar-url', githubAvatarUrl);
-    headers.set('x-neoblock-actor-player-id', `user:${uid}`);
+    headers.set("x-neoblock-actor-display-name", displayName);
+    const githubAvatarUrl = session?.user?.image?.toString() ?? "";
+    if (githubAvatarUrl)
+      headers.set("x-neoblock-actor-github-avatar-url", githubAvatarUrl);
+    headers.set("x-neoblock-actor-player-id", `user:${uid}`);
   } else if (guest) {
-    headers.set('x-neoblock-guest-id', guest.id);
-    headers.set('x-neoblock-guest-nickname', guest.nickname);
-    headers.set('x-neoblock-actor-player-id', `guest:${guest.id}`);
+    headers.set("x-neoblock-guest-id", guest.id);
+    headers.set("x-neoblock-guest-nickname", guest.nickname);
+    headers.set("x-neoblock-actor-player-id", `guest:${guest.id}`);
   }
 
   const upstreamRes = await fetch(upstreamUrl.toString(), {

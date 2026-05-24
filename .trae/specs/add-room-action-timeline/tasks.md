@@ -1,4 +1,5 @@
 # Tasks
+
 - [x] Task 1: 暴露并保留最近事件列表
   - [x] 在 `use-room-connection` 中将 `recentEventsRef` 以 state/selector 的形式暴露给调用方（仅最近 N 条）
   - [x] 明确事件保留上限与排序规则（createdAtMs/seq）
@@ -26,6 +27,7 @@
   - [x] 验证“移动/扣费/购买”至少各出现一次且文案正确（地产名可读）
 
 # Task Dependencies
+
 - Task 2 depends on Task 1
 - Task 3 depends on Task 2
 - Task 4 depends on Task 1
