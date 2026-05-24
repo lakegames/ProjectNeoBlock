@@ -1389,6 +1389,181 @@ export function BoardSkeleton(props: BoardSkeletonProps) {
           </div>
         )}
 
+              <div
+        style={{
+          marginTop: 12,
+          borderRadius: 'var(--nb-radius-lg, 16px)',
+          border: '1px solid var(--nb-color-border, rgba(0,0,0,0.12))',
+          background: 'var(--nb-color-surface, #fff)',
+          padding: 12,
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
+          <div style={{ fontWeight: 800, color: 'var(--nb-color-fg, rgba(0,0,0,0.92))' }}>玩家</div>
+          <Popover
+            open={chatOpen}
+            onOpenChange={setChatOpen}
+            content={
+              <div style={{ width: 360, maxWidth: 'min(90vw, 360px)', display: 'grid', gap: 10 }}>
+                <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10 }}>
+                  <div style={{ fontWeight: 800, color: 'var(--nb-color-fg, rgba(0,0,0,0.92))' }}>聊天</div>
+                  <div style={{ color: 'var(--nb-color-muted-fg, rgba(0,0,0,0.65))', fontSize: 12 }}>{chatMessages.length} 条</div>
+                </div>
+                <div
+                  style={{
+                    maxHeight: 260,
+                    overflow: 'auto',
+                    borderRadius: 12,
+                    border: '1px solid rgba(0,0,0,0.08)',
+                    background: 'var(--nb-color-bg, #f8fafc)',
+                    padding: 10,
+                    display: 'grid',
+                    gap: 10,
+                  }}
+                >
+                  {chatMessages.length ? (
+                    chatMessages.slice(-40).map((m) => {
+                      const fromName = membersById.get(m.fromPlayerId)?.displayName ?? m.fromPlayerId;
+                      const toName = m.toPlayerId ? membersById.get(m.toPlayerId)?.displayName ?? m.toPlayerId : null;
+                      const time = formatClock(m.createdAtMs).slice(0, 5);
+                      return (
+                        <div key={m.eventId} style={{ display: 'grid', gap: 2 }}>
+                          <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10 }}>
+                            <div style={{ fontWeight: 800, color: 'rgba(0,0,0,0.82)' }}>
+                              {fromName}
+                              {toName ? ` → ${toName}` : ''}
+                            </div>
+                            <div style={{ color: 'rgba(0,0,0,0.5)', fontSize: 12 }}>{time}</div>
+                          </div>
+                          <div style={{ color: 'rgba(0,0,0,0.78)', lineHeight: '18px', wordBreak: 'break-word' }}>{m.text}</div>
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <div style={{ color: 'rgba(0,0,0,0.55)' }}>暂无消息</div>
+                  )}
+                </div>
+                <div style={{ display: 'grid', gap: 8 }}>
+                  <div style={{ display: 'grid', gap: 6 }}>
+                    <div style={{ color: 'rgba(0,0,0,0.62)', fontSize: 12 }}>发送给</div>
+                    <select
+                      value={chatTo}
+                      onChange={(e) => setChatTo(e.target.value)}
+                      style={{ padding: '10px 12px', borderRadius: 10, border: '1px solid rgba(0,0,0,0.12)' }}
+                    >
+                      <option value="">所有人</option>
+                      {chatTargets.map((m) => (
+                        <option key={m.playerId} value={m.playerId}>
+                          {m.displayName}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                    <Input value={chatText} onChange={(e) => setChatText(e.target.value)} placeholder="输入消息" style={{ flex: '1 1 auto', minWidth: 0 }} />
+                    <Button size="sm" mode="Primary" onClick={onSendChat} disabled={!canSendChat}>
+                      发送
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            }
+          >
+            <Button size="sm" mode="Second">
+              聊天
+            </Button>
+          </Popover>
+        </div>
+
+        <div style={{ marginTop: 10, display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 4 }}>
+          {players.map((p) => {
+            const isSelf = p.playerId === selfPlayerId;
+            const color = playerColors[(p.seatIndex ?? 0) % playerColors.length];
+            return (
+              <div
+                key={p.playerId}
+                style={{
+                  flex: '0 0 auto',
+                  minWidth: 240,
+                  borderRadius: 'var(--nb-radius-md, 12px)',
+                  border: isSelf ? `2px solid ${color}` : '1px solid var(--nb-color-border, rgba(0,0,0,0.12))',
+                  padding: 10,
+                  background: 'var(--nb-color-bg, #f8fafc)',
+                  opacity: p.eliminated ? 0.6 : 1,
+                  display: 'grid',
+                  gap: 10,
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+                  <div
+                    style={{
+                      width: 14,
+                      height: 14,
+                      borderRadius: 999,
+                      background: color,
+                      boxShadow: '0 1px 2px rgba(0,0,0,0.14)',
+                      flex: '0 0 auto',
+                    }}
+                  />
+                  {(() => {
+                    const member = membersById.get(p.playerId) ?? null;
+                    const uid = member?.userId ?? null;
+                    const pub = uid ? publicProfiles[uid] : undefined;
+                    const avatarUrl = pub?.avatarUrl ?? null;
+                    const initial = initialFor(p.displayName);
+                    return avatarUrl ? (
+                      <div style={{ position: 'relative', width: 22, height: 22, borderRadius: 999, overflow: 'hidden', flex: '0 0 auto' }}>
+                        <Image src={avatarUrl} alt="" fill sizes="22px" style={{ objectFit: 'cover' }} unoptimized />
+                      </div>
+                    ) : (
+                      <div
+                        style={{
+                          width: 22,
+                          height: 22,
+                          borderRadius: 999,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          background: 'rgba(0,0,0,0.06)',
+                          color: 'rgba(0,0,0,0.7)',
+                          fontWeight: 800,
+                          fontSize: 12,
+                          flex: '0 0 auto',
+                        }}
+                      >
+                        {initial}
+                      </div>
+                    );
+                  })()}
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ fontWeight: 800, color: 'var(--nb-color-fg, rgba(0,0,0,0.92))', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {p.displayName}
+                      {isSelf ? <span style={{ marginLeft: 6, color: 'var(--nb-color-muted-fg, rgba(0,0,0,0.65))' }}>（我）</span> : null}
+                    </div>
+                    <div style={{ marginTop: 4, color: 'var(--nb-color-muted-fg, rgba(0,0,0,0.65))', fontSize: 13, lineHeight: '18px' }}>
+                      现金 {formatMoney(p.cash)} ｜位置 #{p.position}
+                      {p.inJail ? `｜监狱 ${p.jailTurns}` : ''}
+                      {p.eliminated ? '｜已出局' : ''}
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  <Button size="sm" mode="Second" onClick={() => setDrawerPlayerId(p.playerId)}>
+                    资产（{p.properties.length}）
+                  </Button>
+                  <Button size="sm" mode="NoBackground" onClick={() => setActivePlayerId(p.playerId)}>
+                    详情
+                  </Button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {lastError ? <div style={{ marginTop: 10, color: '#b42318' }}>{lastError.message}</div> : null}
+      </div>
+
         <aside
           style={{
             borderRadius: 'var(--nb-radius-lg, 16px)',
@@ -1765,180 +1940,6 @@ export function BoardSkeleton(props: BoardSkeletonProps) {
         </aside>
       </div>
 
-      <div
-        style={{
-          marginTop: 12,
-          borderRadius: 'var(--nb-radius-lg, 16px)',
-          border: '1px solid var(--nb-color-border, rgba(0,0,0,0.12))',
-          background: 'var(--nb-color-surface, #fff)',
-          padding: 12,
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
-          <div style={{ fontWeight: 800, color: 'var(--nb-color-fg, rgba(0,0,0,0.92))' }}>玩家</div>
-          <Popover
-            open={chatOpen}
-            onOpenChange={setChatOpen}
-            content={
-              <div style={{ width: 360, maxWidth: 'min(90vw, 360px)', display: 'grid', gap: 10 }}>
-                <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10 }}>
-                  <div style={{ fontWeight: 800, color: 'var(--nb-color-fg, rgba(0,0,0,0.92))' }}>聊天</div>
-                  <div style={{ color: 'var(--nb-color-muted-fg, rgba(0,0,0,0.65))', fontSize: 12 }}>{chatMessages.length} 条</div>
-                </div>
-                <div
-                  style={{
-                    maxHeight: 260,
-                    overflow: 'auto',
-                    borderRadius: 12,
-                    border: '1px solid rgba(0,0,0,0.08)',
-                    background: 'var(--nb-color-bg, #f8fafc)',
-                    padding: 10,
-                    display: 'grid',
-                    gap: 10,
-                  }}
-                >
-                  {chatMessages.length ? (
-                    chatMessages.slice(-40).map((m) => {
-                      const fromName = membersById.get(m.fromPlayerId)?.displayName ?? m.fromPlayerId;
-                      const toName = m.toPlayerId ? membersById.get(m.toPlayerId)?.displayName ?? m.toPlayerId : null;
-                      const time = formatClock(m.createdAtMs).slice(0, 5);
-                      return (
-                        <div key={m.eventId} style={{ display: 'grid', gap: 2 }}>
-                          <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10 }}>
-                            <div style={{ fontWeight: 800, color: 'rgba(0,0,0,0.82)' }}>
-                              {fromName}
-                              {toName ? ` → ${toName}` : ''}
-                            </div>
-                            <div style={{ color: 'rgba(0,0,0,0.5)', fontSize: 12 }}>{time}</div>
-                          </div>
-                          <div style={{ color: 'rgba(0,0,0,0.78)', lineHeight: '18px', wordBreak: 'break-word' }}>{m.text}</div>
-                        </div>
-                      );
-                    })
-                  ) : (
-                    <div style={{ color: 'rgba(0,0,0,0.55)' }}>暂无消息</div>
-                  )}
-                </div>
-                <div style={{ display: 'grid', gap: 8 }}>
-                  <div style={{ display: 'grid', gap: 6 }}>
-                    <div style={{ color: 'rgba(0,0,0,0.62)', fontSize: 12 }}>发送给</div>
-                    <select
-                      value={chatTo}
-                      onChange={(e) => setChatTo(e.target.value)}
-                      style={{ padding: '10px 12px', borderRadius: 10, border: '1px solid rgba(0,0,0,0.12)' }}
-                    >
-                      <option value="">所有人</option>
-                      {chatTargets.map((m) => (
-                        <option key={m.playerId} value={m.playerId}>
-                          {m.displayName}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                    <Input value={chatText} onChange={(e) => setChatText(e.target.value)} placeholder="输入消息" style={{ flex: '1 1 auto', minWidth: 0 }} />
-                    <Button size="sm" mode="Primary" onClick={onSendChat} disabled={!canSendChat}>
-                      发送
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            }
-          >
-            <Button size="sm" mode="Second">
-              聊天
-            </Button>
-          </Popover>
-        </div>
-
-        <div style={{ marginTop: 10, display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 4 }}>
-          {players.map((p) => {
-            const isSelf = p.playerId === selfPlayerId;
-            const color = playerColors[(p.seatIndex ?? 0) % playerColors.length];
-            return (
-              <div
-                key={p.playerId}
-                style={{
-                  flex: '0 0 auto',
-                  minWidth: 240,
-                  borderRadius: 'var(--nb-radius-md, 12px)',
-                  border: isSelf ? `2px solid ${color}` : '1px solid var(--nb-color-border, rgba(0,0,0,0.12))',
-                  padding: 10,
-                  background: 'var(--nb-color-bg, #f8fafc)',
-                  opacity: p.eliminated ? 0.6 : 1,
-                  display: 'grid',
-                  gap: 10,
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
-                  <div
-                    style={{
-                      width: 14,
-                      height: 14,
-                      borderRadius: 999,
-                      background: color,
-                      boxShadow: '0 1px 2px rgba(0,0,0,0.14)',
-                      flex: '0 0 auto',
-                    }}
-                  />
-                  {(() => {
-                    const member = membersById.get(p.playerId) ?? null;
-                    const uid = member?.userId ?? null;
-                    const pub = uid ? publicProfiles[uid] : undefined;
-                    const avatarUrl = pub?.avatarUrl ?? null;
-                    const initial = initialFor(p.displayName);
-                    return avatarUrl ? (
-                      <div style={{ position: 'relative', width: 22, height: 22, borderRadius: 999, overflow: 'hidden', flex: '0 0 auto' }}>
-                        <Image src={avatarUrl} alt="" fill sizes="22px" style={{ objectFit: 'cover' }} unoptimized />
-                      </div>
-                    ) : (
-                      <div
-                        style={{
-                          width: 22,
-                          height: 22,
-                          borderRadius: 999,
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          background: 'rgba(0,0,0,0.06)',
-                          color: 'rgba(0,0,0,0.7)',
-                          fontWeight: 800,
-                          fontSize: 12,
-                          flex: '0 0 auto',
-                        }}
-                      >
-                        {initial}
-                      </div>
-                    );
-                  })()}
-                  <div style={{ minWidth: 0 }}>
-                    <div style={{ fontWeight: 800, color: 'var(--nb-color-fg, rgba(0,0,0,0.92))', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                      {p.displayName}
-                      {isSelf ? <span style={{ marginLeft: 6, color: 'var(--nb-color-muted-fg, rgba(0,0,0,0.65))' }}>（我）</span> : null}
-                    </div>
-                    <div style={{ marginTop: 4, color: 'var(--nb-color-muted-fg, rgba(0,0,0,0.65))', fontSize: 13, lineHeight: '18px' }}>
-                      现金 {formatMoney(p.cash)} ｜位置 #{p.position}
-                      {p.inJail ? `｜监狱 ${p.jailTurns}` : ''}
-                      {p.eliminated ? '｜已出局' : ''}
-                    </div>
-                  </div>
-                </div>
-
-                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                  <Button size="sm" mode="Second" onClick={() => setDrawerPlayerId(p.playerId)}>
-                    资产（{p.properties.length}）
-                  </Button>
-                  <Button size="sm" mode="NoBackground" onClick={() => setActivePlayerId(p.playerId)}>
-                    详情
-                  </Button>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-
-        {lastError ? <div style={{ marginTop: 10, color: '#b42318' }}>{lastError.message}</div> : null}
-      </div>
 
       <Dialog
         open={!!activePlayer}

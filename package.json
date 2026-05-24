@@ -23,13 +23,14 @@
     "test:e2e": "npm -w @neoblock/server run test:e2e"
   },
   "devDependencies": {
+    "@next/eslint-plugin-next": "^14.2.35",
+    "@svgr/cli": "^8.1.0",
     "@types/node": "^24.0.0",
     "@types/react": "^18.3.24",
     "@types/react-dom": "^18.3.7",
-    "@next/eslint-plugin-next": "^14.2.35",
     "@typescript-eslint/eslint-plugin": "^8.30.0",
     "@typescript-eslint/parser": "^8.30.0",
-    "@svgr/cli": "^8.1.0",
+    "concurrently": "^9.1.2",
     "eslint": "^8.57.0",
     "eslint-config-prettier": "^10.0.0",
     "eslint-import-resolver-typescript": "^4.4.4",
@@ -37,8 +38,10 @@
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-hooks": "^5.2.0",
     "prettier": "^3.5.3",
-    "concurrently": "^9.1.2",
     "tsx": "^4.19.4",
     "typescript": "^5.9.0"
+  },
+  "dependencies": {
+    "dotenv": "^17.4.2"
   }
 }
