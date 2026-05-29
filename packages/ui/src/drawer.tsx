@@ -1,11 +1,11 @@
 "use client";
 
-import * as React from 'react';
-import { createPortal } from 'react-dom';
+import * as React from "react";
+import { createPortal } from "react-dom";
 
-import { Button } from './button';
+import { Button } from "./button";
 
-export type DrawerSide = 'right' | 'left' | 'bottom';
+export type DrawerSide = "right" | "left" | "bottom";
 
 export type DrawerProps = {
   open: boolean;
@@ -21,14 +21,21 @@ function getFocusableElements(root: HTMLElement) {
     'a[href],button:not([disabled]),textarea:not([disabled]),input:not([disabled]),select:not([disabled]),[tabindex]:not([tabindex="-1"])',
   );
   return Array.from(nodes).filter((el) => {
-    if (el.getAttribute('aria-hidden') === 'true') return false;
+    if (el.getAttribute("aria-hidden") === "true") return false;
     const style = window.getComputedStyle(el);
-    if (style.display === 'none' || style.visibility === 'hidden') return false;
+    if (style.display === "none" || style.visibility === "hidden") return false;
     return true;
   });
 }
 
-export function Drawer({ open, onOpenChange, title, children, width = 420, side = 'right' }: DrawerProps) {
+export function Drawer({
+  open,
+  onOpenChange,
+  title,
+  children,
+  width = 420,
+  side = "right",
+}: DrawerProps) {
   const [mounted, setMounted] = React.useState(false);
   const titleId = React.useId();
   const panelRef = React.useRef<HTMLDivElement | null>(null);
@@ -38,10 +45,11 @@ export function Drawer({ open, onOpenChange, title, children, width = 420, side 
 
   React.useEffect(() => {
     if (!open) return;
-    lastFocusedRef.current = (document.activeElement as HTMLElement | null) ?? null;
+    lastFocusedRef.current =
+      (document.activeElement as HTMLElement | null) ?? null;
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onOpenChange(false);
-      if (e.key !== 'Tab') return;
+      if (e.key === "Escape") onOpenChange(false);
+      if (e.key !== "Tab") return;
       const panel = panelRef.current;
       if (!panel) return;
       const focusable = getFocusableElements(panel);
@@ -63,8 +71,8 @@ export function Drawer({ open, onOpenChange, title, children, width = 420, side 
         focusable[0]?.focus();
       }
     };
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
   }, [onOpenChange, open]);
 
   React.useEffect(() => {
@@ -82,37 +90,37 @@ export function Drawer({ open, onOpenChange, title, children, width = 420, side 
   if (!open || !mounted) return null;
 
   const panelStyle: React.CSSProperties =
-    side === 'bottom'
+    side === "bottom"
       ? {
-          position: 'absolute',
+          position: "absolute",
           left: 0,
           right: 0,
           bottom: 0,
           height: width,
-          maxHeight: '92vh',
-          borderTopLeftRadius: 'var(--nb-radius-lg, 16px)',
-          borderTopRightRadius: 'var(--nb-radius-lg, 16px)',
+          maxHeight: "92vh",
+          borderTopLeftRadius: "var(--nb-radius-lg, 16px)",
+          borderTopRightRadius: "var(--nb-radius-lg, 16px)",
         }
-      : side === 'left'
+      : side === "left"
         ? {
-            position: 'absolute',
+            position: "absolute",
             top: 0,
             bottom: 0,
             left: 0,
             width,
-            maxWidth: '92vw',
-            borderTopRightRadius: 'var(--nb-radius-lg, 16px)',
-            borderBottomRightRadius: 'var(--nb-radius-lg, 16px)',
+            maxWidth: "92vw",
+            borderTopRightRadius: "var(--nb-radius-lg, 16px)",
+            borderBottomRightRadius: "var(--nb-radius-lg, 16px)",
           }
         : {
-            position: 'absolute',
+            position: "absolute",
             top: 0,
             bottom: 0,
             right: 0,
             width,
-            maxWidth: '92vw',
-            borderTopLeftRadius: 'var(--nb-radius-lg, 16px)',
-            borderBottomLeftRadius: 'var(--nb-radius-lg, 16px)',
+            maxWidth: "92vw",
+            borderTopLeftRadius: "var(--nb-radius-lg, 16px)",
+            borderBottomLeftRadius: "var(--nb-radius-lg, 16px)",
           };
 
   return createPortal(
@@ -124,9 +132,9 @@ export function Drawer({ open, onOpenChange, title, children, width = 420, side 
         if (e.target === e.currentTarget) onOpenChange(false);
       }}
       style={{
-        position: 'fixed',
+        position: "fixed",
         inset: 0,
-        background: 'rgba(15,23,42,0.5)',
+        background: "rgba(15,23,42,0.5)",
         zIndex: 60,
       }}
     >
@@ -135,27 +143,47 @@ export function Drawer({ open, onOpenChange, title, children, width = 420, side 
         tabIndex={-1}
         style={{
           ...panelStyle,
-          background: 'var(--nb-color-surface, #fff)',
-          border: '1px solid var(--nb-color-border, rgba(0,0,0,0.12))',
-          boxShadow: 'var(--nb-shadow-md, 0 8px 24px rgba(16,24,40,0.14))',
-          display: 'flex',
-          flexDirection: 'column',
-          overflow: 'hidden',
+          background: "var(--nb-color-surface, #fff)",
+          border: "1px solid var(--nb-color-border, rgba(0,0,0,0.12))",
+          boxShadow: "var(--nb-shadow-md, 0 8px 24px rgba(16,24,40,0.14))",
+          display: "flex",
+          flexDirection: "column",
+          overflow: "hidden",
         }}
       >
-        <div style={{ padding: 14, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+        <div
+          style={{
+            padding: 14,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 10,
+          }}
+        >
           {title ? (
-            <div id={titleId} style={{ fontWeight: 700, color: 'var(--nb-color-fg, rgba(0,0,0,0.92))' }}>
+            <div
+              id={titleId}
+              style={{
+                fontWeight: 700,
+                color: "var(--nb-color-fg, rgba(0,0,0,0.92))",
+              }}
+            >
               {title}
             </div>
           ) : (
             <div />
           )}
-          <Button mode="NoBackground" onClick={() => onOpenChange(false)} aria-label="关闭抽屉">
+          <Button
+            mode="NoBackground"
+            onClick={() => onOpenChange(false)}
+            aria-label="关闭抽屉"
+          >
             关闭
           </Button>
         </div>
-        <div style={{ padding: 14, paddingTop: 0, overflow: 'auto' }}>{children}</div>
+        <div style={{ padding: 14, paddingTop: 0, overflow: "auto" }}>
+          {children}
+        </div>
       </div>
     </div>,
     document.body,

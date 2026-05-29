@@ -4,9 +4,7 @@
     "$value": "Standard",
     "$extensions": {
       "com.figma.variableId": "VariableID:143:432",
-      "com.figma.scopes": [
-        "ALL_SCOPES"
-      ],
+      "com.figma.scopes": ["ALL_SCOPES"],
       "com.figma.type": "string"
     }
   },

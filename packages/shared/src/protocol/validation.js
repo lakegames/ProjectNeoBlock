@@ -1,1 +1,1 @@
-export * from '../../dist/protocol/validation.js';
+export * from "../../dist/protocol/validation.js";

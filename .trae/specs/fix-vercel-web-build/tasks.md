@@ -1,4 +1,5 @@
 # Tasks
+
 - [x] Task 1: 复现并定位 Vercel 构建失败的类型错误
   - [x] 在 `apps/web/app/room/[code]/use-room-connection.ts` 定位 `getDebugDump` 的实现与返回对象
   - [x] 明确与 `RoomConnectionDebugDump` 不兼容的具体字段（kind 字面量收窄）
@@ -12,5 +13,6 @@
   - [x] 触发一次 Vercel 构建，确认不再因 TypeScript 类型错误失败
 
 # Task Dependencies
+
 - Task 2 depends on Task 1
 - Task 3 depends on Task 2

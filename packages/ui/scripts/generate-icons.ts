@@ -1,23 +1,23 @@
-import { spawnSync } from 'node:child_process';
-import * as fs from 'node:fs/promises';
-import { createRequire } from 'node:module';
-import * as path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { spawnSync } from "node:child_process";
+import * as fs from "node:fs/promises";
+import { createRequire } from "node:module";
+import * as path from "node:path";
+import { fileURLToPath } from "node:url";
 
 const scriptFile = fileURLToPath(import.meta.url);
 const scriptDir = path.dirname(scriptFile);
-const packageRoot = path.resolve(scriptDir, '..');
-const inputDir = path.resolve(packageRoot, 'assets', 'icons');
-const generatedDir = path.resolve(packageRoot, 'src', 'icons', 'generated');
-const registryFile = path.resolve(generatedDir, 'registry.ts');
-const tempSvgDir = path.resolve(packageRoot, '.cache', 'icons');
+const packageRoot = path.resolve(scriptDir, "..");
+const inputDir = path.resolve(packageRoot, "assets", "icons");
+const generatedDir = path.resolve(packageRoot, "src", "icons", "generated");
+const registryFile = path.resolve(generatedDir, "registry.ts");
+const tempSvgDir = path.resolve(packageRoot, ".cache", "icons");
 
 function toPascalCase(value: string) {
   return value
     .split(/[^a-zA-Z0-9]+/g)
     .filter(Boolean)
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join('');
+    .join("");
 }
 
 async function listSvgFiles(dir: string) {
@@ -27,7 +27,8 @@ async function listSvgFiles(dir: string) {
   for (const entry of entries) {
     const fullPath = path.resolve(dir, entry.name);
     if (entry.isDirectory()) files.push(...(await listSvgFiles(fullPath)));
-    if (entry.isFile() && entry.name.toLowerCase().endsWith('.svg')) files.push(fullPath);
+    if (entry.isFile() && entry.name.toLowerCase().endsWith(".svg"))
+      files.push(fullPath);
   }
 
   return files.sort((a, b) => a.localeCompare(b));
@@ -42,11 +43,11 @@ async function writeEmptyRegistry() {
 }
 
 function parseFigmaVariantName(baseName: string) {
-  const parts = baseName.split(',').map((part) => part.trim());
+  const parts = baseName.split(",").map((part) => part.trim());
   const entries = new Map<string, string>();
 
   for (const part of parts) {
-    const idx = part.indexOf('=');
+    const idx = part.indexOf("=");
     if (idx === -1) continue;
     const key = part.slice(0, idx).trim().toLowerCase();
     const value = part.slice(idx + 1).trim();
@@ -54,9 +55,9 @@ function parseFigmaVariantName(baseName: string) {
     entries.set(key, value);
   }
 
-  const thickness = entries.get('thickness');
-  const name = entries.get('name');
-  const mode = entries.get('mode');
+  const thickness = entries.get("thickness");
+  const name = entries.get("name");
+  const mode = entries.get("mode");
 
   if (!thickness || !name || !mode) return null;
 
@@ -64,16 +65,18 @@ function parseFigmaVariantName(baseName: string) {
 }
 
 function sanitizeFileBase(value: string) {
-  const sanitized = value.replace(/[^a-zA-Z0-9_-]+/g, '-').replace(/^-+|-+$/g, '');
-  return sanitized || 'icon';
+  const sanitized = value
+    .replace(/[^a-zA-Z0-9_-]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  return sanitized || "icon";
 }
 
 function toSnakeCase(value: string) {
   return value
-    .replace(/[^a-zA-Z0-9]+/g, '_')
-    .replace(/([a-z0-9])([A-Z])/g, '$1_$2')
-    .replace(/_+/g, '_')
-    .replace(/^_+|_+$/g, '')
+    .replace(/[^a-zA-Z0-9]+/g, "_")
+    .replace(/([a-z0-9])([A-Z])/g, "$1_$2")
+    .replace(/_+/g, "_")
+    .replace(/^_+|_+$/g, "")
     .toLowerCase();
 }
 
@@ -93,12 +96,18 @@ async function main() {
   await fs.mkdir(tempSvgDir, { recursive: true });
   const keySources = new Map<string, string>();
   const keyFileBases = new Map<string, string>();
-  const entries: Array<{ key: string; name: string; mode: string; thickness: string; fileBase: string }> = [];
+  const entries: Array<{
+    key: string;
+    name: string;
+    mode: string;
+    thickness: string;
+    fileBase: string;
+  }> = [];
   const usedFileBases = new Set<string>();
 
   try {
     for (const svgPath of svgs) {
-      const baseName = path.basename(svgPath, '.svg');
+      const baseName = path.basename(svgPath, ".svg");
       const parsed = parseFigmaVariantName(baseName);
       if (!parsed) {
         throw new Error(`Unsupported icon filename: ${baseName}`);
@@ -127,10 +136,10 @@ async function main() {
         })();
 
       const outSvgPath = path.resolve(tempSvgDir, `${fileBase}.svg`);
-      const svgContent = await fs.readFile(svgPath, 'utf8');
+      const svgContent = await fs.readFile(svgPath, "utf8");
 
       if (keySources.has(key)) {
-        const existingContent = await fs.readFile(outSvgPath, 'utf8');
+        const existingContent = await fs.readFile(outSvgPath, "utf8");
         if (existingContent !== svgContent) {
           console.warn(
             `Duplicate icon key with different SVG content: ${key}\n- keeping: ${keySources.get(key)}\n- skipping: ${svgPath}`,
@@ -144,23 +153,23 @@ async function main() {
     }
 
     const require = createRequire(import.meta.url);
-    const svgrBin = require.resolve('@svgr/cli/bin/svgr');
+    const svgrBin = require.resolve("@svgr/cli/bin/svgr");
     const result = spawnSync(
       process.execPath,
       [
         svgrBin,
-        '--no-index',
-        '--typescript',
-        '--icon',
-        '--ext',
-        'tsx',
-        '--filename-case',
-        'snake',
-        '--out-dir',
+        "--no-index",
+        "--typescript",
+        "--icon",
+        "--ext",
+        "tsx",
+        "--filename-case",
+        "snake",
+        "--out-dir",
         generatedDir,
         tempSvgDir,
       ],
-      { cwd: packageRoot, stdio: 'inherit' },
+      { cwd: packageRoot, stdio: "inherit" },
     );
 
     if (result.error) {
@@ -196,18 +205,20 @@ async function main() {
   const nameUnion = Array.from(names)
     .sort((a, b) => a.localeCompare(b))
     .map((n) => `'${n}'`)
-    .join(' | ');
+    .join(" | ");
   const modeUnion = Array.from(modes)
     .sort((a, b) => a.localeCompare(b))
     .map((n) => `'${n}'`)
-    .join(' | ');
+    .join(" | ");
   const thicknessUnion = Array.from(thicknesses)
     .sort((a, b) => a.localeCompare(b))
     .map((n) => `'${n}'`)
-    .join(' | ');
+    .join(" | ");
 
-  const content = `${imports.join('\n')}\n\nexport const icons = {\n${pairs.join('\n')}\n} as const;\n\nexport type IconKey = keyof typeof icons;\nexport type IconName = ${nameUnion || 'never'};\nexport type IconMode = ${modeUnion || 'never'};\nexport type IconThickness = ${thicknessUnion || 'never'};\nexport type IconVariant = IconMode;\n`;
-  const finalContent = exports.length ? `${content}\n${exports.join('\n')}\n` : content;
+  const content = `${imports.join("\n")}\n\nexport const icons = {\n${pairs.join("\n")}\n} as const;\n\nexport type IconKey = keyof typeof icons;\nexport type IconName = ${nameUnion || "never"};\nexport type IconMode = ${modeUnion || "never"};\nexport type IconThickness = ${thicknessUnion || "never"};\nexport type IconVariant = IconMode;\n`;
+  const finalContent = exports.length
+    ? `${content}\n${exports.join("\n")}\n`
+    : content;
   await fs.writeFile(registryFile, finalContent);
 }
 

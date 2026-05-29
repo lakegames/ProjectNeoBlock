@@ -1,4 +1,12 @@
-import type { CommandId, EventSeq, GameId, PlayerId, RoomCode, RoomId, UserId } from './ids.js';
+import type {
+  CommandId,
+  EventSeq,
+  GameId,
+  PlayerId,
+  RoomCode,
+  RoomId,
+  UserId,
+} from "./ids.js";
 
 export type CommandBase = {
   commandId: CommandId;
@@ -6,28 +14,28 @@ export type CommandBase = {
 };
 
 export type JoinRoomCommand = CommandBase & {
-  type: 'room/join';
+  type: "room/join";
   roomCode: RoomCode;
   userId?: UserId;
   displayName: string;
-  mode: 'player' | 'spectator';
+  mode: "player" | "spectator";
   resumeFromSeqExclusive?: EventSeq;
 };
 
 export type LeaveRoomCommand = CommandBase & {
-  type: 'room/leave';
+  type: "room/leave";
   roomId: RoomId;
 };
 
 export type SetReadyCommand = CommandBase & {
-  type: 'room/setReady';
+  type: "room/setReady";
   roomId: RoomId;
   playerId: PlayerId;
   ready: boolean;
 };
 
 export type SendChatCommand = CommandBase & {
-  type: 'room/sendChat';
+  type: "room/sendChat";
   roomId: RoomId;
   playerId: PlayerId;
   text: string;
@@ -35,32 +43,32 @@ export type SendChatCommand = CommandBase & {
 };
 
 export type StartGameCommand = CommandBase & {
-  type: 'room/startGame';
+  type: "room/startGame";
   roomId: RoomId;
   playerId: PlayerId;
 };
 
 export type RoomConfigPatch = {
   maxPlayers?: number;
-  boardPreset?: 'default' | 'full' | 'e2e_fast';
+  boardPreset?: "default" | "full" | "e2e_fast";
 };
 
 export type SetRoomConfigCommand = CommandBase & {
-  type: 'room/setConfig';
+  type: "room/setConfig";
   roomId: RoomId;
   playerId: PlayerId;
   config: RoomConfigPatch;
 };
 
 export type RollDiceCommand = CommandBase & {
-  type: 'game/rollDice';
+  type: "game/rollDice";
   roomId: RoomId;
   gameId: GameId;
   playerId: PlayerId;
 };
 
 export type BuyPropertyCommand = CommandBase & {
-  type: 'game/buyProperty';
+  type: "game/buyProperty";
   roomId: RoomId;
   gameId: GameId;
   playerId: PlayerId;
@@ -68,14 +76,14 @@ export type BuyPropertyCommand = CommandBase & {
 };
 
 export type EndTurnCommand = CommandBase & {
-  type: 'game/endTurn';
+  type: "game/endTurn";
   roomId: RoomId;
   gameId: GameId;
   playerId: PlayerId;
 };
 
 export type RespondPromptCommand = CommandBase & {
-  type: 'game/respondPrompt';
+  type: "game/respondPrompt";
   roomId: RoomId;
   gameId: GameId;
   playerId: PlayerId;
@@ -84,22 +92,22 @@ export type RespondPromptCommand = CommandBase & {
 };
 
 export type PayJailFineCommand = CommandBase & {
-  type: 'game/payJailFine';
+  type: "game/payJailFine";
   roomId: RoomId;
   gameId: GameId;
   playerId: PlayerId;
 };
 
 export type UseGetOutOfJailCardCommand = CommandBase & {
-  type: 'game/useGetOutOfJailCard';
+  type: "game/useGetOutOfJailCard";
   roomId: RoomId;
   gameId: GameId;
   playerId: PlayerId;
-  deck: 'chance' | 'communityChest';
+  deck: "chance" | "communityChest";
 };
 
 export type MortgagePropertyCommand = CommandBase & {
-  type: 'game/mortgageProperty';
+  type: "game/mortgageProperty";
   roomId: RoomId;
   gameId: GameId;
   playerId: PlayerId;
@@ -107,7 +115,7 @@ export type MortgagePropertyCommand = CommandBase & {
 };
 
 export type RedeemPropertyCommand = CommandBase & {
-  type: 'game/redeemProperty';
+  type: "game/redeemProperty";
   roomId: RoomId;
   gameId: GameId;
   playerId: PlayerId;
@@ -115,7 +123,7 @@ export type RedeemPropertyCommand = CommandBase & {
 };
 
 export type BuildCommand = CommandBase & {
-  type: 'game/build';
+  type: "game/build";
   roomId: RoomId;
   gameId: GameId;
   playerId: PlayerId;
@@ -123,7 +131,7 @@ export type BuildCommand = CommandBase & {
 };
 
 export type SellBuildingCommand = CommandBase & {
-  type: 'game/sellBuilding';
+  type: "game/sellBuilding";
   roomId: RoomId;
   gameId: GameId;
   playerId: PlayerId;
@@ -138,7 +146,7 @@ export type TradeOffer = {
 };
 
 export type ProposeTradeCommand = CommandBase & {
-  type: 'game/proposeTrade';
+  type: "game/proposeTrade";
   roomId: RoomId;
   gameId: GameId;
   playerId: PlayerId;
@@ -148,7 +156,7 @@ export type ProposeTradeCommand = CommandBase & {
 };
 
 export type RespondTradeCommand = CommandBase & {
-  type: 'game/respondTrade';
+  type: "game/respondTrade";
   roomId: RoomId;
   gameId: GameId;
   playerId: PlayerId;
@@ -156,21 +164,21 @@ export type RespondTradeCommand = CommandBase & {
 };
 
 export type DeclareBankruptcyCommand = CommandBase & {
-  type: 'game/declareBankruptcy';
+  type: "game/declareBankruptcy";
   roomId: RoomId;
   gameId: GameId;
   playerId: PlayerId;
 };
 
 export type ForfeitCommand = CommandBase & {
-  type: 'game/forfeit';
+  type: "game/forfeit";
   roomId: RoomId;
   gameId: GameId;
   playerId: PlayerId;
 };
 
 export type DebugAddCashCommand = CommandBase & {
-  type: 'debug/addCash';
+  type: "debug/addCash";
   roomId: RoomId;
   gameId: GameId;
   playerId: PlayerId;
@@ -179,7 +187,7 @@ export type DebugAddCashCommand = CommandBase & {
 };
 
 export type DebugAssignPropertyCommand = CommandBase & {
-  type: 'debug/assignProperty';
+  type: "debug/assignProperty";
   roomId: RoomId;
   gameId: GameId;
   playerId: PlayerId;
@@ -188,7 +196,7 @@ export type DebugAssignPropertyCommand = CommandBase & {
 };
 
 export type DebugSetBuildingsCommand = CommandBase & {
-  type: 'debug/setBuildings';
+  type: "debug/setBuildings";
   roomId: RoomId;
   gameId: GameId;
   playerId: PlayerId;
@@ -221,4 +229,4 @@ export type Command =
   | DebugAssignPropertyCommand
   | DebugSetBuildingsCommand;
 
-export type CommandType = Command['type'];
+export type CommandType = Command["type"];

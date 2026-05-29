@@ -1,9 +1,9 @@
 "use client";
 
-import * as React from 'react';
-import { createPortal } from 'react-dom';
+import * as React from "react";
+import { createPortal } from "react-dom";
 
-import { Button } from './button';
+import { Button } from "./button";
 
 export type DialogProps = {
   open: boolean;
@@ -20,14 +20,22 @@ function getFocusableElements(root: HTMLElement) {
     'a[href],button:not([disabled]),textarea:not([disabled]),input:not([disabled]),select:not([disabled]),[tabindex]:not([tabindex="-1"])',
   );
   return Array.from(nodes).filter((el) => {
-    if (el.getAttribute('aria-hidden') === 'true') return false;
+    if (el.getAttribute("aria-hidden") === "true") return false;
     const style = window.getComputedStyle(el);
-    if (style.display === 'none' || style.visibility === 'hidden') return false;
+    if (style.display === "none" || style.visibility === "hidden") return false;
     return true;
   });
 }
 
-export function Dialog({ open, onOpenChange, title, description, children, footer, width = 520 }: DialogProps) {
+export function Dialog({
+  open,
+  onOpenChange,
+  title,
+  description,
+  children,
+  footer,
+  width = 520,
+}: DialogProps) {
   const [mounted, setMounted] = React.useState(false);
   const titleId = React.useId();
   const descriptionId = React.useId();
@@ -38,10 +46,11 @@ export function Dialog({ open, onOpenChange, title, description, children, foote
 
   React.useEffect(() => {
     if (!open) return;
-    lastFocusedRef.current = (document.activeElement as HTMLElement | null) ?? null;
+    lastFocusedRef.current =
+      (document.activeElement as HTMLElement | null) ?? null;
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onOpenChange(false);
-      if (e.key !== 'Tab') return;
+      if (e.key === "Escape") onOpenChange(false);
+      if (e.key !== "Tab") return;
       const panel = panelRef.current;
       if (!panel) return;
       const focusable = getFocusableElements(panel);
@@ -63,8 +72,8 @@ export function Dialog({ open, onOpenChange, title, description, children, foote
         focusable[0]?.focus();
       }
     };
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
   }, [onOpenChange, open]);
 
   React.useEffect(() => {
@@ -91,12 +100,12 @@ export function Dialog({ open, onOpenChange, title, description, children, foote
         if (e.target === e.currentTarget) onOpenChange(false);
       }}
       style={{
-        position: 'fixed',
+        position: "fixed",
         inset: 0,
-        background: 'rgba(15,23,42,0.5)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
+        background: "rgba(15,23,42,0.5)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
         padding: 16,
         zIndex: 50,
       }}
@@ -106,46 +115,84 @@ export function Dialog({ open, onOpenChange, title, description, children, foote
         tabIndex={-1}
         style={{
           width,
-          maxWidth: 'min(92vw, 720px)',
-          maxHeight: 'calc(100vh - 32px)',
-          background: 'var(--nb-color-surface, #fff)',
-          border: '1px solid var(--nb-color-border, rgba(0,0,0,0.12))',
-          borderRadius: 'var(--nb-radius-lg, 16px)',
-          boxShadow: 'var(--nb-shadow-md, 0 8px 24px rgba(16,24,40,0.14))',
-          overflow: 'hidden',
-          display: 'flex',
-          flexDirection: 'column',
+          maxWidth: "min(92vw, 720px)",
+          maxHeight: "calc(100vh - 32px)",
+          background: "var(--nb-color-surface, #fff)",
+          border: "1px solid var(--nb-color-border, rgba(0,0,0,0.12))",
+          borderRadius: "var(--nb-radius-lg, 16px)",
+          boxShadow: "var(--nb-shadow-md, 0 8px 24px rgba(16,24,40,0.14))",
+          overflow: "hidden",
+          display: "flex",
+          flexDirection: "column",
         }}
       >
-        <div style={{ padding: 14, display: 'flex', alignItems: 'start', justifyContent: 'space-between', gap: 10 }}>
+        <div
+          style={{
+            padding: 14,
+            display: "flex",
+            alignItems: "start",
+            justifyContent: "space-between",
+            gap: 10,
+          }}
+        >
           <div style={{ minWidth: 0 }}>
             {title ? (
-              <div id={titleId} style={{ fontWeight: 700, color: 'var(--nb-color-fg, rgba(0,0,0,0.92))' }}>
+              <div
+                id={titleId}
+                style={{
+                  fontWeight: 700,
+                  color: "var(--nb-color-fg, rgba(0,0,0,0.92))",
+                }}
+              >
                 {title}
               </div>
             ) : null}
             {description ? (
-              <div id={descriptionId} style={{ marginTop: 6, color: 'var(--nb-color-muted-fg, rgba(0,0,0,0.65))', fontSize: 14, lineHeight: '20px' }}>
+              <div
+                id={descriptionId}
+                style={{
+                  marginTop: 6,
+                  color: "var(--nb-color-muted-fg, rgba(0,0,0,0.65))",
+                  fontSize: 14,
+                  lineHeight: "20px",
+                }}
+              >
                 {description}
               </div>
             ) : null}
           </div>
-          <Button mode="NoBackground" onClick={() => onOpenChange(false)} aria-label="关闭弹窗">
+          <Button
+            mode="NoBackground"
+            onClick={() => onOpenChange(false)}
+            aria-label="关闭弹窗"
+          >
             关闭
           </Button>
         </div>
 
-        {children ? <div style={{ padding: 14, paddingTop: 0, overflow: 'auto', flex: '1 1 auto', minHeight: 0 }}>{children}</div> : null}
+        {children ? (
+          <div
+            style={{
+              padding: 14,
+              paddingTop: 0,
+              overflow: "auto",
+              flex: "1 1 auto",
+              minHeight: 0,
+            }}
+          >
+            {children}
+          </div>
+        ) : null}
 
         {footer ? (
           <div
             style={{
               padding: 14,
-              borderTop: '1px solid var(--nb-color-border, rgba(0,0,0,0.12))',
-              display: 'flex',
-              justifyContent: 'flex-end',
+              borderTop: "1px solid var(--nb-color-border, rgba(0,0,0,0.12))",
+              display: "flex",
+              justifyContent: "flex-end",
               gap: 10,
-              flexWrap: 'wrap',
+              flexWrap: "wrap",
             }}
           >
             {footer}

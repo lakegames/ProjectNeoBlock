@@ -2,7 +2,10 @@ export type DeterministicRng = {
   readonly seed: string;
   readonly step: number;
   nextUint32: () => { value: number; rng: DeterministicRng };
-  nextIntInclusive: (min: number, max: number) => { value: number; rng: DeterministicRng };
+  nextIntInclusive: (
+    min: number,
+    max: number,
+  ) => { value: number; rng: DeterministicRng };
 };
 
 function fnv1a32(input: string): number {
@@ -37,7 +40,7 @@ export function createRng(seed: string, step = 0): DeterministicRng {
     },
     nextIntInclusive: (min: number, max: number) => {
       if (!Number.isInteger(min) || !Number.isInteger(max) || min > max)
-        throw new Error('INVALID_RANGE');
+        throw new Error("INVALID_RANGE");
       const { value: u, rng } = createRng(seed, step).nextUint32();
       const span = max - min + 1;
       const value = min + (u % span);
@@ -46,7 +49,10 @@ export function createRng(seed: string, step = 0): DeterministicRng {
   };
 }
 
-export function rollDice(seed: string, step: number): { dice: [number, number]; nextStep: number } {
+export function rollDice(
+  seed: string,
+  step: number,
+): { dice: [number, number]; nextStep: number } {
   const r0 = createRng(seed, step);
   const a = r0.nextIntInclusive(1, 6);
   const b = a.rng.nextIntInclusive(1, 6);

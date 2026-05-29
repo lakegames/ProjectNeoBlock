@@ -1,3 +1,3 @@
 module.exports = {
-  extends: [require.resolve('@neoblock/rules/eslint/node')],
+  extends: [require.resolve("@neoblock/rules/eslint/node")],
 };

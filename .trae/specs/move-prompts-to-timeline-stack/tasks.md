@@ -1,4 +1,5 @@
 # Tasks
+
 - [x] Task 1: 梳理并定位现有三类模态实现
   - [x] 在 `board-skeleton.tsx` 中定位 buyOrAuction / auctionBid / debt 的 Dialog/Popover/UI 片段
   - [x] 明确每类提示当前发送的 command、校验条件（仅自己可操作 / 其他人只读）
@@ -31,6 +32,7 @@
   - [x] 验证：两开浏览器加入同一房间，发起交易后接收方在 Prompt Stack 中处理，时间轴可继续滚动
 
 # Task Dependencies
+
 - Task 2 depends on Task 1
 - Task 3 depends on Task 2
 - Task 4 depends on Task 3

@@ -1,4 +1,11 @@
-import type { CommandId, EventId, EventSeq, GameId, PlayerId, RoomId } from './ids.js';
+import type {
+  CommandId,
+  EventId,
+  EventSeq,
+  GameId,
+  PlayerId,
+  RoomId,
+} from "./ids.js";
 
 export type EventBase = {
   eventId: EventId;
@@ -12,7 +19,7 @@ export type EventBase = {
 };
 
 export type PlayerJoinedEvent = EventBase & {
-  type: 'room/playerJoined';
+  type: "room/playerJoined";
   player: {
     playerId: PlayerId;
     displayName: string;
@@ -23,34 +30,34 @@ export type PlayerJoinedEvent = EventBase & {
 };
 
 export type PlayerConnectionChangedEvent = EventBase & {
-  type: 'room/playerConnectionChanged';
+  type: "room/playerConnectionChanged";
   playerId: PlayerId;
   connected: boolean;
 };
 
 export type PlayerLeftEvent = EventBase & {
-  type: 'room/playerLeft';
+  type: "room/playerLeft";
   playerId: PlayerId;
 };
 
 export type PlayerReadyChangedEvent = EventBase & {
-  type: 'room/playerReadyChanged';
+  type: "room/playerReadyChanged";
   playerId: PlayerId;
   ready: boolean;
 };
 
 export type ChatMessageEvent = EventBase & {
-  type: 'room/chatMessage';
+  type: "room/chatMessage";
   fromPlayerId: PlayerId;
   text: string;
   toPlayerId?: PlayerId;
 };
 
 export type RoomConfigChangedEvent = EventBase & {
-  type: 'room/configChanged';
+  type: "room/configChanged";
   config: {
     maxPlayers: number;
-    boardPreset?: 'default' | 'full' | 'e2e_fast';
+    boardPreset?: "default" | "full" | "e2e_fast";
     turnTimeMs?: number;
     rulesetVersionId?: string;
     boardVersionId?: string;
@@ -58,12 +65,12 @@ export type RoomConfigChangedEvent = EventBase & {
 };
 
 export type GameStartedEvent = EventBase & {
-  type: 'room/gameStarted';
+  type: "room/gameStarted";
   gameId: GameId;
 };
 
 export type TurnStartedEvent = EventBase & {
-  type: 'game/turnStarted';
+  type: "game/turnStarted";
   gameId: GameId;
   currentPlayerId: PlayerId;
   round: number;
@@ -72,14 +79,14 @@ export type TurnStartedEvent = EventBase & {
 };
 
 export type DiceRolledEvent = EventBase & {
-  type: 'game/diceRolled';
+  type: "game/diceRolled";
   gameId: GameId;
   playerId: PlayerId;
   dice: [number, number];
 };
 
 export type PlayerMovedEvent = EventBase & {
-  type: 'game/playerMoved';
+  type: "game/playerMoved";
   gameId: GameId;
   playerId: PlayerId;
   from: number;
@@ -87,7 +94,7 @@ export type PlayerMovedEvent = EventBase & {
 };
 
 export type MoneyChangedEvent = EventBase & {
-  type: 'game/moneyChanged';
+  type: "game/moneyChanged";
   gameId: GameId;
   playerId: PlayerId;
   delta: number;
@@ -95,7 +102,7 @@ export type MoneyChangedEvent = EventBase & {
 };
 
 export type PromptedEvent = EventBase & {
-  type: 'game/prompted';
+  type: "game/prompted";
   gameId: GameId;
   prompt: {
     promptId: string;
@@ -107,13 +114,13 @@ export type PromptedEvent = EventBase & {
 };
 
 export type GameEndedEvent = EventBase & {
-  type: 'game/ended';
+  type: "game/ended";
   gameId: GameId;
   winnerPlayerId?: PlayerId;
 };
 
 export type EngineEvent = EventBase & {
-  type: 'game/engine';
+  type: "game/engine";
   gameId: GameId;
   name: string;
   data: unknown;
@@ -135,4 +142,4 @@ export type Event =
   | GameEndedEvent
   | EngineEvent;
 
-export type EventType = Event['type'];
+export type EventType = Event["type"];

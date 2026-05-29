@@ -1,18 +1,18 @@
-import type { GameId, PlayerId, RoomId } from '@neoblock/shared';
+import type { GameId, PlayerId, RoomId } from "@neoblock/shared";
 
 export type RulesPhase =
-  | 'await_roll'
-  | 'await_prompt'
-  | 'await_debt'
-  | 'await_end_turn'
-  | 'ended';
+  | "await_roll"
+  | "await_prompt"
+  | "await_debt"
+  | "await_end_turn"
+  | "ended";
 
 export type BoardStartTile = {
-  kind: 'start';
+  kind: "start";
 };
 
 export type BoardPropertyTile = {
-  kind: 'property';
+  kind: "property";
   propertyId: string;
   name?: string;
   groupId: string;
@@ -26,24 +26,24 @@ export type BoardPropertyTile = {
 };
 
 export type BoardJailTile = {
-  kind: 'jail';
+  kind: "jail";
 };
 
 export type BoardGoToJailTile = {
-  kind: 'goToJail';
+  kind: "goToJail";
 };
 
 export type BoardTaxTile = {
-  kind: 'tax';
+  kind: "tax";
   amount: number;
 };
 
 export type BoardChanceTile = {
-  kind: 'chance';
+  kind: "chance";
 };
 
 export type BoardCommunityChestTile = {
-  kind: 'communityChest';
+  kind: "communityChest";
 };
 
 export type BoardTile =
@@ -55,14 +55,14 @@ export type BoardTile =
   | BoardChanceTile
   | BoardCommunityChestTile;
 
-export type CardDeckKind = 'chance' | 'communityChest';
+export type CardDeckKind = "chance" | "communityChest";
 
 export type CardEffect =
-  | { kind: 'money'; delta: number }
-  | { kind: 'moneyFromEachPlayer'; amount: number }
-  | { kind: 'moveTo'; index: number; passStart: boolean }
-  | { kind: 'goToJail' }
-  | { kind: 'getOutOfJail' };
+  | { kind: "money"; delta: number }
+  | { kind: "moneyFromEachPlayer"; amount: number }
+  | { kind: "moveTo"; index: number; passStart: boolean }
+  | { kind: "goToJail" }
+  | { kind: "getOutOfJail" };
 
 export type CardDef = {
   cardId: string;
@@ -101,14 +101,14 @@ export type GamePlayerState = {
 
 export type PendingPrompt =
   | {
-      kind: 'buyOrAuction';
+      kind: "buyOrAuction";
       promptId: string;
       playerId: PlayerId;
       propertyId: string;
       price: number;
     }
   | {
-      kind: 'auctionBid';
+      kind: "auctionBid";
       promptId: string;
       playerId: PlayerId;
       propertyId: string;
@@ -117,7 +117,7 @@ export type PendingPrompt =
       highestBidderId?: PlayerId;
     }
   | {
-      kind: 'tradeOffer';
+      kind: "tradeOffer";
       promptId: string;
       playerId: PlayerId;
       tradeId: string;
@@ -126,7 +126,7 @@ export type PendingPrompt =
       request: TradeOffer;
     }
   | {
-      kind: 'resolveDebt';
+      kind: "resolveDebt";
       promptId: string;
       playerId: PlayerId;
       amount: number;
@@ -157,7 +157,9 @@ export type TradeState = {
   request: TradeOffer;
 };
 
-export type DebtCreditor = { kind: 'bank' } | { kind: 'player'; playerId: PlayerId };
+export type DebtCreditor =
+  | { kind: "bank" }
+  | { kind: "player"; playerId: PlayerId };
 
 export type DebtState = {
   debtorId: PlayerId;
@@ -179,7 +181,7 @@ export type GameDecksState = {
 export type GameState = {
   roomId: RoomId;
   gameId: GameId;
-  status: 'playing' | 'ended';
+  status: "playing" | "ended";
   seed: string;
   rngStep: number;
   round: number;
