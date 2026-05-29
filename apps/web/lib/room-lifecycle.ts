@@ -1,4 +1,4 @@
-import type { Room } from './store';
+import type { Room } from "./store";
 
 export const roomEmptyCloseMs = 3 * 60 * 1000;
 export const roomArchivedTtlMs = 30 * 24 * 60 * 60 * 1000;
@@ -24,4 +24,3 @@ export function applyRoomAutoClose(room: Room, nowMs: number) {
     room.closedAtMs = nowMs;
   }
 }
-

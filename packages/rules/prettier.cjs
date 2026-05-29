@@ -2,6 +2,6 @@ module.exports = {
   printWidth: 100,
   semi: true,
   singleQuote: true,
-  trailingComma: 'all',
-  arrowParens: 'always',
+  trailingComma: "all",
+  arrowParens: "always",
 };

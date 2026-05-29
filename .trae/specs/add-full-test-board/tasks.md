@@ -1,4 +1,5 @@
 # Tasks
+
 - [ ] Task 1: 定义标准 40 格棋盘数据模板
   - [ ] 在 apps/web/lib/config.ts 新增 `fullBoardConfig()`（或等价函数），生成 40 格 tiles
   - [ ] 覆盖关键格子：start/jail/goToJail/tax/chance/communityChest/property
@@ -17,5 +18,6 @@
   - [ ] npm -w @neoblock/web run typecheck
 
 # Task Dependencies
+
 - Task 2 依赖 Task 1
 - Task 3 依赖 Task 2

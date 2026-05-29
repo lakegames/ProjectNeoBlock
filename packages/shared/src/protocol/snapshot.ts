@@ -6,14 +6,14 @@ import type {
   RoomCode,
   RoomId,
   UserId,
-} from './ids.js';
+} from "./ids.js";
 
 export type RoomConfigSnapshot = {
   maxPlayers: number;
   turnTimeMs?: number;
   rulesetVersionId?: string;
   boardVersionId?: string;
-  boardPreset?: 'default' | 'full' | 'e2e_fast';
+  boardPreset?: "default" | "full" | "e2e_fast";
 };
 
 export type RoomMemberSnapshot = {
@@ -30,7 +30,7 @@ export type RoomMemberSnapshot = {
 export type RoomSnapshot = {
   roomId: RoomId;
   roomCode: RoomCode;
-  status: 'lobby' | 'playing' | 'ended';
+  status: "lobby" | "playing" | "ended";
   hostPlayerId: PlayerId;
   createdAtMs: number;
   closedAtMs?: number;
@@ -50,7 +50,7 @@ export type GamePlayerStateSnapshot = {
 
 export type GameSnapshot = {
   gameId: GameId;
-  status: 'playing' | 'ended';
+  status: "playing" | "ended";
   seed: string;
   rngStep: number;
   round: number;

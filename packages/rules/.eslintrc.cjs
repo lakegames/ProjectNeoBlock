@@ -1,3 +1,3 @@
 module.exports = {
-  extends: [require.resolve('./eslint/node.cjs')],
+  extends: [require.resolve("./eslint/node.cjs")],
 };

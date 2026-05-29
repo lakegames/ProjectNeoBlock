@@ -8,9 +8,9 @@ import type {
   GameSnapshot,
   PlayerId,
   RoomId,
-} from '@neoblock/shared';
+} from "@neoblock/shared";
 
-import { createRng, rollDice } from './rng.js';
+import { createRng, rollDice } from "./rng.js";
 import type {
   AuctionState,
   BoardChanceTile,
@@ -28,7 +28,7 @@ import type {
   RulesPhase,
   TradeOffer,
   TradeState,
-} from './types.js';
+} from "./types.js";
 
 export type CreateGameInput = {
   roomId: RoomId;
@@ -98,7 +98,7 @@ function allocEvent(match: MatchState, nowMs: number, causedBy: CausedBy) {
 function gamePlayersInOrder(game: GameState) {
   return game.turnOrder
     .map((id) => game.players[id])
-    .filter((p): p is GameState['players'][PlayerId] => Boolean(p));
+    .filter((p): p is GameState["players"][PlayerId] => Boolean(p));
 }
 
 function findNextActivePlayer(game: GameState, fromPlayerId: PlayerId) {
@@ -124,13 +124,14 @@ function getTile(game: GameState, position: number) {
   const size = game.board.tiles.length;
   const idx = ((position % size) + size) % size;
   const tile = game.board.tiles[idx];
-  if (!tile) throw new Error('INVALID_BOARD');
+  if (!tile) throw new Error("INVALID_BOARD");
   return tile;
 }
 
 function getPropertyTile(game: GameState, propertyId: string) {
   return game.board.tiles.find(
-    (t): t is BoardPropertyTile => t.kind === 'property' && t.propertyId === propertyId,
+    (t): t is BoardPropertyTile =>
+      t.kind === "property" && t.propertyId === propertyId,
   );
 }
 
@@ -139,10 +140,16 @@ function clearTurnTransient(game: GameState) {
 }
 
 function buildingsInUse(buildings: number) {
-  return buildings === 5 ? { houses: 0, hotels: 1 } : { houses: Math.max(0, Math.min(4, buildings)), hotels: 0 };
+  return buildings === 5
+    ? { houses: 0, hotels: 1 }
+    : { houses: Math.max(0, Math.min(4, buildings)), hotels: 0 };
 }
 
-function applyBuildingsDeltaToBank(game: GameState, before: number, after: number) {
+function applyBuildingsDeltaToBank(
+  game: GameState,
+  before: number,
+  after: number,
+) {
   const b = buildingsInUse(before);
   const a = buildingsInUse(after);
   game.bank.houses += b.houses - a.houses;
@@ -184,10 +191,10 @@ function shuffle<T>(seed: string, step: number, items: T[]) {
 }
 
 export function createGame(input: CreateGameInput): HandleCommandResult {
-  if (input.playerIds.length < 2) throw new Error('NEED_AT_LEAST_2_PLAYERS');
-  if (input.board.tiles.length === 0) throw new Error('INVALID_BOARD');
+  if (input.playerIds.length < 2) throw new Error("NEED_AT_LEAST_2_PLAYERS");
+  if (input.board.tiles.length === 0) throw new Error("INVALID_BOARD");
   const firstPlayerId = input.playerIds[0];
-  if (!firstPlayerId) throw new Error('INVALID_PLAYERS');
+  if (!firstPlayerId) throw new Error("INVALID_PLAYERS");
 
   const initialCash = input.initialCash ?? 1500;
   const players = Object.fromEntries(
@@ -205,31 +212,39 @@ export function createGame(input: CreateGameInput): HandleCommandResult {
         eliminated: false,
       },
     ]),
-  ) as Record<PlayerId, GameState['players'][PlayerId]>;
+  ) as Record<PlayerId, GameState["players"][PlayerId]>;
 
   const board = structuredClone(input.board) as BoardConfig;
   for (const t of board.tiles) {
-    if (t.kind === 'property') {
+    if (t.kind === "property") {
       if (t.buildings === undefined) t.buildings = 0;
       if (t.mortgaged === undefined) t.mortgaged = false;
     }
   }
 
-  const chanceCards = getDeckCards(board, 'chance');
-  const communityCards = getDeckCards(board, 'communityChest');
-  const s1 = shuffle(input.seed, 0, chanceCards.map((c) => c.cardId));
-  const s2 = shuffle(input.seed, s1.nextStep, communityCards.map((c) => c.cardId));
+  const chanceCards = getDeckCards(board, "chance");
+  const communityCards = getDeckCards(board, "communityChest");
+  const s1 = shuffle(
+    input.seed,
+    0,
+    chanceCards.map((c) => c.cardId),
+  );
+  const s2 = shuffle(
+    input.seed,
+    s1.nextStep,
+    communityCards.map((c) => c.cardId),
+  );
 
   let match: MatchState = {
     nextSeq: 0,
     game: {
       roomId: input.roomId,
       gameId: input.gameId,
-      status: 'playing',
+      status: "playing",
       seed: input.seed,
       rngStep: s2.nextStep,
       round: 1,
-      phase: 'await_roll',
+      phase: "await_roll",
       currentPlayerId: firstPlayerId,
       turnOrder: [...input.playerIds],
       players,
@@ -252,7 +267,7 @@ export function createGame(input: CreateGameInput): HandleCommandResult {
     match = r.match;
     events.push({
       ...r.base,
-      type: 'room/gameStarted',
+      type: "room/gameStarted",
       gameId: input.gameId,
     });
   }
@@ -262,11 +277,11 @@ export function createGame(input: CreateGameInput): HandleCommandResult {
     match = r.match;
     events.push({
       ...r.base,
-      type: 'game/turnStarted',
+      type: "game/turnStarted",
       gameId: input.gameId,
       currentPlayerId: match.game.currentPlayerId,
       round: match.game.round,
-      phase: 'await_roll',
+      phase: "await_roll",
     });
   }
 
@@ -275,60 +290,70 @@ export function createGame(input: CreateGameInput): HandleCommandResult {
 }
 
 function validateGameCommand(match: MatchState, command: Command) {
-  if (command.type.startsWith('debug/')) return;
+  if (command.type.startsWith("debug/")) return;
   if (
-    command.type === 'game/rollDice' ||
-    command.type === 'game/buyProperty' ||
-    command.type === 'game/endTurn' ||
-    command.type === 'game/respondPrompt' ||
-    command.type === 'game/payJailFine' ||
-    command.type === 'game/useGetOutOfJailCard' ||
-    command.type === 'game/mortgageProperty' ||
-    command.type === 'game/redeemProperty' ||
-    command.type === 'game/build' ||
-    command.type === 'game/sellBuilding' ||
-    command.type === 'game/proposeTrade' ||
-    command.type === 'game/respondTrade' ||
-    command.type === 'game/declareBankruptcy' ||
-    command.type === 'game/forfeit'
+    command.type === "game/rollDice" ||
+    command.type === "game/buyProperty" ||
+    command.type === "game/endTurn" ||
+    command.type === "game/respondPrompt" ||
+    command.type === "game/payJailFine" ||
+    command.type === "game/useGetOutOfJailCard" ||
+    command.type === "game/mortgageProperty" ||
+    command.type === "game/redeemProperty" ||
+    command.type === "game/build" ||
+    command.type === "game/sellBuilding" ||
+    command.type === "game/proposeTrade" ||
+    command.type === "game/respondTrade" ||
+    command.type === "game/declareBankruptcy" ||
+    command.type === "game/forfeit"
   )
     return;
-  throw new Error('UNSUPPORTED_COMMAND');
+  throw new Error("UNSUPPORTED_COMMAND");
 }
 
-export function handleCommand(match: MatchState, command: Command, nowMs: number): HandleCommandResult {
+export function handleCommand(
+  match: MatchState,
+  command: Command,
+  nowMs: number,
+): HandleCommandResult {
   validateGameCommand(match, command);
-  if (match.game.status !== 'playing') return { state: match, events: [] };
+  if (match.game.status !== "playing") return { state: match, events: [] };
 
   const causedBy: CausedBy = (() => {
-    const c: { commandId?: CommandId; playerId?: PlayerId } = { commandId: command.commandId };
-    if ('playerId' in command) c.playerId = command.playerId;
+    const c: { commandId?: CommandId; playerId?: PlayerId } = {
+      commandId: command.commandId,
+    };
+    if ("playerId" in command) c.playerId = command.playerId;
     return c;
   })();
 
   const requireGame = () => {
-    if ('gameId' in command && 'roomId' in command) {
-      if (command.gameId !== match.game.gameId || command.roomId !== match.game.roomId)
-        throw new Error('WRONG_GAME');
+    if ("gameId" in command && "roomId" in command) {
+      if (
+        command.gameId !== match.game.gameId ||
+        command.roomId !== match.game.roomId
+      )
+        throw new Error("WRONG_GAME");
     }
   };
 
   const requireCurrentPlayer = (playerId: PlayerId) => {
-    if (playerId !== match.game.currentPlayerId) throw new Error('NOT_YOUR_TURN');
-    if (match.game.players[playerId]?.eliminated) throw new Error('ELIMINATED');
+    if (playerId !== match.game.currentPlayerId)
+      throw new Error("NOT_YOUR_TURN");
+    if (match.game.players[playerId]?.eliminated) throw new Error("ELIMINATED");
   };
 
   const ensureNoBlockingInteraction = () => {
-    if (match.game.pendingPrompt) throw new Error('INVALID_PHASE');
-    if (match.game.auction) throw new Error('INVALID_PHASE');
-    if (match.game.trade) throw new Error('INVALID_PHASE');
+    if (match.game.pendingPrompt) throw new Error("INVALID_PHASE");
+    if (match.game.auction) throw new Error("INVALID_PHASE");
+    if (match.game.trade) throw new Error("INVALID_PHASE");
   };
 
-  if (command.type === 'game/rollDice') {
+  if (command.type === "game/rollDice") {
     requireGame();
     requireCurrentPlayer(command.playerId);
-    if (match.game.phase !== 'await_roll') throw new Error('INVALID_PHASE');
-    if (match.game.debt) throw new Error('INVALID_PHASE');
+    if (match.game.phase !== "await_roll") throw new Error("INVALID_PHASE");
+    if (match.game.debt) throw new Error("INVALID_PHASE");
     ensureNoBlockingInteraction();
 
     let events: Event[] = [];
@@ -340,7 +365,7 @@ export function handleCommand(match: MatchState, command: Command, nowMs: number
       cursor = r.match;
       events.push({
         ...r.base,
-        type: 'game/diceRolled',
+        type: "game/diceRolled",
         gameId: match.game.gameId,
         playerId: command.playerId,
         dice,
@@ -348,7 +373,7 @@ export function handleCommand(match: MatchState, command: Command, nowMs: number
     }
 
     const player = match.game.players[command.playerId];
-    if (!player) throw new Error('PLAYER_NOT_FOUND');
+    if (!player) throw new Error("PLAYER_NOT_FOUND");
     const sum = dice[0] + dice[1];
     const isDouble = dice[0] === dice[1];
 
@@ -358,7 +383,7 @@ export function handleCommand(match: MatchState, command: Command, nowMs: number
       cursor = r.match;
       events.push({
         ...r.base,
-        type: 'game/playerMoved',
+        type: "game/playerMoved",
         gameId: match.game.gameId,
         playerId: command.playerId,
         from,
@@ -371,7 +396,7 @@ export function handleCommand(match: MatchState, command: Command, nowMs: number
       cursor = r.match;
       events.push({
         ...r.base,
-        type: 'game/moneyChanged',
+        type: "game/moneyChanged",
         gameId: match.game.gameId,
         playerId,
         delta,
@@ -386,9 +411,9 @@ export function handleCommand(match: MatchState, command: Command, nowMs: number
           cursor = r.match;
           events.push({
             ...r.base,
-            type: 'game/engine',
+            type: "game/engine",
             gameId: match.game.gameId,
-            name: 'jail/release',
+            name: "jail/release",
             data: { playerId: command.playerId },
           });
         }
@@ -400,29 +425,29 @@ export function handleCommand(match: MatchState, command: Command, nowMs: number
             cursor = r.match;
             events.push({
               ...r.base,
-              type: 'game/engine',
+              type: "game/engine",
               gameId: match.game.gameId,
-              name: 'debt/created',
+              name: "debt/created",
               data: {
                 debtorId: command.playerId,
-                creditor: { kind: 'bank' },
+                creditor: { kind: "bank" },
                 amount: fine,
-                reason: 'jailFine',
+                reason: "jailFine",
               } satisfies DebtState,
             });
           }
           const nextState = applyEvents(match, events);
           return { state: nextState, events };
         }
-        emitMoney(command.playerId, -fine, 'jailFine');
+        emitMoney(command.playerId, -fine, "jailFine");
         {
           const r = allocEvent(cursor, nowMs, causedBy);
           cursor = r.match;
           events.push({
             ...r.base,
-            type: 'game/engine',
+            type: "game/engine",
             gameId: match.game.gameId,
-            name: 'jail/release',
+            name: "jail/release",
             data: { playerId: command.playerId },
           });
         }
@@ -432,9 +457,9 @@ export function handleCommand(match: MatchState, command: Command, nowMs: number
           cursor = r.match;
           events.push({
             ...r.base,
-            type: 'game/engine',
+            type: "game/engine",
             gameId: match.game.gameId,
-            name: 'jail/turn',
+            name: "jail/turn",
             data: { playerId: command.playerId },
           });
         }
@@ -444,16 +469,26 @@ export function handleCommand(match: MatchState, command: Command, nowMs: number
     }
 
     const afterRelease = applyEvents(match, events);
-    const from = afterRelease.game.players[command.playerId]?.position ?? player.position;
+    const from =
+      afterRelease.game.players[command.playerId]?.position ?? player.position;
     const rawTo = from + sum;
     const to = rawTo % boardSize;
     if (rawTo >= boardSize) {
-      emitMoney(command.playerId, rulesStartSalary(match.game.board), 'passStart');
+      emitMoney(
+        command.playerId,
+        rulesStartSalary(match.game.board),
+        "passStart",
+      );
     }
     emitMove(from, to);
 
     const afterMove = applyEvents(match, events);
-    const landingEvents = deriveLandingEvents(afterMove, cursor, nowMs, causedBy);
+    const landingEvents = deriveLandingEvents(
+      afterMove,
+      cursor,
+      nowMs,
+      causedBy,
+    );
     events = [...events, ...landingEvents.events];
     cursor = landingEvents.match;
 
@@ -466,15 +501,15 @@ export function handleCommand(match: MatchState, command: Command, nowMs: number
     return { state: nextState, events };
   }
 
-  if (command.type === 'game/payJailFine') {
+  if (command.type === "game/payJailFine") {
     requireGame();
     requireCurrentPlayer(command.playerId);
-    if (match.game.phase !== 'await_roll') throw new Error('INVALID_PHASE');
+    if (match.game.phase !== "await_roll") throw new Error("INVALID_PHASE");
     ensureNoBlockingInteraction();
     const player = match.game.players[command.playerId];
-    if (!player?.inJail) throw new Error('INVALID_PHASE');
+    if (!player?.inJail) throw new Error("INVALID_PHASE");
     const fine = rulesJailFine(match.game.board);
-    if (player.cash < fine) throw new Error('INSUFFICIENT_CASH');
+    if (player.cash < fine) throw new Error("INSUFFICIENT_CASH");
 
     let cursor = match;
     const events: Event[] = [];
@@ -483,11 +518,11 @@ export function handleCommand(match: MatchState, command: Command, nowMs: number
       cursor = r.match;
       events.push({
         ...r.base,
-        type: 'game/moneyChanged',
+        type: "game/moneyChanged",
         gameId: match.game.gameId,
         playerId: command.playerId,
         delta: -fine,
-        reason: 'jailFine',
+        reason: "jailFine",
       });
     }
     {
@@ -495,9 +530,9 @@ export function handleCommand(match: MatchState, command: Command, nowMs: number
       cursor = r.match;
       events.push({
         ...r.base,
-        type: 'game/engine',
+        type: "game/engine",
         gameId: match.game.gameId,
-        name: 'jail/release',
+        name: "jail/release",
         data: { playerId: command.playerId },
       });
     }
@@ -505,18 +540,20 @@ export function handleCommand(match: MatchState, command: Command, nowMs: number
     return { state: nextState, events };
   }
 
-  if (command.type === 'game/useGetOutOfJailCard') {
+  if (command.type === "game/useGetOutOfJailCard") {
     requireGame();
     requireCurrentPlayer(command.playerId);
-    if (match.game.phase !== 'await_roll') throw new Error('INVALID_PHASE');
+    if (match.game.phase !== "await_roll") throw new Error("INVALID_PHASE");
     ensureNoBlockingInteraction();
     const player = match.game.players[command.playerId];
-    if (!player?.inJail) throw new Error('INVALID_PHASE');
+    if (!player?.inJail) throw new Error("INVALID_PHASE");
 
     const deck: CardDeckKind = command.deck;
     const has =
-      deck === 'chance' ? player.getOutOfJailChance > 0 : player.getOutOfJailCommunity > 0;
-    if (!has) throw new Error('NO_CARD');
+      deck === "chance"
+        ? player.getOutOfJailChance > 0
+        : player.getOutOfJailCommunity > 0;
+    if (!has) throw new Error("NO_CARD");
 
     let cursor = match;
     const events: Event[] = [];
@@ -525,9 +562,9 @@ export function handleCommand(match: MatchState, command: Command, nowMs: number
       cursor = r.match;
       events.push({
         ...r.base,
-        type: 'game/engine',
+        type: "game/engine",
         gameId: match.game.gameId,
-        name: 'card/usedGetOutOfJail',
+        name: "card/usedGetOutOfJail",
         data: { playerId: command.playerId, deck },
       });
     }
@@ -536,9 +573,9 @@ export function handleCommand(match: MatchState, command: Command, nowMs: number
       cursor = r.match;
       events.push({
         ...r.base,
-        type: 'game/engine',
+        type: "game/engine",
         gameId: match.game.gameId,
-        name: 'jail/release',
+        name: "jail/release",
         data: { playerId: command.playerId },
       });
     }
@@ -548,27 +585,31 @@ export function handleCommand(match: MatchState, command: Command, nowMs: number
 
   const requireActionPhase = () => {
     if (match.game.debt) return;
-    if (match.game.phase !== 'await_roll' && match.game.phase !== 'await_end_turn')
-      throw new Error('INVALID_PHASE');
+    if (
+      match.game.phase !== "await_roll" &&
+      match.game.phase !== "await_end_turn"
+    )
+      throw new Error("INVALID_PHASE");
   };
 
-  if (command.type === 'game/mortgageProperty') {
+  if (command.type === "game/mortgageProperty") {
     requireGame();
     requireCurrentPlayer(command.playerId);
     requireActionPhase();
     ensureNoBlockingInteraction();
 
     const tile = getPropertyTile(match.game, command.propertyId);
-    if (!tile || tile.ownerPlayerId !== command.playerId) throw new Error('NOT_OWNER');
-    if (tile.mortgaged) throw new Error('ALREADY_MORTGAGED');
-    if ((tile.buildings ?? 0) > 0) throw new Error('HAS_BUILDINGS');
+    if (!tile || tile.ownerPlayerId !== command.playerId)
+      throw new Error("NOT_OWNER");
+    if (tile.mortgaged) throw new Error("ALREADY_MORTGAGED");
+    if ((tile.buildings ?? 0) > 0) throw new Error("HAS_BUILDINGS");
     const groupHasBuildings = match.game.board.tiles.some(
       (t) =>
-        t.kind === 'property' &&
+        t.kind === "property" &&
         t.groupId === tile.groupId &&
-        ((t.buildings ?? 0) > 0),
+        (t.buildings ?? 0) > 0,
     );
-    if (groupHasBuildings) throw new Error('GROUP_HAS_BUILDINGS');
+    if (groupHasBuildings) throw new Error("GROUP_HAS_BUILDINGS");
 
     const mortgageValue = Math.floor(tile.price / 2);
 
@@ -579,10 +620,14 @@ export function handleCommand(match: MatchState, command: Command, nowMs: number
       cursor = r.match;
       events.push({
         ...r.base,
-        type: 'game/engine',
+        type: "game/engine",
         gameId: match.game.gameId,
-        name: 'property/mortgaged',
-        data: { playerId: command.playerId, propertyId: command.propertyId, mortgageValue },
+        name: "property/mortgaged",
+        data: {
+          playerId: command.playerId,
+          propertyId: command.propertyId,
+          mortgageValue,
+        },
       });
     }
     {
@@ -590,7 +635,7 @@ export function handleCommand(match: MatchState, command: Command, nowMs: number
       cursor = r.match;
       events.push({
         ...r.base,
-        type: 'game/moneyChanged',
+        type: "game/moneyChanged",
         gameId: match.game.gameId,
         playerId: command.playerId,
         delta: mortgageValue,
@@ -605,20 +650,23 @@ export function handleCommand(match: MatchState, command: Command, nowMs: number
     return { state: finalState, events: finalEvents };
   }
 
-  if (command.type === 'game/redeemProperty') {
+  if (command.type === "game/redeemProperty") {
     requireGame();
     requireCurrentPlayer(command.playerId);
     requireActionPhase();
     ensureNoBlockingInteraction();
 
     const tile = getPropertyTile(match.game, command.propertyId);
-    if (!tile || tile.ownerPlayerId !== command.playerId) throw new Error('NOT_OWNER');
-    if (!tile.mortgaged) throw new Error('NOT_MORTGAGED');
+    if (!tile || tile.ownerPlayerId !== command.playerId)
+      throw new Error("NOT_OWNER");
+    if (!tile.mortgaged) throw new Error("NOT_MORTGAGED");
 
     const mortgageValue = Math.floor(tile.price / 2);
-    const cost = Math.ceil(mortgageValue * (1 + rulesMortgageInterestRate(match.game.board)));
+    const cost = Math.ceil(
+      mortgageValue * (1 + rulesMortgageInterestRate(match.game.board)),
+    );
     const player = match.game.players[command.playerId];
-    if (!player || player.cash < cost) throw new Error('INSUFFICIENT_CASH');
+    if (!player || player.cash < cost) throw new Error("INSUFFICIENT_CASH");
 
     let cursor = match;
     const events: Event[] = [];
@@ -627,10 +675,14 @@ export function handleCommand(match: MatchState, command: Command, nowMs: number
       cursor = r.match;
       events.push({
         ...r.base,
-        type: 'game/engine',
+        type: "game/engine",
         gameId: match.game.gameId,
-        name: 'property/redeemed',
-        data: { playerId: command.playerId, propertyId: command.propertyId, cost },
+        name: "property/redeemed",
+        data: {
+          playerId: command.playerId,
+          propertyId: command.propertyId,
+          cost,
+        },
       });
     }
     {
@@ -638,7 +690,7 @@ export function handleCommand(match: MatchState, command: Command, nowMs: number
       cursor = r.match;
       events.push({
         ...r.base,
-        type: 'game/moneyChanged',
+        type: "game/moneyChanged",
         gameId: match.game.gameId,
         playerId: command.playerId,
         delta: -cost,
@@ -653,38 +705,43 @@ export function handleCommand(match: MatchState, command: Command, nowMs: number
     return { state: finalState, events: finalEvents };
   }
 
-  if (command.type === 'game/build') {
+  if (command.type === "game/build") {
     requireGame();
     requireCurrentPlayer(command.playerId);
     requireActionPhase();
     ensureNoBlockingInteraction();
 
     const tile = getPropertyTile(match.game, command.propertyId);
-    if (!tile || tile.ownerPlayerId !== command.playerId) throw new Error('NOT_OWNER');
-    if (tile.mortgaged) throw new Error('MORTGAGED');
+    if (!tile || tile.ownerPlayerId !== command.playerId)
+      throw new Error("NOT_OWNER");
+    if (tile.mortgaged) throw new Error("MORTGAGED");
 
     const groupTiles = match.game.board.tiles.filter(
-      (t): t is BoardPropertyTile => t.kind === 'property' && t.groupId === tile.groupId,
+      (t): t is BoardPropertyTile =>
+        t.kind === "property" && t.groupId === tile.groupId,
     );
-    const ownsAll = groupTiles.every((t) => t.ownerPlayerId === command.playerId);
+    const ownsAll = groupTiles.every(
+      (t) => t.ownerPlayerId === command.playerId,
+    );
     const noneMortgaged = groupTiles.every((t) => !t.mortgaged);
-    if (!ownsAll || !noneMortgaged) throw new Error('NO_MONOPOLY');
+    if (!ownsAll || !noneMortgaged) throw new Error("NO_MONOPOLY");
 
     const levels = groupTiles.map((t) => t.buildings ?? 0);
     const min = Math.min(...levels);
     const max = Math.max(...levels);
     const current = tile.buildings ?? 0;
-    if (current > min) throw new Error('MUST_BUILD_EVENLY');
-    if (current >= 5) throw new Error('MAX_BUILDINGS');
+    if (current > min) throw new Error("MUST_BUILD_EVENLY");
+    if (current >= 5) throw new Error("MAX_BUILDINGS");
 
     const player = match.game.players[command.playerId];
-    if (!player || player.cash < tile.houseCost) throw new Error('INSUFFICIENT_CASH');
+    if (!player || player.cash < tile.houseCost)
+      throw new Error("INSUFFICIENT_CASH");
 
     const needsHotel = current === 4;
     if (needsHotel) {
-      if (match.game.bank.hotels <= 0) throw new Error('NO_HOTELS');
+      if (match.game.bank.hotels <= 0) throw new Error("NO_HOTELS");
     } else {
-      if (match.game.bank.houses <= 0) throw new Error('NO_HOUSES');
+      if (match.game.bank.houses <= 0) throw new Error("NO_HOUSES");
     }
 
     let cursor = match;
@@ -694,9 +751,9 @@ export function handleCommand(match: MatchState, command: Command, nowMs: number
       cursor = r.match;
       events.push({
         ...r.base,
-        type: 'game/engine',
+        type: "game/engine",
         gameId: match.game.gameId,
-        name: 'building/built',
+        name: "building/built",
         data: { playerId: command.playerId, propertyId: command.propertyId },
       });
     }
@@ -705,7 +762,7 @@ export function handleCommand(match: MatchState, command: Command, nowMs: number
       cursor = r.match;
       events.push({
         ...r.base,
-        type: 'game/moneyChanged',
+        type: "game/moneyChanged",
         gameId: match.game.gameId,
         playerId: command.playerId,
         delta: -tile.houseCost,
@@ -720,27 +777,29 @@ export function handleCommand(match: MatchState, command: Command, nowMs: number
     return { state: finalState, events: finalEvents };
   }
 
-  if (command.type === 'game/sellBuilding') {
+  if (command.type === "game/sellBuilding") {
     requireGame();
     requireCurrentPlayer(command.playerId);
     requireActionPhase();
     ensureNoBlockingInteraction();
 
     const tile = getPropertyTile(match.game, command.propertyId);
-    if (!tile || tile.ownerPlayerId !== command.playerId) throw new Error('NOT_OWNER');
+    if (!tile || tile.ownerPlayerId !== command.playerId)
+      throw new Error("NOT_OWNER");
     const current = tile.buildings ?? 0;
-    if (current <= 0) throw new Error('NO_BUILDINGS');
+    if (current <= 0) throw new Error("NO_BUILDINGS");
 
     const groupTiles = match.game.board.tiles.filter(
-      (t): t is BoardPropertyTile => t.kind === 'property' && t.groupId === tile.groupId,
+      (t): t is BoardPropertyTile =>
+        t.kind === "property" && t.groupId === tile.groupId,
     );
     const levels = groupTiles.map((t) => t.buildings ?? 0);
     const min = Math.min(...levels);
     const max = Math.max(...levels);
-    if (current < max) throw new Error('MUST_SELL_EVENLY');
+    if (current < max) throw new Error("MUST_SELL_EVENLY");
 
     if (current === 5) {
-      if (match.game.bank.houses < 4) throw new Error('NO_HOUSES');
+      if (match.game.bank.houses < 4) throw new Error("NO_HOUSES");
     }
 
     let cursor = match;
@@ -750,9 +809,9 @@ export function handleCommand(match: MatchState, command: Command, nowMs: number
       cursor = r.match;
       events.push({
         ...r.base,
-        type: 'game/engine',
+        type: "game/engine",
         gameId: match.game.gameId,
-        name: 'building/sold',
+        name: "building/sold",
         data: { playerId: command.playerId, propertyId: command.propertyId },
       });
     }
@@ -761,7 +820,7 @@ export function handleCommand(match: MatchState, command: Command, nowMs: number
       cursor = r.match;
       events.push({
         ...r.base,
-        type: 'game/moneyChanged',
+        type: "game/moneyChanged",
         gameId: match.game.gameId,
         playerId: command.playerId,
         delta: Math.floor(tile.houseCost / 2),
@@ -776,7 +835,7 @@ export function handleCommand(match: MatchState, command: Command, nowMs: number
     return { state: finalState, events: finalEvents };
   }
 
-  if (command.type === 'game/proposeTrade') {
+  if (command.type === "game/proposeTrade") {
     requireGame();
     requireCurrentPlayer(command.playerId);
     requireActionPhase();
@@ -784,23 +843,25 @@ export function handleCommand(match: MatchState, command: Command, nowMs: number
 
     const from = match.game.players[command.playerId];
     const to = match.game.players[command.toPlayerId];
-    if (!from || !to || to.eliminated) throw new Error('PLAYER_NOT_FOUND');
+    if (!from || !to || to.eliminated) throw new Error("PLAYER_NOT_FOUND");
 
     const offer: TradeOffer = command.offer;
     const request: TradeOffer = command.request;
-    if (offer.cash < 0 || request.cash < 0) throw new Error('INVALID_TRADE');
-    if (from.cash < offer.cash) throw new Error('INSUFFICIENT_CASH');
-    if (to.cash < request.cash) throw new Error('OTHER_INSUFFICIENT_CASH');
+    if (offer.cash < 0 || request.cash < 0) throw new Error("INVALID_TRADE");
+    if (from.cash < offer.cash) throw new Error("INSUFFICIENT_CASH");
+    if (to.cash < request.cash) throw new Error("OTHER_INSUFFICIENT_CASH");
 
     for (const pid of offer.properties) {
       const t = getPropertyTile(match.game, pid);
-      if (!t || t.ownerPlayerId !== command.playerId) throw new Error('NOT_OWNER');
-      if ((t.buildings ?? 0) > 0) throw new Error('HAS_BUILDINGS');
+      if (!t || t.ownerPlayerId !== command.playerId)
+        throw new Error("NOT_OWNER");
+      if ((t.buildings ?? 0) > 0) throw new Error("HAS_BUILDINGS");
     }
     for (const pid of request.properties) {
       const t = getPropertyTile(match.game, pid);
-      if (!t || t.ownerPlayerId !== command.toPlayerId) throw new Error('NOT_OWNER');
-      if ((t.buildings ?? 0) > 0) throw new Error('HAS_BUILDINGS');
+      if (!t || t.ownerPlayerId !== command.toPlayerId)
+        throw new Error("NOT_OWNER");
+      if ((t.buildings ?? 0) > 0) throw new Error("HAS_BUILDINGS");
     }
 
     let cursor = match;
@@ -811,9 +872,9 @@ export function handleCommand(match: MatchState, command: Command, nowMs: number
       cursor = r.match;
       events.push({
         ...r.base,
-        type: 'game/engine',
+        type: "game/engine",
         gameId: match.game.gameId,
-        name: 'trade/offered',
+        name: "trade/offered",
         data: {
           tradeId,
           fromPlayerId: command.playerId,
@@ -829,12 +890,12 @@ export function handleCommand(match: MatchState, command: Command, nowMs: number
       const promptId = `p${r.seq}`;
       events.push({
         ...r.base,
-        type: 'game/prompted',
+        type: "game/prompted",
         gameId: match.game.gameId,
         prompt: {
           promptId,
           playerId: command.toPlayerId,
-          kind: 'tradeOffer',
+          kind: "tradeOffer",
           data: { tradeId, fromPlayerId: command.playerId, offer, request },
         },
       });
@@ -844,11 +905,12 @@ export function handleCommand(match: MatchState, command: Command, nowMs: number
     return { state: nextState, events };
   }
 
-  if (command.type === 'game/respondTrade') {
+  if (command.type === "game/respondTrade") {
     requireGame();
-    if (!match.game.trade) throw new Error('NO_TRADE');
-    if (match.game.trade.toPlayerId !== command.playerId) throw new Error('FORBIDDEN');
-    if (match.game.phase !== 'await_prompt') throw new Error('INVALID_PHASE');
+    if (!match.game.trade) throw new Error("NO_TRADE");
+    if (match.game.trade.toPlayerId !== command.playerId)
+      throw new Error("FORBIDDEN");
+    if (match.game.phase !== "await_prompt") throw new Error("INVALID_PHASE");
 
     const trade = match.game.trade;
     const accept = command.accept;
@@ -859,16 +921,17 @@ export function handleCommand(match: MatchState, command: Command, nowMs: number
     if (accept) {
       const from = match.game.players[trade.fromPlayerId];
       const to = match.game.players[trade.toPlayerId];
-      if (!from || !to) throw new Error('PLAYER_NOT_FOUND');
-      if (from.cash < trade.offer.cash) throw new Error('INSUFFICIENT_CASH');
-      if (to.cash < trade.request.cash) throw new Error('OTHER_INSUFFICIENT_CASH');
+      if (!from || !to) throw new Error("PLAYER_NOT_FOUND");
+      if (from.cash < trade.offer.cash) throw new Error("INSUFFICIENT_CASH");
+      if (to.cash < trade.request.cash)
+        throw new Error("OTHER_INSUFFICIENT_CASH");
 
       const emitMoney = (playerId: PlayerId, delta: number, reason: string) => {
         const r = allocEvent(cursor, nowMs, causedBy);
         cursor = r.match;
         events.push({
           ...r.base,
-          type: 'game/moneyChanged',
+          type: "game/moneyChanged",
           gameId: match.game.gameId,
           playerId,
           delta,
@@ -877,47 +940,85 @@ export function handleCommand(match: MatchState, command: Command, nowMs: number
       };
 
       if (trade.offer.cash > 0) {
-        emitMoney(trade.fromPlayerId, -trade.offer.cash, `trade:${trade.tradeId}`);
+        emitMoney(
+          trade.fromPlayerId,
+          -trade.offer.cash,
+          `trade:${trade.tradeId}`,
+        );
         emitMoney(trade.toPlayerId, trade.offer.cash, `trade:${trade.tradeId}`);
       }
       if (trade.request.cash > 0) {
-        emitMoney(trade.toPlayerId, -trade.request.cash, `trade:${trade.tradeId}`);
-        emitMoney(trade.fromPlayerId, trade.request.cash, `trade:${trade.tradeId}`);
+        emitMoney(
+          trade.toPlayerId,
+          -trade.request.cash,
+          `trade:${trade.tradeId}`,
+        );
+        emitMoney(
+          trade.fromPlayerId,
+          trade.request.cash,
+          `trade:${trade.tradeId}`,
+        );
       }
 
-      const transferProperty = (propertyId: string, fromId: PlayerId, toId: PlayerId) => {
+      const transferProperty = (
+        propertyId: string,
+        fromId: PlayerId,
+        toId: PlayerId,
+      ) => {
         const r = allocEvent(cursor, nowMs, causedBy);
         cursor = r.match;
         events.push({
           ...r.base,
-          type: 'game/engine',
+          type: "game/engine",
           gameId: match.game.gameId,
-          name: 'property/transferred',
+          name: "property/transferred",
           data: { propertyId, fromPlayerId: fromId, toPlayerId: toId },
         });
       };
 
-      for (const pid of trade.offer.properties) transferProperty(pid, trade.fromPlayerId, trade.toPlayerId);
-      for (const pid of trade.request.properties) transferProperty(pid, trade.toPlayerId, trade.fromPlayerId);
+      for (const pid of trade.offer.properties)
+        transferProperty(pid, trade.fromPlayerId, trade.toPlayerId);
+      for (const pid of trade.request.properties)
+        transferProperty(pid, trade.toPlayerId, trade.fromPlayerId);
 
-      const cardDelta = (deck: CardDeckKind, fromId: PlayerId, toId: PlayerId, count: number) => {
+      const cardDelta = (
+        deck: CardDeckKind,
+        fromId: PlayerId,
+        toId: PlayerId,
+        count: number,
+      ) => {
         if (count <= 0) return;
         const r = allocEvent(cursor, nowMs, causedBy);
         cursor = r.match;
         events.push({
           ...r.base,
-          type: 'game/engine',
+          type: "game/engine",
           gameId: match.game.gameId,
-          name: 'card/transferredGetOutOfJail',
+          name: "card/transferredGetOutOfJail",
           data: { deck, fromPlayerId: fromId, toPlayerId: toId, count },
         });
       };
 
-      cardDelta('chance', trade.fromPlayerId, trade.toPlayerId, trade.offer.getOutOfJailChance ?? 0);
-      cardDelta('communityChest', trade.fromPlayerId, trade.toPlayerId, trade.offer.getOutOfJailCommunity ?? 0);
-      cardDelta('chance', trade.toPlayerId, trade.fromPlayerId, trade.request.getOutOfJailChance ?? 0);
       cardDelta(
-        'communityChest',
+        "chance",
+        trade.fromPlayerId,
+        trade.toPlayerId,
+        trade.offer.getOutOfJailChance ?? 0,
+      );
+      cardDelta(
+        "communityChest",
+        trade.fromPlayerId,
+        trade.toPlayerId,
+        trade.offer.getOutOfJailCommunity ?? 0,
+      );
+      cardDelta(
+        "chance",
+        trade.toPlayerId,
+        trade.fromPlayerId,
+        trade.request.getOutOfJailChance ?? 0,
+      );
+      cardDelta(
+        "communityChest",
         trade.toPlayerId,
         trade.fromPlayerId,
         trade.request.getOutOfJailCommunity ?? 0,
@@ -929,9 +1030,9 @@ export function handleCommand(match: MatchState, command: Command, nowMs: number
       cursor = r.match;
       events.push({
         ...r.base,
-        type: 'game/engine',
+        type: "game/engine",
         gameId: match.game.gameId,
-        name: 'trade/resolved',
+        name: "trade/resolved",
         data: { tradeId: trade.tradeId, accepted: accept },
       });
     }
@@ -945,62 +1046,70 @@ export function handleCommand(match: MatchState, command: Command, nowMs: number
     return { state: nextState, events };
   }
 
-  if (command.type === 'game/buyProperty') {
+  if (command.type === "game/buyProperty") {
     requireGame();
     requireCurrentPlayer(command.playerId);
-    if (match.game.phase !== 'await_prompt') throw new Error('INVALID_PHASE');
+    if (match.game.phase !== "await_prompt") throw new Error("INVALID_PHASE");
     const pending = match.game.pendingPrompt;
-    if (!pending || pending.kind !== 'buyOrAuction') throw new Error('INVALID_PHASE');
-    if (pending.playerId !== command.playerId) throw new Error('FORBIDDEN');
-    if (pending.propertyId !== command.propertyId) throw new Error('PROPERTY_MISMATCH');
+    if (!pending || pending.kind !== "buyOrAuction")
+      throw new Error("INVALID_PHASE");
+    if (pending.playerId !== command.playerId) throw new Error("FORBIDDEN");
+    if (pending.propertyId !== command.propertyId)
+      throw new Error("PROPERTY_MISMATCH");
 
     return handleCommand(
       match,
       {
-        type: 'game/respondPrompt',
+        type: "game/respondPrompt",
         commandId: command.commandId,
         clientSeq: command.clientSeq,
         roomId: command.roomId,
         gameId: command.gameId,
         playerId: command.playerId,
         promptId: pending.promptId,
-        choice: { action: 'buy' },
+        choice: { action: "buy" },
       },
       nowMs,
     );
   }
 
-  if (command.type === 'game/respondPrompt') {
+  if (command.type === "game/respondPrompt") {
     requireGame();
-    if (match.game.phase !== 'await_prompt') throw new Error('INVALID_PHASE');
+    if (match.game.phase !== "await_prompt") throw new Error("INVALID_PHASE");
     const pending = match.game.pendingPrompt;
-    if (!pending) throw new Error('INVALID_PHASE');
-    if (pending.promptId !== command.promptId) throw new Error('PROMPT_MISMATCH');
-    if (pending.playerId !== command.playerId) throw new Error('FORBIDDEN');
+    if (!pending) throw new Error("INVALID_PHASE");
+    if (pending.promptId !== command.promptId)
+      throw new Error("PROMPT_MISMATCH");
+    if (pending.playerId !== command.playerId) throw new Error("FORBIDDEN");
 
     let cursor = match;
     let events: Event[] = [];
 
-    if (pending.kind === 'buyOrAuction') {
+    if (pending.kind === "buyOrAuction") {
       const choice = command.choice as { action?: unknown };
       const action = choice?.action;
-      if (action !== 'buy' && action !== 'auction') throw new Error('INVALID_CHOICE');
+      if (action !== "buy" && action !== "auction")
+        throw new Error("INVALID_CHOICE");
       const tile = getPropertyTile(match.game, pending.propertyId);
-      if (!tile || tile.ownerPlayerId) throw new Error('NOT_BUYABLE');
+      if (!tile || tile.ownerPlayerId) throw new Error("NOT_BUYABLE");
       const buyer = match.game.players[pending.playerId];
-      if (!buyer) throw new Error('PLAYER_NOT_FOUND');
+      if (!buyer) throw new Error("PLAYER_NOT_FOUND");
 
-      if (action === 'buy') {
-        if (buyer.cash < pending.price) throw new Error('INSUFFICIENT_CASH');
+      if (action === "buy") {
+        if (buyer.cash < pending.price) throw new Error("INSUFFICIENT_CASH");
         {
           const r = allocEvent(cursor, nowMs, causedBy);
           cursor = r.match;
           events.push({
             ...r.base,
-            type: 'game/engine',
+            type: "game/engine",
             gameId: match.game.gameId,
-            name: 'property/bought',
-            data: { playerId: pending.playerId, propertyId: pending.propertyId, price: pending.price },
+            name: "property/bought",
+            data: {
+              playerId: pending.playerId,
+              propertyId: pending.propertyId,
+              price: pending.price,
+            },
           });
         }
         {
@@ -1008,7 +1117,7 @@ export function handleCommand(match: MatchState, command: Command, nowMs: number
           cursor = r.match;
           events.push({
             ...r.base,
-            type: 'game/moneyChanged',
+            type: "game/moneyChanged",
             gameId: match.game.gameId,
             playerId: pending.playerId,
             delta: -pending.price,
@@ -1021,9 +1130,9 @@ export function handleCommand(match: MatchState, command: Command, nowMs: number
           cursor = r.match;
           events.push({
             ...r.base,
-            type: 'game/engine',
+            type: "game/engine",
             gameId: match.game.gameId,
-            name: 'auction/started',
+            name: "auction/started",
             data: { propertyId: pending.propertyId },
           });
         }
@@ -1040,12 +1149,12 @@ export function handleCommand(match: MatchState, command: Command, nowMs: number
           const promptId = `p${r.seq}`;
           events.push({
             ...r.base,
-            type: 'game/prompted',
+            type: "game/prompted",
             gameId: match.game.gameId,
             prompt: {
               promptId,
               playerId: firstBidder,
-              kind: 'auctionBid',
+              kind: "auctionBid",
               data: {
                 propertyId: pending.propertyId,
                 minBid: 1,
@@ -1056,23 +1165,27 @@ export function handleCommand(match: MatchState, command: Command, nowMs: number
           });
         }
       }
-    } else if (pending.kind === 'auctionBid') {
+    } else if (pending.kind === "auctionBid") {
       const choice = command.choice as { bid?: unknown; pass?: unknown };
       const bidRaw = choice?.bid;
       const pass = choice?.pass === true;
-      const bid = typeof bidRaw === 'number' && Number.isFinite(bidRaw) ? Math.floor(bidRaw) : null;
+      const bid =
+        typeof bidRaw === "number" && Number.isFinite(bidRaw)
+          ? Math.floor(bidRaw)
+          : null;
 
       const auction = match.game.auction;
-      if (!auction) throw new Error('NO_AUCTION');
-      if (auction.propertyId !== pending.propertyId) throw new Error('AUCTION_MISMATCH');
+      if (!auction) throw new Error("NO_AUCTION");
+      if (auction.propertyId !== pending.propertyId)
+        throw new Error("AUCTION_MISMATCH");
 
       const tile = getPropertyTile(match.game, auction.propertyId);
-      if (!tile || tile.ownerPlayerId) throw new Error('NOT_BUYABLE');
+      if (!tile || tile.ownerPlayerId) throw new Error("NOT_BUYABLE");
 
       const active = [...auction.activeBidders];
       const bidder = pending.playerId;
       const bidderIndex = active.indexOf(bidder);
-      if (bidderIndex < 0) throw new Error('NOT_A_BIDDER');
+      if (bidderIndex < 0) throw new Error("NOT_A_BIDDER");
 
       let highestBid = auction.highestBid;
       let highestBidderId = auction.highestBidderId;
@@ -1080,11 +1193,11 @@ export function handleCommand(match: MatchState, command: Command, nowMs: number
       if (pass) {
         active.splice(bidderIndex, 1);
       } else {
-        if (bid === null) throw new Error('INVALID_CHOICE');
+        if (bid === null) throw new Error("INVALID_CHOICE");
         const minBid = highestBid + 1;
-        if (bid < minBid) throw new Error('BID_TOO_LOW');
+        if (bid < minBid) throw new Error("BID_TOO_LOW");
         const p = match.game.players[bidder];
-        if (!p || p.cash < bid) throw new Error('INSUFFICIENT_CASH');
+        if (!p || p.cash < bid) throw new Error("INSUFFICIENT_CASH");
         highestBid = bid;
         highestBidderId = bidder;
       }
@@ -1102,9 +1215,9 @@ export function handleCommand(match: MatchState, command: Command, nowMs: number
         cursor = r.match;
         events.push({
           ...r.base,
-          type: 'game/engine',
+          type: "game/engine",
           gameId: match.game.gameId,
-          name: 'auction/updated',
+          name: "auction/updated",
           data: nextAuction,
         });
       }
@@ -1117,10 +1230,14 @@ export function handleCommand(match: MatchState, command: Command, nowMs: number
             cursor = r.match;
             events.push({
               ...r.base,
-              type: 'game/engine',
+              type: "game/engine",
               gameId: match.game.gameId,
-              name: 'property/bought',
-              data: { playerId: winner, propertyId: auction.propertyId, price: highestBid },
+              name: "property/bought",
+              data: {
+                playerId: winner,
+                propertyId: auction.propertyId,
+                price: highestBid,
+              },
             });
           }
           {
@@ -1128,7 +1245,7 @@ export function handleCommand(match: MatchState, command: Command, nowMs: number
             cursor = r.match;
             events.push({
               ...r.base,
-              type: 'game/moneyChanged',
+              type: "game/moneyChanged",
               gameId: match.game.gameId,
               playerId: winner,
               delta: -highestBid,
@@ -1141,14 +1258,20 @@ export function handleCommand(match: MatchState, command: Command, nowMs: number
           cursor = r.match;
           events.push({
             ...r.base,
-            type: 'game/engine',
+            type: "game/engine",
             gameId: match.game.gameId,
-            name: 'auction/ended',
-            data: { propertyId: auction.propertyId, winnerPlayerId: winner ?? null, price: highestBid },
+            name: "auction/ended",
+            data: {
+              propertyId: auction.propertyId,
+              winnerPlayerId: winner ?? null,
+              price: highestBid,
+            },
           });
         }
       } else {
-        const nextIndex = pass ? bidderIndex % active.length : (bidderIndex + 1) % active.length;
+        const nextIndex = pass
+          ? bidderIndex % active.length
+          : (bidderIndex + 1) % active.length;
         const nextBidder = active[nextIndex]!;
         {
           const r = allocEvent(cursor, nowMs, causedBy);
@@ -1156,12 +1279,12 @@ export function handleCommand(match: MatchState, command: Command, nowMs: number
           const promptId = `p${r.seq}`;
           events.push({
             ...r.base,
-            type: 'game/prompted',
+            type: "game/prompted",
             gameId: match.game.gameId,
             prompt: {
               promptId,
               playerId: nextBidder,
-              kind: 'auctionBid',
+              kind: "auctionBid",
               data: {
                 propertyId: auction.propertyId,
                 minBid: highestBid + 1,
@@ -1173,7 +1296,7 @@ export function handleCommand(match: MatchState, command: Command, nowMs: number
         }
       }
     } else {
-      throw new Error('UNSUPPORTED_PROMPT');
+      throw new Error("UNSUPPORTED_PROMPT");
     }
 
     const after = applyEvents(match, events);
@@ -1186,12 +1309,13 @@ export function handleCommand(match: MatchState, command: Command, nowMs: number
     return { state: nextState, events: finalEvents };
   }
 
-  if (command.type === 'game/declareBankruptcy') {
+  if (command.type === "game/declareBankruptcy") {
     requireGame();
     requireCurrentPlayer(command.playerId);
-    if (!match.game.debt) throw new Error('NO_DEBT');
-    if (match.game.debt.debtorId !== command.playerId) throw new Error('FORBIDDEN');
-    if (match.game.phase !== 'await_debt') throw new Error('INVALID_PHASE');
+    if (!match.game.debt) throw new Error("NO_DEBT");
+    if (match.game.debt.debtorId !== command.playerId)
+      throw new Error("FORBIDDEN");
+    if (match.game.phase !== "await_debt") throw new Error("INVALID_PHASE");
 
     let cursor = match;
     const events: Event[] = [];
@@ -1200,9 +1324,9 @@ export function handleCommand(match: MatchState, command: Command, nowMs: number
       cursor = r.match;
       events.push({
         ...r.base,
-        type: 'game/engine',
+        type: "game/engine",
         gameId: match.game.gameId,
-        name: 'bankruptcy/declared',
+        name: "bankruptcy/declared",
         data: match.game.debt,
       });
     }
@@ -1210,18 +1334,23 @@ export function handleCommand(match: MatchState, command: Command, nowMs: number
     const afterBankruptcy = applyEvents(match, events);
     const active = activePlayerIds(afterBankruptcy.game);
     if (active.length > 1) {
-      const nextPlayerId = findNextActivePlayer(afterBankruptcy.game, command.playerId);
+      const nextPlayerId = findNextActivePlayer(
+        afterBankruptcy.game,
+        command.playerId,
+      );
       const round =
-        nextPlayerId === afterBankruptcy.game.turnOrder[0] ? afterBankruptcy.game.round + 1 : afterBankruptcy.game.round;
+        nextPlayerId === afterBankruptcy.game.turnOrder[0]
+          ? afterBankruptcy.game.round + 1
+          : afterBankruptcy.game.round;
       const r = allocEvent(cursor, nowMs, causedBy);
       cursor = r.match;
       events.push({
         ...r.base,
-        type: 'game/turnStarted',
+        type: "game/turnStarted",
         gameId: match.game.gameId,
         currentPlayerId: nextPlayerId,
         round,
-        phase: 'await_roll',
+        phase: "await_roll",
       });
     }
 
@@ -1232,11 +1361,11 @@ export function handleCommand(match: MatchState, command: Command, nowMs: number
     return { state: nextState, events: finalEvents };
   }
 
-  if (command.type === 'game/forfeit') {
+  if (command.type === "game/forfeit") {
     requireGame();
     const player = match.game.players[command.playerId];
-    if (!player) throw new Error('PLAYER_NOT_FOUND');
-    if (player.eliminated) throw new Error('ELIMINATED');
+    if (!player) throw new Error("PLAYER_NOT_FOUND");
+    if (player.eliminated) throw new Error("ELIMINATED");
 
     let cursor = match;
     const events: Event[] = [];
@@ -1245,9 +1374,9 @@ export function handleCommand(match: MatchState, command: Command, nowMs: number
       cursor = r.match;
       events.push({
         ...r.base,
-        type: 'game/engine',
+        type: "game/engine",
         gameId: match.game.gameId,
-        name: 'player/forfeited',
+        name: "player/forfeited",
         data: { playerId: command.playerId },
       });
     }
@@ -1255,18 +1384,23 @@ export function handleCommand(match: MatchState, command: Command, nowMs: number
     const afterForfeit = applyEvents(match, events);
     const active = activePlayerIds(afterForfeit.game);
     if (active.length > 1 && command.playerId === match.game.currentPlayerId) {
-      const nextPlayerId = findNextActivePlayer(afterForfeit.game, command.playerId);
+      const nextPlayerId = findNextActivePlayer(
+        afterForfeit.game,
+        command.playerId,
+      );
       const round =
-        nextPlayerId === afterForfeit.game.turnOrder[0] ? afterForfeit.game.round + 1 : afterForfeit.game.round;
+        nextPlayerId === afterForfeit.game.turnOrder[0]
+          ? afterForfeit.game.round + 1
+          : afterForfeit.game.round;
       const r = allocEvent(cursor, nowMs, causedBy);
       cursor = r.match;
       events.push({
         ...r.base,
-        type: 'game/turnStarted',
+        type: "game/turnStarted",
         gameId: match.game.gameId,
         currentPlayerId: nextPlayerId,
         round,
-        phase: 'await_roll',
+        phase: "await_roll",
       });
     }
 
@@ -1277,16 +1411,18 @@ export function handleCommand(match: MatchState, command: Command, nowMs: number
     return { state: nextState, events: finalEvents };
   }
 
-  if (command.type === 'game/endTurn') {
+  if (command.type === "game/endTurn") {
     requireGame();
     requireCurrentPlayer(command.playerId);
-    if (match.game.phase !== 'await_end_turn') throw new Error('INVALID_PHASE');
-    if (match.game.debt) throw new Error('INVALID_PHASE');
+    if (match.game.phase !== "await_end_turn") throw new Error("INVALID_PHASE");
+    if (match.game.debt) throw new Error("INVALID_PHASE");
     ensureNoBlockingInteraction();
 
     const nextPlayerId = findNextActivePlayer(match.game, command.playerId);
     const round =
-      nextPlayerId === match.game.turnOrder[0] ? match.game.round + 1 : match.game.round;
+      nextPlayerId === match.game.turnOrder[0]
+        ? match.game.round + 1
+        : match.game.round;
 
     let cursor = match;
     const events: Event[] = [];
@@ -1295,23 +1431,25 @@ export function handleCommand(match: MatchState, command: Command, nowMs: number
       cursor = r.match;
       events.push({
         ...r.base,
-        type: 'game/turnStarted',
+        type: "game/turnStarted",
         gameId: match.game.gameId,
         currentPlayerId: nextPlayerId,
         round,
-        phase: 'await_roll',
+        phase: "await_roll",
       });
     }
     const nextState = applyEvents(match, events);
     return { state: nextState, events };
   }
 
-  if (command.type === 'debug/addCash') {
+  if (command.type === "debug/addCash") {
     requireGame();
-    const delta = Number.isFinite(command.delta) ? Math.trunc(command.delta) : 0;
+    const delta = Number.isFinite(command.delta)
+      ? Math.trunc(command.delta)
+      : 0;
     const targetId = command.targetPlayerId;
     const target = match.game.players[targetId];
-    if (!target) throw new Error('PLAYER_NOT_FOUND');
+    if (!target) throw new Error("PLAYER_NOT_FOUND");
 
     let cursor = match;
     const events: Event[] = [];
@@ -1320,11 +1458,11 @@ export function handleCommand(match: MatchState, command: Command, nowMs: number
       cursor = r.match;
       events.push({
         ...r.base,
-        type: 'game/moneyChanged',
+        type: "game/moneyChanged",
         gameId: match.game.gameId,
         playerId: targetId,
         delta,
-        reason: 'debug:addCash',
+        reason: "debug:addCash",
       });
     }
 
@@ -1338,11 +1476,17 @@ export function handleCommand(match: MatchState, command: Command, nowMs: number
     return { state: nextState, events: finalEvents };
   }
 
-  if (command.type === 'debug/assignProperty') {
+  if (command.type === "debug/assignProperty") {
     requireGame();
     const tile = getPropertyTile(match.game, command.propertyId);
-    if (!tile) throw new Error('INVALID_PROPERTY');
-    if (!(command.ownerPlayerId === null || match.game.players[command.ownerPlayerId])) throw new Error('PLAYER_NOT_FOUND');
+    if (!tile) throw new Error("INVALID_PROPERTY");
+    if (
+      !(
+        command.ownerPlayerId === null ||
+        match.game.players[command.ownerPlayerId]
+      )
+    )
+      throw new Error("PLAYER_NOT_FOUND");
 
     let cursor = match;
     const events: Event[] = [];
@@ -1351,10 +1495,13 @@ export function handleCommand(match: MatchState, command: Command, nowMs: number
       cursor = r.match;
       events.push({
         ...r.base,
-        type: 'game/engine',
+        type: "game/engine",
         gameId: match.game.gameId,
-        name: 'debug/propertyAssigned',
-        data: { propertyId: command.propertyId, ownerPlayerId: command.ownerPlayerId },
+        name: "debug/propertyAssigned",
+        data: {
+          propertyId: command.propertyId,
+          ownerPlayerId: command.ownerPlayerId,
+        },
       });
     }
 
@@ -1368,11 +1515,11 @@ export function handleCommand(match: MatchState, command: Command, nowMs: number
     return { state: nextState, events: finalEvents };
   }
 
-  if (command.type === 'debug/setBuildings') {
+  if (command.type === "debug/setBuildings") {
     requireGame();
     const tile = getPropertyTile(match.game, command.propertyId);
-    if (!tile) throw new Error('INVALID_PROPERTY');
-    if (!tile.ownerPlayerId) throw new Error('NOT_OWNED');
+    if (!tile) throw new Error("INVALID_PROPERTY");
+    if (!tile.ownerPlayerId) throw new Error("NOT_OWNED");
     const buildings = Math.max(0, Math.min(5, Math.trunc(command.buildings)));
 
     let cursor = match;
@@ -1382,9 +1529,9 @@ export function handleCommand(match: MatchState, command: Command, nowMs: number
       cursor = r.match;
       events.push({
         ...r.base,
-        type: 'game/engine',
+        type: "game/engine",
         gameId: match.game.gameId,
-        name: 'debug/buildingsSet',
+        name: "debug/buildingsSet",
         data: { propertyId: command.propertyId, buildings },
       });
     }
@@ -1419,9 +1566,12 @@ function deriveLandingEvents(
     const buildings = t.buildings ?? 0;
     if (buildings > 0) return t.rents[buildings] ?? 0;
     const groupTiles = g.board.tiles.filter(
-      (x): x is BoardPropertyTile => x.kind === 'property' && x.groupId === t.groupId,
+      (x): x is BoardPropertyTile =>
+        x.kind === "property" && x.groupId === t.groupId,
     );
-    const ownsAll = groupTiles.every((x) => x.ownerPlayerId === t.ownerPlayerId);
+    const ownsAll = groupTiles.every(
+      (x) => x.ownerPlayerId === t.ownerPlayerId,
+    );
     const noneMortgaged = groupTiles.every((x) => !x.mortgaged);
     if (ownsAll && noneMortgaged) return (t.rents[0] ?? 0) * 2;
     return t.rents[0] ?? 0;
@@ -1430,44 +1580,91 @@ function deriveLandingEvents(
   const allocEngine = (events: Event[], name: string, data: unknown) => {
     const r = allocEvent(m, nowMs, causedBy);
     m = r.match;
-    events.push({ ...r.base, type: 'game/engine', gameId: state.game.gameId, name, data });
+    events.push({
+      ...r.base,
+      type: "game/engine",
+      gameId: state.game.gameId,
+      name,
+      data,
+    });
   };
 
-  const allocMoney = (events: Event[], playerId: PlayerId, delta: number, reason: string) => {
+  const allocMoney = (
+    events: Event[],
+    playerId: PlayerId,
+    delta: number,
+    reason: string,
+  ) => {
     const r = allocEvent(m, nowMs, causedBy);
     m = r.match;
-    events.push({ ...r.base, type: 'game/moneyChanged', gameId: state.game.gameId, playerId, delta, reason });
+    events.push({
+      ...r.base,
+      type: "game/moneyChanged",
+      gameId: state.game.gameId,
+      playerId,
+      delta,
+      reason,
+    });
   };
 
-  const allocMove = (events: Event[], playerId: PlayerId, from: number, to: number) => {
+  const allocMove = (
+    events: Event[],
+    playerId: PlayerId,
+    from: number,
+    to: number,
+  ) => {
     const r = allocEvent(m, nowMs, causedBy);
     m = r.match;
-    events.push({ ...r.base, type: 'game/playerMoved', gameId: state.game.gameId, playerId, from, to });
+    events.push({
+      ...r.base,
+      type: "game/playerMoved",
+      gameId: state.game.gameId,
+      playerId,
+      from,
+      to,
+    });
   };
 
-  const allocPromptBuyOrAuction = (events: Event[], playerId: PlayerId, propertyId: string, price: number) => {
+  const allocPromptBuyOrAuction = (
+    events: Event[],
+    playerId: PlayerId,
+    propertyId: string,
+    price: number,
+  ) => {
     const r = allocEvent(m, nowMs, causedBy);
     m = r.match;
     const promptId = `p${r.seq}`;
     events.push({
       ...r.base,
-      type: 'game/prompted',
+      type: "game/prompted",
       gameId: state.game.gameId,
-      prompt: { promptId, playerId, kind: 'buyOrAuction', data: { propertyId, price } },
+      prompt: {
+        promptId,
+        playerId,
+        kind: "buyOrAuction",
+        data: { propertyId, price },
+      },
     });
   };
 
   const createDebt = (events: Event[], debt: DebtState) => {
-    allocEngine(events, 'debt/created', debt);
+    allocEngine(events, "debt/created", debt);
   };
 
-  const tryPay = (events: Event[], debtorId: PlayerId, creditor: DebtCreditor, amount: number, reason: string) => {
+  const tryPay = (
+    events: Event[],
+    debtorId: PlayerId,
+    creditor: DebtCreditor,
+    amount: number,
+    reason: string,
+  ) => {
     const debtor = state.game.players[debtorId];
     if (!debtor) return;
     if (amount <= 0) return;
     if (debtor.cash >= amount) {
       allocMoney(events, debtorId, -amount, reason);
-      if (creditor.kind === 'player') allocMoney(events, creditor.playerId, amount, reason);
+      if (creditor.kind === "player")
+        allocMoney(events, creditor.playerId, amount, reason);
       return;
     }
     createDebt(events, { debtorId, creditor, amount, reason });
@@ -1481,27 +1678,38 @@ function deriveLandingEvents(
 
     const stepEvents: Event[] = [];
     const tile = getTile(game, player.position);
-    if (tile.kind === 'goToJail') {
-      allocEngine(stepEvents, 'jail/enter', { playerId: player.playerId });
+    if (tile.kind === "goToJail") {
+      allocEngine(stepEvents, "jail/enter", { playerId: player.playerId });
       all.push(...stepEvents);
       state = applyEvents(state, stepEvents);
       break;
     }
 
-    if (tile.kind === 'tax') {
-      tryPay(stepEvents, player.playerId, { kind: 'bank' }, (tile as BoardTaxTile).amount, `tax:${player.position}`);
+    if (tile.kind === "tax") {
+      tryPay(
+        stepEvents,
+        player.playerId,
+        { kind: "bank" },
+        (tile as BoardTaxTile).amount,
+        `tax:${player.position}`,
+      );
       all.push(...stepEvents);
       state = applyEvents(state, stepEvents);
       if (state.game.debt) break;
       break;
     }
 
-    if (tile.kind === 'chance' || tile.kind === 'communityChest') {
-      const deck: CardDeckKind = tile.kind === 'chance' ? 'chance' : 'communityChest';
+    if (tile.kind === "chance" || tile.kind === "communityChest") {
+      const deck: CardDeckKind =
+        tile.kind === "chance" ? "chance" : "communityChest";
       const deckState = game.decks[deck];
       const cardId = deckState.drawPile[0];
       if (!cardId) break;
-      allocEngine(stepEvents, 'card/drawn', { deck, cardId, playerId: player.playerId });
+      allocEngine(stepEvents, "card/drawn", {
+        deck,
+        cardId,
+        playerId: player.playerId,
+      });
       all.push(...stepEvents);
       state = applyEvents(state, stepEvents);
 
@@ -1509,7 +1717,7 @@ function deriveLandingEvents(
       if (!def) break;
       const eff = def.effect;
 
-      if (eff.kind === 'money') {
+      if (eff.kind === "money") {
         if (eff.delta >= 0) {
           const stepEvents2: Event[] = [];
           allocMoney(stepEvents2, player.playerId, eff.delta, `card:${cardId}`);
@@ -1518,26 +1726,38 @@ function deriveLandingEvents(
           break;
         }
         const stepEvents2: Event[] = [];
-        tryPay(stepEvents2, player.playerId, { kind: 'bank' }, -eff.delta, `card:${cardId}`);
+        tryPay(
+          stepEvents2,
+          player.playerId,
+          { kind: "bank" },
+          -eff.delta,
+          `card:${cardId}`,
+        );
         all.push(...stepEvents2);
         state = applyEvents(state, stepEvents2);
         if (state.game.debt) break;
         break;
       }
 
-      if (eff.kind === 'moveTo') {
+      if (eff.kind === "moveTo") {
         const from = player.position;
         const to = eff.index;
-        if (eff.passStart && to < from) allocMoney(stepEvents, player.playerId, rulesStartSalary(game.board), 'passStart');
+        if (eff.passStart && to < from)
+          allocMoney(
+            stepEvents,
+            player.playerId,
+            rulesStartSalary(game.board),
+            "passStart",
+          );
         allocMove(stepEvents, player.playerId, from, to);
         all.push(...stepEvents);
         state = applyEvents(state, stepEvents);
         continue;
       }
 
-      if (eff.kind === 'goToJail') {
+      if (eff.kind === "goToJail") {
         const stepEvents2: Event[] = [];
-        allocEngine(stepEvents2, 'jail/enter', { playerId: player.playerId });
+        allocEngine(stepEvents2, "jail/enter", { playerId: player.playerId });
         all.push(...stepEvents2);
         state = applyEvents(state, stepEvents2);
         break;
@@ -1546,11 +1766,16 @@ function deriveLandingEvents(
       break;
     }
 
-    if (tile.kind === 'property') {
+    if (tile.kind === "property") {
       const t = tile as BoardPropertyTile;
       if (!t.ownerPlayerId) {
         if (player.cash >= t.price) {
-          allocPromptBuyOrAuction(stepEvents, player.playerId, t.propertyId, t.price);
+          allocPromptBuyOrAuction(
+            stepEvents,
+            player.playerId,
+            t.propertyId,
+            t.price,
+          );
           all.push(...stepEvents);
           state = applyEvents(state, stepEvents);
         }
@@ -1559,7 +1784,13 @@ function deriveLandingEvents(
       if (t.ownerPlayerId !== player.playerId) {
         const rent = calcRent(game, t);
         if (rent > 0)
-          tryPay(stepEvents, player.playerId, { kind: 'player', playerId: t.ownerPlayerId }, rent, `rent:${t.propertyId}`);
+          tryPay(
+            stepEvents,
+            player.playerId,
+            { kind: "player", playerId: t.ownerPlayerId },
+            rent,
+            `rent:${t.propertyId}`,
+          );
         all.push(...stepEvents);
         state = applyEvents(state, stepEvents);
         break;
@@ -1593,7 +1824,7 @@ function deriveAutoDebtPayment(
     m = r.match;
     events.push({
       ...r.base,
-      type: 'game/moneyChanged',
+      type: "game/moneyChanged",
       gameId: after.game.gameId,
       playerId: debt.debtorId,
       delta: -debt.amount,
@@ -1601,12 +1832,12 @@ function deriveAutoDebtPayment(
     });
   }
 
-  if (debt.creditor.kind === 'player') {
+  if (debt.creditor.kind === "player") {
     const r = allocEvent(m, nowMs, causedBy);
     m = r.match;
     events.push({
       ...r.base,
-      type: 'game/moneyChanged',
+      type: "game/moneyChanged",
       gameId: after.game.gameId,
       playerId: debt.creditor.playerId,
       delta: debt.amount,
@@ -1619,9 +1850,9 @@ function deriveAutoDebtPayment(
     m = r.match;
     events.push({
       ...r.base,
-      type: 'game/engine',
+      type: "game/engine",
       gameId: after.game.gameId,
-      name: 'debt/cleared',
+      name: "debt/cleared",
       data: { debtorId: debt.debtorId },
     });
   }
@@ -1629,7 +1860,11 @@ function deriveAutoDebtPayment(
   return { events, match: m };
 }
 
-function deriveEndEvents(after: MatchState, cursor: MatchState, nowMs: number): DeriveEventsResult {
+function deriveEndEvents(
+  after: MatchState,
+  cursor: MatchState,
+  nowMs: number,
+): DeriveEventsResult {
   const game = after.game;
   const active = activePlayerIds(game);
   if (active.length > 1) return { events: [], match: cursor };
@@ -1646,10 +1881,10 @@ function deriveEndEvents(after: MatchState, cursor: MatchState, nowMs: number): 
       eventId: EventId;
       seq: EventSeq;
       causedBy?: { commandId?: CommandId; playerId?: PlayerId };
-      type: 'game/ended';
+      type: "game/ended";
       gameId: GameId;
       winnerPlayerId?: PlayerId;
-    } = { ...r.base, type: 'game/ended', gameId: game.gameId };
+    } = { ...r.base, type: "game/ended", gameId: game.gameId };
     if (winnerPlayerId) e.winnerPlayerId = winnerPlayerId;
     return e as Event;
   })();
@@ -1661,9 +1896,9 @@ export function applyEvent(match: MatchState, event: Event): MatchState {
   const next = structuredClone(match) as MatchState;
   const game = next.game;
 
-  if (event.type === 'room/gameStarted') return next;
+  if (event.type === "room/gameStarted") return next;
 
-  if (event.type === 'game/turnStarted') {
+  if (event.type === "game/turnStarted") {
     if (event.gameId !== game.gameId) return next;
     clearTurnTransient(game);
     delete game.pendingPrompt;
@@ -1671,20 +1906,20 @@ export function applyEvent(match: MatchState, event: Event): MatchState {
     delete game.trade;
     game.currentPlayerId = event.currentPlayerId;
     game.round = event.round;
-    game.phase = (event.phase as RulesPhase) ?? 'await_roll';
+    game.phase = (event.phase as RulesPhase) ?? "await_roll";
     delete game.debt;
     return next;
   }
 
-  if (event.type === 'game/diceRolled') {
+  if (event.type === "game/diceRolled") {
     if (event.gameId !== game.gameId) return next;
     game.lastDice = event.dice;
     game.rngStep += 2;
-    game.phase = 'await_end_turn';
+    game.phase = "await_end_turn";
     return next;
   }
 
-  if (event.type === 'game/playerMoved') {
+  if (event.type === "game/playerMoved") {
     if (event.gameId !== game.gameId) return next;
     const p = game.players[event.playerId];
     if (!p) return next;
@@ -1692,22 +1927,22 @@ export function applyEvent(match: MatchState, event: Event): MatchState {
     return next;
   }
 
-  if (event.type === 'game/prompted') {
+  if (event.type === "game/prompted") {
     if (event.gameId !== game.gameId) return next;
-    if (event.prompt.kind === 'buyOrAuction') {
+    if (event.prompt.kind === "buyOrAuction") {
       const data = event.prompt.data as { propertyId: string; price: number };
       const pending: PendingPrompt = {
-        kind: 'buyOrAuction',
+        kind: "buyOrAuction",
         promptId: event.prompt.promptId,
         playerId: event.prompt.playerId,
         propertyId: data.propertyId,
         price: data.price,
       };
       game.pendingPrompt = pending;
-      game.phase = 'await_prompt';
+      game.phase = "await_prompt";
       return next;
     }
-    if (event.prompt.kind === 'auctionBid') {
+    if (event.prompt.kind === "auctionBid") {
       const data = event.prompt.data as {
         propertyId: string;
         minBid: number;
@@ -1715,24 +1950,26 @@ export function applyEvent(match: MatchState, event: Event): MatchState {
         highestBidderId?: PlayerId | null;
       };
       const pending: PendingPrompt = {
-        kind: 'auctionBid',
+        kind: "auctionBid",
         promptId: event.prompt.promptId,
         playerId: event.prompt.playerId,
         propertyId: data.propertyId,
         minBid: data.minBid,
         highestBid: data.highestBid,
-        ...(data.highestBidderId ? { highestBidderId: data.highestBidderId } : {}),
+        ...(data.highestBidderId
+          ? { highestBidderId: data.highestBidderId }
+          : {}),
       };
       game.pendingPrompt = pending;
-      game.phase = 'await_prompt';
+      game.phase = "await_prompt";
       return next;
     }
     return next;
   }
 
-  if (event.type === 'game/engine') {
+  if (event.type === "game/engine") {
     if (event.gameId !== game.gameId) return next;
-    if (event.name === 'property/bought') {
+    if (event.name === "property/bought") {
       const data = event.data as { playerId: PlayerId; propertyId: string };
       const tile = getPropertyTile(game, data.propertyId);
       if (tile) {
@@ -1741,24 +1978,25 @@ export function applyEvent(match: MatchState, event: Event): MatchState {
         tile.buildings = 0;
       }
       const p = game.players[data.playerId];
-      if (p && !p.properties.includes(data.propertyId)) p.properties.push(data.propertyId);
+      if (p && !p.properties.includes(data.propertyId))
+        p.properties.push(data.propertyId);
       delete game.pendingPrompt;
-      game.phase = 'await_end_turn';
+      game.phase = "await_end_turn";
       return next;
     }
-    if (event.name === 'property/mortgaged') {
+    if (event.name === "property/mortgaged") {
       const data = event.data as { propertyId: string };
       const tile = getPropertyTile(game, data.propertyId);
       if (tile) tile.mortgaged = true;
       return next;
     }
-    if (event.name === 'property/redeemed') {
+    if (event.name === "property/redeemed") {
       const data = event.data as { propertyId: string };
       const tile = getPropertyTile(game, data.propertyId);
       if (tile) tile.mortgaged = false;
       return next;
     }
-    if (event.name === 'building/built') {
+    if (event.name === "building/built") {
       const data = event.data as { propertyId: string };
       const tile = getPropertyTile(game, data.propertyId);
       if (!tile) return next;
@@ -1773,7 +2011,7 @@ export function applyEvent(match: MatchState, event: Event): MatchState {
       }
       return next;
     }
-    if (event.name === 'building/sold') {
+    if (event.name === "building/sold") {
       const data = event.data as { propertyId: string };
       const tile = getPropertyTile(game, data.propertyId);
       if (!tile) return next;
@@ -1789,7 +2027,7 @@ export function applyEvent(match: MatchState, event: Event): MatchState {
       }
       return next;
     }
-    if (event.name === 'jail/enter') {
+    if (event.name === "jail/enter") {
       const data = event.data as { playerId: PlayerId };
       const p = game.players[data.playerId];
       if (p) {
@@ -1800,17 +2038,17 @@ export function applyEvent(match: MatchState, event: Event): MatchState {
       delete game.pendingPrompt;
       delete game.auction;
       delete game.trade;
-      game.phase = 'await_end_turn';
+      game.phase = "await_end_turn";
       return next;
     }
-    if (event.name === 'jail/turn') {
+    if (event.name === "jail/turn") {
       const data = event.data as { playerId: PlayerId };
       const p = game.players[data.playerId];
       if (p) p.jailTurns += 1;
-      game.phase = 'await_end_turn';
+      game.phase = "await_end_turn";
       return next;
     }
-    if (event.name === 'jail/release') {
+    if (event.name === "jail/release") {
       const data = event.data as { playerId: PlayerId };
       const p = game.players[data.playerId];
       if (p) {
@@ -1819,7 +2057,7 @@ export function applyEvent(match: MatchState, event: Event): MatchState {
       }
       return next;
     }
-    if (event.name === 'auction/started') {
+    if (event.name === "auction/started") {
       const data = event.data as { propertyId: string };
       game.auction = {
         propertyId: data.propertyId,
@@ -1828,45 +2066,54 @@ export function applyEvent(match: MatchState, event: Event): MatchState {
         highestBid: 0,
       };
       delete game.pendingPrompt;
-      game.phase = 'await_prompt';
+      game.phase = "await_prompt";
       return next;
     }
-    if (event.name === 'auction/updated') {
+    if (event.name === "auction/updated") {
       game.auction = event.data as AuctionState;
       delete game.pendingPrompt;
-      game.phase = 'await_prompt';
+      game.phase = "await_prompt";
       return next;
     }
-    if (event.name === 'auction/ended') {
+    if (event.name === "auction/ended") {
       delete game.auction;
       delete game.pendingPrompt;
-      game.phase = 'await_end_turn';
+      game.phase = "await_end_turn";
       return next;
     }
-    if (event.name === 'trade/offered') {
+    if (event.name === "trade/offered") {
       game.trade = event.data as TradeState;
       delete game.pendingPrompt;
-      game.phase = 'await_prompt';
+      game.phase = "await_prompt";
       return next;
     }
-    if (event.name === 'trade/resolved') {
+    if (event.name === "trade/resolved") {
       delete game.trade;
       delete game.pendingPrompt;
-      game.phase = 'await_end_turn';
+      game.phase = "await_end_turn";
       return next;
     }
-    if (event.name === 'property/transferred') {
-      const data = event.data as { propertyId: string; fromPlayerId: PlayerId; toPlayerId: PlayerId };
+    if (event.name === "property/transferred") {
+      const data = event.data as {
+        propertyId: string;
+        fromPlayerId: PlayerId;
+        toPlayerId: PlayerId;
+      };
       const tile = getPropertyTile(game, data.propertyId);
       if (tile) tile.ownerPlayerId = data.toPlayerId;
       const from = game.players[data.fromPlayerId];
-      if (from) from.properties = from.properties.filter((x) => x !== data.propertyId);
+      if (from)
+        from.properties = from.properties.filter((x) => x !== data.propertyId);
       const to = game.players[data.toPlayerId];
-      if (to && !to.properties.includes(data.propertyId)) to.properties.push(data.propertyId);
+      if (to && !to.properties.includes(data.propertyId))
+        to.properties.push(data.propertyId);
       return next;
     }
-    if (event.name === 'debug/propertyAssigned') {
-      const data = event.data as { propertyId: string; ownerPlayerId: PlayerId | null };
+    if (event.name === "debug/propertyAssigned") {
+      const data = event.data as {
+        propertyId: string;
+        ownerPlayerId: PlayerId | null;
+      };
       const tile = getPropertyTile(game, data.propertyId);
       if (!tile) return next;
       const beforeOwner = tile.ownerPlayerId ?? null;
@@ -1874,11 +2121,15 @@ export function applyEvent(match: MatchState, event: Event): MatchState {
 
       if (beforeOwner) {
         const from = game.players[beforeOwner];
-        if (from) from.properties = from.properties.filter((x) => x !== data.propertyId);
+        if (from)
+          from.properties = from.properties.filter(
+            (x) => x !== data.propertyId,
+          );
       }
       if (data.ownerPlayerId) {
         const to = game.players[data.ownerPlayerId];
-        if (to && !to.properties.includes(data.propertyId)) to.properties.push(data.propertyId);
+        if (to && !to.properties.includes(data.propertyId))
+          to.properties.push(data.propertyId);
         tile.ownerPlayerId = data.ownerPlayerId;
       } else {
         delete tile.ownerPlayerId;
@@ -1893,7 +2144,7 @@ export function applyEvent(match: MatchState, event: Event): MatchState {
       tile.mortgaged = false;
       return next;
     }
-    if (event.name === 'debug/buildingsSet') {
+    if (event.name === "debug/buildingsSet") {
       const data = event.data as { propertyId: string; buildings: number };
       const tile = getPropertyTile(game, data.propertyId);
       if (!tile) return next;
@@ -1905,8 +2156,12 @@ export function applyEvent(match: MatchState, event: Event): MatchState {
       }
       return next;
     }
-    if (event.name === 'card/drawn') {
-      const data = event.data as { deck: CardDeckKind; cardId: string; playerId: PlayerId };
+    if (event.name === "card/drawn") {
+      const data = event.data as {
+        deck: CardDeckKind;
+        cardId: string;
+        playerId: PlayerId;
+      };
       const deck = game.decks[data.deck];
       if (deck.drawPile[0] !== data.cardId) {
         deck.drawPile = deck.drawPile.filter((x) => x !== data.cardId);
@@ -1914,10 +2169,10 @@ export function applyEvent(match: MatchState, event: Event): MatchState {
         deck.drawPile.shift();
       }
       const def = getAllCards(game.board).find((c) => c.cardId === data.cardId);
-      if (def?.effect.kind === 'getOutOfJail') {
+      if (def?.effect.kind === "getOutOfJail") {
         const p = game.players[data.playerId];
         if (p) {
-          if (data.deck === 'chance') p.getOutOfJailChance += 1;
+          if (data.deck === "chance") p.getOutOfJailChance += 1;
           else p.getOutOfJailCommunity += 1;
         }
       } else {
@@ -1925,21 +2180,27 @@ export function applyEvent(match: MatchState, event: Event): MatchState {
       }
       return next;
     }
-    if (event.name === 'card/usedGetOutOfJail') {
+    if (event.name === "card/usedGetOutOfJail") {
       const data = event.data as { playerId: PlayerId; deck: CardDeckKind };
       const p = game.players[data.playerId];
       if (p) {
-        if (data.deck === 'chance') p.getOutOfJailChance = Math.max(0, p.getOutOfJailChance - 1);
+        if (data.deck === "chance")
+          p.getOutOfJailChance = Math.max(0, p.getOutOfJailChance - 1);
         else p.getOutOfJailCommunity = Math.max(0, p.getOutOfJailCommunity - 1);
       }
       return next;
     }
-    if (event.name === 'card/transferredGetOutOfJail') {
-      const data = event.data as { deck: CardDeckKind; fromPlayerId: PlayerId; toPlayerId: PlayerId; count: number };
+    if (event.name === "card/transferredGetOutOfJail") {
+      const data = event.data as {
+        deck: CardDeckKind;
+        fromPlayerId: PlayerId;
+        toPlayerId: PlayerId;
+        count: number;
+      };
       const from = game.players[data.fromPlayerId];
       const to = game.players[data.toPlayerId];
       if (from && to) {
-        if (data.deck === 'chance') {
+        if (data.deck === "chance") {
           from.getOutOfJailChance -= data.count;
           to.getOutOfJailChance += data.count;
         } else {
@@ -1949,31 +2210,41 @@ export function applyEvent(match: MatchState, event: Event): MatchState {
       }
       return next;
     }
-    if (event.name === 'debt/created') {
+    if (event.name === "debt/created") {
       game.debt = event.data as DebtState;
       delete game.pendingPrompt;
       delete game.auction;
       delete game.trade;
-      game.phase = 'await_debt';
+      game.phase = "await_debt";
       return next;
     }
-    if (event.name === 'debt/cleared') {
+    if (event.name === "debt/cleared") {
       delete game.debt;
-      game.phase = 'await_end_turn';
+      game.phase = "await_end_turn";
       return next;
     }
-    if (event.name === 'player/forfeited') {
+    if (event.name === "player/forfeited") {
       const data = event.data as { playerId: PlayerId };
       const playerId = data.playerId;
       const forfeited = game.players[playerId];
       if (!forfeited || forfeited.eliminated) return next;
 
       if (game.pendingPrompt?.playerId === playerId) delete game.pendingPrompt;
-      if (game.trade && (game.trade.fromPlayerId === playerId || game.trade.toPlayerId === playerId)) delete game.trade;
+      if (
+        game.trade &&
+        (game.trade.fromPlayerId === playerId ||
+          game.trade.toPlayerId === playerId)
+      )
+        delete game.trade;
       if (game.debt?.debtorId === playerId) delete game.debt;
       if (game.auction?.activeBidders.includes(playerId)) {
-        game.auction.activeBidders = game.auction.activeBidders.filter((x) => x !== playerId);
-        if (game.auction.currentBidderIndex >= game.auction.activeBidders.length) game.auction.currentBidderIndex = 0;
+        game.auction.activeBidders = game.auction.activeBidders.filter(
+          (x) => x !== playerId,
+        );
+        if (
+          game.auction.currentBidderIndex >= game.auction.activeBidders.length
+        )
+          game.auction.currentBidderIndex = 0;
         if (game.auction.highestBidderId === playerId) {
           delete game.auction.highestBidderId;
           game.auction.highestBid = 0;
@@ -2010,11 +2281,12 @@ export function applyEvent(match: MatchState, event: Event): MatchState {
 
       forfeited.properties = [];
       forfeited.eliminated = true;
-      if (game.currentPlayerId === playerId) game.phase = 'await_end_turn';
-      else if (game.phase === 'await_debt' && !game.debt) game.phase = 'await_end_turn';
+      if (game.currentPlayerId === playerId) game.phase = "await_end_turn";
+      else if (game.phase === "await_debt" && !game.debt)
+        game.phase = "await_end_turn";
       return next;
     }
-    if (event.name === 'bankruptcy/declared') {
+    if (event.name === "bankruptcy/declared") {
       const debt = event.data as DebtState;
       const debtor = game.players[debt.debtorId];
       if (!debtor) return next;
@@ -2040,7 +2312,7 @@ export function applyEvent(match: MatchState, event: Event): MatchState {
       const cashTransfer = debtor.cash;
       debtor.cash = 0;
 
-      if (debt.creditor.kind === 'player') {
+      if (debt.creditor.kind === "player") {
         const creditor = game.players[debt.creditor.playerId];
         if (creditor) creditor.cash += cashTransfer;
       }
@@ -2048,10 +2320,11 @@ export function applyEvent(match: MatchState, event: Event): MatchState {
       for (const pid of [...debtor.properties]) {
         const tile = getPropertyTile(game, pid);
         if (!tile) continue;
-        if (debt.creditor.kind === 'player') {
+        if (debt.creditor.kind === "player") {
           tile.ownerPlayerId = debt.creditor.playerId;
           const creditor = game.players[debt.creditor.playerId];
-          if (creditor && !creditor.properties.includes(pid)) creditor.properties.push(pid);
+          if (creditor && !creditor.properties.includes(pid))
+            creditor.properties.push(pid);
         } else {
           delete tile.ownerPlayerId;
           tile.mortgaged = false;
@@ -2065,13 +2338,13 @@ export function applyEvent(match: MatchState, event: Event): MatchState {
       delete game.pendingPrompt;
       delete game.auction;
       delete game.trade;
-      game.phase = 'await_end_turn';
+      game.phase = "await_end_turn";
       return next;
     }
     return next;
   }
 
-  if (event.type === 'game/moneyChanged') {
+  if (event.type === "game/moneyChanged") {
     if (event.gameId !== game.gameId) return next;
     const p = game.players[event.playerId];
     if (!p) return next;
@@ -2079,10 +2352,10 @@ export function applyEvent(match: MatchState, event: Event): MatchState {
     return next;
   }
 
-  if (event.type === 'game/ended') {
+  if (event.type === "game/ended") {
     if (event.gameId !== game.gameId) return next;
-    game.status = 'ended';
-    game.phase = 'ended';
+    game.status = "ended";
+    game.phase = "ended";
     return next;
   }
 

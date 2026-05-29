@@ -1,36 +1,36 @@
-import type { Command } from './command.js';
-import type { Event } from './event.js';
-import type { ProtocolError } from './errors.js';
-import type { MatchSnapshot } from './snapshot.js';
-import type { EventSeq, GameId, RoomId } from './ids.js';
+import type { Command } from "./command.js";
+import type { Event } from "./event.js";
+import type { ProtocolError } from "./errors.js";
+import type { MatchSnapshot } from "./snapshot.js";
+import type { EventSeq, GameId, RoomId } from "./ids.js";
 
 export type ClientMessage =
   | {
-      kind: 'command';
+      kind: "command";
       command: Command;
     }
   | {
-      kind: 'ping';
+      kind: "ping";
       clientTimeMs: number;
     };
 
 export type ServerMessage =
   | {
-      kind: 'snapshot';
+      kind: "snapshot";
       snapshot: MatchSnapshot;
     }
   | {
-      kind: 'events';
+      kind: "events";
       roomId: RoomId;
       gameId: GameId | null;
       fromSeqExclusive: EventSeq;
       events: Event[];
     }
   | {
-      kind: 'error';
+      kind: "error";
       error: ProtocolError;
     }
   | {
-      kind: 'pong';
+      kind: "pong";
       serverTimeMs: number;
     };

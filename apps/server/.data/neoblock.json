@@ -1,0 +1,1070 @@
+{
+  "profiles": {
+    "dev:hn": {
+      "id": "dev:hn",
+      "displayName": "hn",
+      "githubAvatarUrl": null,
+      "customAvatarDataUrl": null,
+      "customAvatarMime": null,
+      "avatarUpdatedAt": null,
+      "createdAt": "2026-05-24T11:06:06.725Z",
+      "updatedAt": "2026-05-24T11:06:06.725Z"
+    },
+    "dev:test1": {
+      "id": "dev:test1",
+      "displayName": "test1",
+      "githubAvatarUrl": null,
+      "customAvatarDataUrl": null,
+      "customAvatarMime": null,
+      "avatarUpdatedAt": null,
+      "createdAt": "2026-05-24T11:06:38.855Z",
+      "updatedAt": "2026-05-24T11:06:38.855Z"
+    }
+  },
+  "friends": {},
+  "rooms": {
+    "7C45Y9": {
+      "code": "7C45Y9",
+      "roomId": "room:7C45Y9",
+      "status": "lobby",
+      "hostPlayerId": "user:dev:hn",
+      "createdAtMs": 1779620767404,
+      "config": {
+        "maxPlayers": 4,
+        "turnTimeSec": 60,
+        "enableAuto": false,
+        "enableAI": false,
+        "templateVersionId": "v1779620751097_e91ced5d"
+      },
+      "members": [
+        {
+          "playerId": "user:dev:test1",
+          "userId": "dev:test1",
+          "displayName": "test1",
+          "isSpectator": false,
+          "ready": false,
+          "joinedAtMs": 1779620805030
+        },
+        {
+          "playerId": "user:dev:hn",
+          "userId": "dev:hn",
+          "displayName": "hn",
+          "isSpectator": false,
+          "ready": false,
+          "joinedAtMs": 1779620767404
+        }
+      ]
+    }
+  },
+  "configDocs": {
+    "builtin:rules": {
+      "docId": "builtin:rules",
+      "kind": "rules",
+      "name": "默认规则",
+      "createdAtMs": 1779620751097,
+      "updatedAtMs": 1779620751097,
+      "publishedVersionId": "v1779620751097_44910130",
+      "draftVersionId": "v1779620751097",
+      "versionIds": ["v1779620751097", "v1779620751097_44910130"],
+      "versions": {
+        "v1779620751097": {
+          "versionId": "v1779620751097",
+          "status": "draft",
+          "createdAtMs": 1779620751097,
+          "updatedAtMs": 1779620751097,
+          "data": {
+            "initialCash": 1500,
+            "startSalary": 200,
+            "jailFine": 50,
+            "mortgageInterestRate": 0.1,
+            "bankHouses": 32,
+            "bankHotels": 12
+          }
+        },
+        "v1779620751097_44910130": {
+          "versionId": "v1779620751097_44910130",
+          "status": "published",
+          "createdAtMs": 1779620751097,
+          "updatedAtMs": 1779620751097,
+          "data": {
+            "initialCash": 1500,
+            "startSalary": 200,
+            "jailFine": 50,
+            "mortgageInterestRate": 0.1,
+            "bankHouses": 32,
+            "bankHotels": 12
+          },
+          "baseVersionId": "v1779620751097",
+          "note": "seed"
+        }
+      }
+    },
+    "builtin:board": {
+      "docId": "builtin:board",
+      "kind": "board",
+      "name": "默认棋盘",
+      "createdAtMs": 1779620751097,
+      "updatedAtMs": 1779620751097,
+      "publishedVersionId": "v1779620751097_a97d10fe",
+      "draftVersionId": "v1779620751097",
+      "versionIds": ["v1779620751097", "v1779620751097_a97d10fe"],
+      "versions": {
+        "v1779620751097": {
+          "versionId": "v1779620751097",
+          "status": "draft",
+          "createdAtMs": 1779620751097,
+          "updatedAtMs": 1779620751097,
+          "data": {
+            "jailIndex": 6,
+            "tiles": [
+              {
+                "kind": "start"
+              },
+              {
+                "kind": "property",
+                "propertyId": "p1",
+                "groupId": "g1",
+                "price": 60,
+                "houseCost": 50,
+                "rents": [2, 10, 30, 90, 160, 250]
+              },
+              {
+                "kind": "chance"
+              },
+              {
+                "kind": "property",
+                "propertyId": "p2",
+                "groupId": "g1",
+                "price": 60,
+                "houseCost": 50,
+                "rents": [4, 20, 60, 180, 320, 450]
+              },
+              {
+                "kind": "tax",
+                "amount": 200
+              },
+              {
+                "kind": "property",
+                "propertyId": "p3",
+                "groupId": "g2",
+                "price": 100,
+                "houseCost": 50,
+                "rents": [6, 30, 90, 270, 400, 550]
+              },
+              {
+                "kind": "jail"
+              },
+              {
+                "kind": "communityChest"
+              },
+              {
+                "kind": "property",
+                "propertyId": "p4",
+                "groupId": "g2",
+                "price": 120,
+                "houseCost": 50,
+                "rents": [8, 40, 100, 300, 450, 600]
+              },
+              {
+                "kind": "goToJail"
+              },
+              {
+                "kind": "property",
+                "propertyId": "p5",
+                "groupId": "g3",
+                "price": 140,
+                "houseCost": 100,
+                "rents": [10, 50, 150, 450, 625, 750]
+              }
+            ]
+          }
+        },
+        "v1779620751097_a97d10fe": {
+          "versionId": "v1779620751097_a97d10fe",
+          "status": "published",
+          "createdAtMs": 1779620751097,
+          "updatedAtMs": 1779620751097,
+          "data": {
+            "jailIndex": 6,
+            "tiles": [
+              {
+                "kind": "start"
+              },
+              {
+                "kind": "property",
+                "propertyId": "p1",
+                "groupId": "g1",
+                "price": 60,
+                "houseCost": 50,
+                "rents": [2, 10, 30, 90, 160, 250]
+              },
+              {
+                "kind": "chance"
+              },
+              {
+                "kind": "property",
+                "propertyId": "p2",
+                "groupId": "g1",
+                "price": 60,
+                "houseCost": 50,
+                "rents": [4, 20, 60, 180, 320, 450]
+              },
+              {
+                "kind": "tax",
+                "amount": 200
+              },
+              {
+                "kind": "property",
+                "propertyId": "p3",
+                "groupId": "g2",
+                "price": 100,
+                "houseCost": 50,
+                "rents": [6, 30, 90, 270, 400, 550]
+              },
+              {
+                "kind": "jail"
+              },
+              {
+                "kind": "communityChest"
+              },
+              {
+                "kind": "property",
+                "propertyId": "p4",
+                "groupId": "g2",
+                "price": 120,
+                "houseCost": 50,
+                "rents": [8, 40, 100, 300, 450, 600]
+              },
+              {
+                "kind": "goToJail"
+              },
+              {
+                "kind": "property",
+                "propertyId": "p5",
+                "groupId": "g3",
+                "price": 140,
+                "houseCost": 100,
+                "rents": [10, 50, 150, 450, 625, 750]
+              }
+            ]
+          },
+          "baseVersionId": "v1779620751097",
+          "note": "seed"
+        }
+      }
+    },
+    "builtin:cards": {
+      "docId": "builtin:cards",
+      "kind": "cards",
+      "name": "默认卡牌",
+      "createdAtMs": 1779620751097,
+      "updatedAtMs": 1779620751097,
+      "publishedVersionId": "v1779620751097_5a139d07",
+      "draftVersionId": "v1779620751097",
+      "versionIds": ["v1779620751097", "v1779620751097_5a139d07"],
+      "versions": {
+        "v1779620751097": {
+          "versionId": "v1779620751097",
+          "status": "draft",
+          "createdAtMs": 1779620751097,
+          "updatedAtMs": 1779620751097,
+          "data": {
+            "cards": [
+              {
+                "cardId": "c1",
+                "deck": "chance",
+                "text": "前往起点，领取工资",
+                "effect": {
+                  "kind": "moveTo",
+                  "index": 0,
+                  "passStart": true
+                }
+              },
+              {
+                "cardId": "c2",
+                "deck": "chance",
+                "text": "入狱",
+                "effect": {
+                  "kind": "goToJail"
+                }
+              },
+              {
+                "cardId": "cc1",
+                "deck": "communityChest",
+                "text": "银行分红 +200",
+                "effect": {
+                  "kind": "money",
+                  "delta": 200
+                }
+              },
+              {
+                "cardId": "cc2",
+                "deck": "communityChest",
+                "text": "出狱卡",
+                "effect": {
+                  "kind": "getOutOfJail"
+                }
+              }
+            ]
+          }
+        },
+        "v1779620751097_5a139d07": {
+          "versionId": "v1779620751097_5a139d07",
+          "status": "published",
+          "createdAtMs": 1779620751097,
+          "updatedAtMs": 1779620751097,
+          "data": {
+            "cards": [
+              {
+                "cardId": "c1",
+                "deck": "chance",
+                "text": "前往起点，领取工资",
+                "effect": {
+                  "kind": "moveTo",
+                  "index": 0,
+                  "passStart": true
+                }
+              },
+              {
+                "cardId": "c2",
+                "deck": "chance",
+                "text": "入狱",
+                "effect": {
+                  "kind": "goToJail"
+                }
+              },
+              {
+                "cardId": "cc1",
+                "deck": "communityChest",
+                "text": "银行分红 +200",
+                "effect": {
+                  "kind": "money",
+                  "delta": 200
+                }
+              },
+              {
+                "cardId": "cc2",
+                "deck": "communityChest",
+                "text": "出狱卡",
+                "effect": {
+                  "kind": "getOutOfJail"
+                }
+              }
+            ]
+          },
+          "baseVersionId": "v1779620751097",
+          "note": "seed"
+        }
+      }
+    },
+    "builtin:board-full": {
+      "docId": "builtin:board-full",
+      "kind": "board",
+      "name": "标准 40 格（测试）",
+      "createdAtMs": 1779620751097,
+      "updatedAtMs": 1779620751097,
+      "publishedVersionId": "v1779620751097_fea091c9",
+      "draftVersionId": "v1779620751097",
+      "versionIds": ["v1779620751097", "v1779620751097_fea091c9"],
+      "versions": {
+        "v1779620751097": {
+          "versionId": "v1779620751097",
+          "status": "draft",
+          "createdAtMs": 1779620751097,
+          "updatedAtMs": 1779620751097,
+          "data": {
+            "jailIndex": 10,
+            "tiles": [
+              {
+                "kind": "start"
+              },
+              {
+                "kind": "property",
+                "propertyId": "f_p01",
+                "name": "旧金山",
+                "groupId": "f_g_brown",
+                "groupName": "棕色组",
+                "price": 60,
+                "houseCost": 50,
+                "rents": [2, 10, 30, 90, 160, 250]
+              },
+              {
+                "kind": "communityChest"
+              },
+              {
+                "kind": "property",
+                "propertyId": "f_p02",
+                "name": "洛杉矶",
+                "groupId": "f_g_brown",
+                "groupName": "棕色组",
+                "price": 60,
+                "houseCost": 50,
+                "rents": [4, 20, 60, 180, 320, 450]
+              },
+              {
+                "kind": "tax",
+                "amount": 200
+              },
+              {
+                "kind": "property",
+                "propertyId": "f_p03",
+                "name": "纽约",
+                "groupId": "f_g_rail",
+                "groupName": "铁路组",
+                "price": 200,
+                "houseCost": 100,
+                "rents": [25, 50, 100, 200, 350, 500]
+              },
+              {
+                "kind": "property",
+                "propertyId": "f_p04",
+                "name": "多伦多",
+                "groupId": "f_g_lightblue",
+                "groupName": "浅蓝组",
+                "price": 100,
+                "houseCost": 50,
+                "rents": [6, 30, 90, 270, 400, 550]
+              },
+              {
+                "kind": "chance"
+              },
+              {
+                "kind": "property",
+                "propertyId": "f_p05",
+                "name": "温哥华",
+                "groupId": "f_g_lightblue",
+                "groupName": "浅蓝组",
+                "price": 100,
+                "houseCost": 50,
+                "rents": [6, 30, 90, 270, 400, 550]
+              },
+              {
+                "kind": "property",
+                "propertyId": "f_p06",
+                "name": "西雅图",
+                "groupId": "f_g_lightblue",
+                "groupName": "浅蓝组",
+                "price": 120,
+                "houseCost": 50,
+                "rents": [8, 40, 100, 300, 450, 600]
+              },
+              {
+                "kind": "jail"
+              },
+              {
+                "kind": "property",
+                "propertyId": "f_p07",
+                "name": "墨西哥城",
+                "groupId": "f_g_pink",
+                "groupName": "粉色组",
+                "price": 140,
+                "houseCost": 100,
+                "rents": [10, 50, 150, 450, 625, 750]
+              },
+              {
+                "kind": "property",
+                "propertyId": "f_p08",
+                "name": "里约热内卢",
+                "groupId": "f_g_util",
+                "groupName": "公用事业组",
+                "price": 150,
+                "houseCost": 100,
+                "rents": [10, 20, 30, 40, 50, 60]
+              },
+              {
+                "kind": "property",
+                "propertyId": "f_p09",
+                "name": "布宜诺斯艾利斯",
+                "groupId": "f_g_pink",
+                "groupName": "粉色组",
+                "price": 160,
+                "houseCost": 100,
+                "rents": [12, 60, 180, 500, 700, 900]
+              },
+              {
+                "kind": "property",
+                "propertyId": "f_p10",
+                "name": "伦敦",
+                "groupId": "f_g_pink",
+                "groupName": "粉色组",
+                "price": 180,
+                "houseCost": 100,
+                "rents": [14, 70, 200, 550, 750, 950]
+              },
+              {
+                "kind": "property",
+                "propertyId": "f_p11",
+                "name": "巴黎",
+                "groupId": "f_g_rail",
+                "groupName": "铁路组",
+                "price": 200,
+                "houseCost": 100,
+                "rents": [25, 50, 100, 200, 350, 500]
+              },
+              {
+                "kind": "property",
+                "propertyId": "f_p12",
+                "name": "阿姆斯特丹",
+                "groupId": "f_g_orange",
+                "groupName": "橙色组",
+                "price": 180,
+                "houseCost": 100,
+                "rents": [14, 70, 200, 550, 750, 950]
+              },
+              {
+                "kind": "communityChest"
+              },
+              {
+                "kind": "property",
+                "propertyId": "f_p13",
+                "name": "柏林",
+                "groupId": "f_g_orange",
+                "groupName": "橙色组",
+                "price": 200,
+                "houseCost": 100,
+                "rents": [16, 80, 220, 600, 800, 1000]
+              },
+              {
+                "kind": "property",
+                "propertyId": "f_p14",
+                "name": "罗马",
+                "groupId": "f_g_orange",
+                "groupName": "橙色组",
+                "price": 220,
+                "houseCost": 150,
+                "rents": [18, 90, 250, 700, 875, 1050]
+              },
+              {
+                "kind": "chance"
+              },
+              {
+                "kind": "property",
+                "propertyId": "f_p15",
+                "name": "马德里",
+                "groupId": "f_g_red",
+                "groupName": "红色组",
+                "price": 220,
+                "houseCost": 150,
+                "rents": [18, 90, 250, 700, 875, 1050]
+              },
+              {
+                "kind": "chance"
+              },
+              {
+                "kind": "property",
+                "propertyId": "f_p16",
+                "name": "里斯本",
+                "groupId": "f_g_red",
+                "groupName": "红色组",
+                "price": 240,
+                "houseCost": 150,
+                "rents": [20, 100, 300, 750, 925, 1100]
+              },
+              {
+                "kind": "property",
+                "propertyId": "f_p17",
+                "name": "苏黎世",
+                "groupId": "f_g_red",
+                "groupName": "红色组",
+                "price": 260,
+                "houseCost": 150,
+                "rents": [22, 110, 330, 800, 975, 1150]
+              },
+              {
+                "kind": "property",
+                "propertyId": "f_p18",
+                "name": "斯德哥尔摩",
+                "groupId": "f_g_rail",
+                "groupName": "铁路组",
+                "price": 200,
+                "houseCost": 100,
+                "rents": [25, 50, 100, 200, 350, 500]
+              },
+              {
+                "kind": "property",
+                "propertyId": "f_p19",
+                "name": "赫尔辛基",
+                "groupId": "f_g_yellow",
+                "groupName": "黄色组",
+                "price": 260,
+                "houseCost": 150,
+                "rents": [22, 110, 330, 800, 975, 1150]
+              },
+              {
+                "kind": "property",
+                "propertyId": "f_p20",
+                "name": "莫斯科",
+                "groupId": "f_g_yellow",
+                "groupName": "黄色组",
+                "price": 280,
+                "houseCost": 150,
+                "rents": [24, 120, 360, 850, 1025, 1200]
+              },
+              {
+                "kind": "property",
+                "propertyId": "f_p21",
+                "name": "伊斯坦布尔",
+                "groupId": "f_g_util",
+                "groupName": "公用事业组",
+                "price": 150,
+                "houseCost": 100,
+                "rents": [10, 20, 30, 40, 50, 60]
+              },
+              {
+                "kind": "property",
+                "propertyId": "f_p22",
+                "name": "迪拜",
+                "groupId": "f_g_yellow",
+                "groupName": "黄色组",
+                "price": 300,
+                "houseCost": 200,
+                "rents": [26, 130, 390, 900, 1100, 1275]
+              },
+              {
+                "kind": "goToJail"
+              },
+              {
+                "kind": "property",
+                "propertyId": "f_p23",
+                "name": "开罗",
+                "groupId": "f_g_green",
+                "groupName": "绿色组",
+                "price": 300,
+                "houseCost": 200,
+                "rents": [26, 130, 390, 900, 1100, 1275]
+              },
+              {
+                "kind": "property",
+                "propertyId": "f_p24",
+                "name": "内罗毕",
+                "groupId": "f_g_green",
+                "groupName": "绿色组",
+                "price": 320,
+                "houseCost": 200,
+                "rents": [28, 150, 450, 1000, 1200, 1400]
+              },
+              {
+                "kind": "communityChest"
+              },
+              {
+                "kind": "property",
+                "propertyId": "f_p25",
+                "name": "约翰内斯堡",
+                "groupId": "f_g_green",
+                "groupName": "绿色组",
+                "price": 350,
+                "houseCost": 200,
+                "rents": [35, 175, 500, 1100, 1300, 1500]
+              },
+              {
+                "kind": "property",
+                "propertyId": "f_p26",
+                "name": "新德里",
+                "groupId": "f_g_rail",
+                "groupName": "铁路组",
+                "price": 200,
+                "houseCost": 100,
+                "rents": [25, 50, 100, 200, 350, 500]
+              },
+              {
+                "kind": "chance"
+              },
+              {
+                "kind": "property",
+                "propertyId": "f_p27",
+                "name": "北京",
+                "groupId": "f_g_darkblue",
+                "groupName": "深蓝组",
+                "price": 350,
+                "houseCost": 200,
+                "rents": [35, 175, 500, 1100, 1300, 1500]
+              },
+              {
+                "kind": "tax",
+                "amount": 100
+              },
+              {
+                "kind": "property",
+                "propertyId": "f_p28",
+                "name": "东京",
+                "groupId": "f_g_darkblue",
+                "groupName": "深蓝组",
+                "price": 400,
+                "houseCost": 200,
+                "rents": [50, 200, 600, 1400, 1700, 2000]
+              }
+            ]
+          }
+        },
+        "v1779620751097_fea091c9": {
+          "versionId": "v1779620751097_fea091c9",
+          "status": "published",
+          "createdAtMs": 1779620751097,
+          "updatedAtMs": 1779620751097,
+          "data": {
+            "jailIndex": 10,
+            "tiles": [
+              {
+                "kind": "start"
+              },
+              {
+                "kind": "property",
+                "propertyId": "f_p01",
+                "name": "旧金山",
+                "groupId": "f_g_brown",
+                "groupName": "棕色组",
+                "price": 60,
+                "houseCost": 50,
+                "rents": [2, 10, 30, 90, 160, 250]
+              },
+              {
+                "kind": "communityChest"
+              },
+              {
+                "kind": "property",
+                "propertyId": "f_p02",
+                "name": "洛杉矶",
+                "groupId": "f_g_brown",
+                "groupName": "棕色组",
+                "price": 60,
+                "houseCost": 50,
+                "rents": [4, 20, 60, 180, 320, 450]
+              },
+              {
+                "kind": "tax",
+                "amount": 200
+              },
+              {
+                "kind": "property",
+                "propertyId": "f_p03",
+                "name": "纽约",
+                "groupId": "f_g_rail",
+                "groupName": "铁路组",
+                "price": 200,
+                "houseCost": 100,
+                "rents": [25, 50, 100, 200, 350, 500]
+              },
+              {
+                "kind": "property",
+                "propertyId": "f_p04",
+                "name": "多伦多",
+                "groupId": "f_g_lightblue",
+                "groupName": "浅蓝组",
+                "price": 100,
+                "houseCost": 50,
+                "rents": [6, 30, 90, 270, 400, 550]
+              },
+              {
+                "kind": "chance"
+              },
+              {
+                "kind": "property",
+                "propertyId": "f_p05",
+                "name": "温哥华",
+                "groupId": "f_g_lightblue",
+                "groupName": "浅蓝组",
+                "price": 100,
+                "houseCost": 50,
+                "rents": [6, 30, 90, 270, 400, 550]
+              },
+              {
+                "kind": "property",
+                "propertyId": "f_p06",
+                "name": "西雅图",
+                "groupId": "f_g_lightblue",
+                "groupName": "浅蓝组",
+                "price": 120,
+                "houseCost": 50,
+                "rents": [8, 40, 100, 300, 450, 600]
+              },
+              {
+                "kind": "jail"
+              },
+              {
+                "kind": "property",
+                "propertyId": "f_p07",
+                "name": "墨西哥城",
+                "groupId": "f_g_pink",
+                "groupName": "粉色组",
+                "price": 140,
+                "houseCost": 100,
+                "rents": [10, 50, 150, 450, 625, 750]
+              },
+              {
+                "kind": "property",
+                "propertyId": "f_p08",
+                "name": "里约热内卢",
+                "groupId": "f_g_util",
+                "groupName": "公用事业组",
+                "price": 150,
+                "houseCost": 100,
+                "rents": [10, 20, 30, 40, 50, 60]
+              },
+              {
+                "kind": "property",
+                "propertyId": "f_p09",
+                "name": "布宜诺斯艾利斯",
+                "groupId": "f_g_pink",
+                "groupName": "粉色组",
+                "price": 160,
+                "houseCost": 100,
+                "rents": [12, 60, 180, 500, 700, 900]
+              },
+              {
+                "kind": "property",
+                "propertyId": "f_p10",
+                "name": "伦敦",
+                "groupId": "f_g_pink",
+                "groupName": "粉色组",
+                "price": 180,
+                "houseCost": 100,
+                "rents": [14, 70, 200, 550, 750, 950]
+              },
+              {
+                "kind": "property",
+                "propertyId": "f_p11",
+                "name": "巴黎",
+                "groupId": "f_g_rail",
+                "groupName": "铁路组",
+                "price": 200,
+                "houseCost": 100,
+                "rents": [25, 50, 100, 200, 350, 500]
+              },
+              {
+                "kind": "property",
+                "propertyId": "f_p12",
+                "name": "阿姆斯特丹",
+                "groupId": "f_g_orange",
+                "groupName": "橙色组",
+                "price": 180,
+                "houseCost": 100,
+                "rents": [14, 70, 200, 550, 750, 950]
+              },
+              {
+                "kind": "communityChest"
+              },
+              {
+                "kind": "property",
+                "propertyId": "f_p13",
+                "name": "柏林",
+                "groupId": "f_g_orange",
+                "groupName": "橙色组",
+                "price": 200,
+                "houseCost": 100,
+                "rents": [16, 80, 220, 600, 800, 1000]
+              },
+              {
+                "kind": "property",
+                "propertyId": "f_p14",
+                "name": "罗马",
+                "groupId": "f_g_orange",
+                "groupName": "橙色组",
+                "price": 220,
+                "houseCost": 150,
+                "rents": [18, 90, 250, 700, 875, 1050]
+              },
+              {
+                "kind": "chance"
+              },
+              {
+                "kind": "property",
+                "propertyId": "f_p15",
+                "name": "马德里",
+                "groupId": "f_g_red",
+                "groupName": "红色组",
+                "price": 220,
+                "houseCost": 150,
+                "rents": [18, 90, 250, 700, 875, 1050]
+              },
+              {
+                "kind": "chance"
+              },
+              {
+                "kind": "property",
+                "propertyId": "f_p16",
+                "name": "里斯本",
+                "groupId": "f_g_red",
+                "groupName": "红色组",
+                "price": 240,
+                "houseCost": 150,
+                "rents": [20, 100, 300, 750, 925, 1100]
+              },
+              {
+                "kind": "property",
+                "propertyId": "f_p17",
+                "name": "苏黎世",
+                "groupId": "f_g_red",
+                "groupName": "红色组",
+                "price": 260,
+                "houseCost": 150,
+                "rents": [22, 110, 330, 800, 975, 1150]
+              },
+              {
+                "kind": "property",
+                "propertyId": "f_p18",
+                "name": "斯德哥尔摩",
+                "groupId": "f_g_rail",
+                "groupName": "铁路组",
+                "price": 200,
+                "houseCost": 100,
+                "rents": [25, 50, 100, 200, 350, 500]
+              },
+              {
+                "kind": "property",
+                "propertyId": "f_p19",
+                "name": "赫尔辛基",
+                "groupId": "f_g_yellow",
+                "groupName": "黄色组",
+                "price": 260,
+                "houseCost": 150,
+                "rents": [22, 110, 330, 800, 975, 1150]
+              },
+              {
+                "kind": "property",
+                "propertyId": "f_p20",
+                "name": "莫斯科",
+                "groupId": "f_g_yellow",
+                "groupName": "黄色组",
+                "price": 280,
+                "houseCost": 150,
+                "rents": [24, 120, 360, 850, 1025, 1200]
+              },
+              {
+                "kind": "property",
+                "propertyId": "f_p21",
+                "name": "伊斯坦布尔",
+                "groupId": "f_g_util",
+                "groupName": "公用事业组",
+                "price": 150,
+                "houseCost": 100,
+                "rents": [10, 20, 30, 40, 50, 60]
+              },
+              {
+                "kind": "property",
+                "propertyId": "f_p22",
+                "name": "迪拜",
+                "groupId": "f_g_yellow",
+                "groupName": "黄色组",
+                "price": 300,
+                "houseCost": 200,
+                "rents": [26, 130, 390, 900, 1100, 1275]
+              },
+              {
+                "kind": "goToJail"
+              },
+              {
+                "kind": "property",
+                "propertyId": "f_p23",
+                "name": "开罗",
+                "groupId": "f_g_green",
+                "groupName": "绿色组",
+                "price": 300,
+                "houseCost": 200,
+                "rents": [26, 130, 390, 900, 1100, 1275]
+              },
+              {
+                "kind": "property",
+                "propertyId": "f_p24",
+                "name": "内罗毕",
+                "groupId": "f_g_green",
+                "groupName": "绿色组",
+                "price": 320,
+                "houseCost": 200,
+                "rents": [28, 150, 450, 1000, 1200, 1400]
+              },
+              {
+                "kind": "communityChest"
+              },
+              {
+                "kind": "property",
+                "propertyId": "f_p25",
+                "name": "约翰内斯堡",
+                "groupId": "f_g_green",
+                "groupName": "绿色组",
+                "price": 350,
+                "houseCost": 200,
+                "rents": [35, 175, 500, 1100, 1300, 1500]
+              },
+              {
+                "kind": "property",
+                "propertyId": "f_p26",
+                "name": "新德里",
+                "groupId": "f_g_rail",
+                "groupName": "铁路组",
+                "price": 200,
+                "houseCost": 100,
+                "rents": [25, 50, 100, 200, 350, 500]
+              },
+              {
+                "kind": "chance"
+              },
+              {
+                "kind": "property",
+                "propertyId": "f_p27",
+                "name": "北京",
+                "groupId": "f_g_darkblue",
+                "groupName": "深蓝组",
+                "price": 350,
+                "houseCost": 200,
+                "rents": [35, 175, 500, 1100, 1300, 1500]
+              },
+              {
+                "kind": "tax",
+                "amount": 100
+              },
+              {
+                "kind": "property",
+                "propertyId": "f_p28",
+                "name": "东京",
+                "groupId": "f_g_darkblue",
+                "groupName": "深蓝组",
+                "price": 400,
+                "houseCost": 200,
+                "rents": [50, 200, 600, 1400, 1700, 2000]
+              }
+            ]
+          },
+          "baseVersionId": "v1779620751097",
+          "note": "seed"
+        }
+      }
+    },
+    "system:template-standard": {
+      "docId": "system:template-standard",
+      "kind": "template",
+      "name": "标准玩法（系统）",
+      "createdAtMs": 1779620751097,
+      "updatedAtMs": 1779620751097,
+      "publishedVersionId": "v1779620751097_e91ced5d",
+      "draftVersionId": "v1779620751097",
+      "versionIds": ["v1779620751097", "v1779620751097_e91ced5d"],
+      "versions": {
+        "v1779620751097": {
+          "versionId": "v1779620751097",
+          "status": "draft",
+          "createdAtMs": 1779620751097,
+          "updatedAtMs": 1779620751097,
+          "data": {
+            "rulesVersionId": "v1779620751097_44910130",
+            "boardVersionId": "v1779620751097_fea091c9",
+            "cardsVersionId": "v1779620751097_5a139d07"
+          }
+        },
+        "v1779620751097_e91ced5d": {
+          "versionId": "v1779620751097_e91ced5d",
+          "status": "published",
+          "createdAtMs": 1779620751097,
+          "updatedAtMs": 1779620751097,
+          "data": {
+            "rulesVersionId": "v1779620751097_44910130",
+            "boardVersionId": "v1779620751097_fea091c9",
+            "cardsVersionId": "v1779620751097_5a139d07"
+          },
+          "baseVersionId": "v1779620751097",
+          "note": "seed"
+        }
+      }
+    }
+  },
+  "gameInvites": []
+}

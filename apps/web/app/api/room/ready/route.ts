@@ -1,9 +1,9 @@
-import { NextResponse } from 'next/server';
+import { NextResponse } from "next/server";
 
-import { normalizeRoomCode, resolveActor } from 'lib/room';
-import { updateAppData } from 'lib/store';
+import { normalizeRoomCode, resolveActor } from "lib/room";
+import { updateAppData } from "lib/store";
 
-export const runtime = 'nodejs';
+export const runtime = "nodejs";
 
 type Body = {
   roomCode?: string;
@@ -13,24 +13,30 @@ type Body = {
 export async function POST(req: Request) {
   const body = (await req.json().catch(() => null)) as Body | null;
   const roomCodeRaw = body?.roomCode;
-  if (!roomCodeRaw) return NextResponse.json({ error: 'INVALID_ROOM_CODE' }, { status: 400 });
+  if (!roomCodeRaw)
+    return NextResponse.json({ error: "INVALID_ROOM_CODE" }, { status: 400 });
   const roomCode = normalizeRoomCode(roomCodeRaw);
-  if (!roomCode) return NextResponse.json({ error: 'INVALID_ROOM_CODE' }, { status: 400 });
+  if (!roomCode)
+    return NextResponse.json({ error: "INVALID_ROOM_CODE" }, { status: 400 });
 
   const actor = await resolveActor({ allowGuestCreate: false });
-  if (!actor) return NextResponse.json({ error: 'UNAUTHORIZED' }, { status: 401 });
+  if (!actor)
+    return NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 });
 
   const ready = body?.ready === true;
 
   const result = await updateAppData((data) => {
     const room = data.rooms[roomCode];
-    if (!room) return { ok: false as const, error: 'ROOM_NOT_FOUND' as const };
-    if (room.closedAtMs) return { ok: false as const, error: 'ROOM_CLOSED' as const };
-    if (room.status !== 'lobby') return { ok: false as const, error: 'GAME_ALREADY_STARTED' as const };
+    if (!room) return { ok: false as const, error: "ROOM_NOT_FOUND" as const };
+    if (room.closedAtMs)
+      return { ok: false as const, error: "ROOM_CLOSED" as const };
+    if (room.status !== "lobby")
+      return { ok: false as const, error: "GAME_ALREADY_STARTED" as const };
 
     const member = room.members.find((m) => m.playerId === actor.playerId);
-    if (!member) return { ok: false as const, error: 'NOT_IN_ROOM' as const };
-    if (member.isSpectator) return { ok: false as const, error: 'NOT_A_PLAYER' as const };
+    if (!member) return { ok: false as const, error: "NOT_IN_ROOM" as const };
+    if (member.isSpectator)
+      return { ok: false as const, error: "NOT_A_PLAYER" as const };
 
     member.ready = ready;
     return { ok: true as const, room };
@@ -38,13 +44,13 @@ export async function POST(req: Request) {
 
   if (!result.ok) {
     const status =
-      result.error === 'ROOM_NOT_FOUND'
+      result.error === "ROOM_NOT_FOUND"
         ? 404
-        : result.error === 'ROOM_CLOSED'
+        : result.error === "ROOM_CLOSED"
           ? 410
-        : result.error === 'NOT_IN_ROOM' || result.error === 'NOT_A_PLAYER'
-          ? 403
-          : 400;
+          : result.error === "NOT_IN_ROOM" || result.error === "NOT_A_PLAYER"
+            ? 403
+            : 400;
     return NextResponse.json(result, { status });
   }
   return NextResponse.json(result);

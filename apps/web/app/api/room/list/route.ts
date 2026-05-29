@@ -1,9 +1,9 @@
-import { NextResponse } from 'next/server';
+import { NextResponse } from "next/server";
 
-import { applyRoomAutoClose, roomArchivedTtlMs } from 'lib/room-lifecycle';
-import { readAppData, updateAppData } from 'lib/store';
+import { applyRoomAutoClose, roomArchivedTtlMs } from "lib/room-lifecycle";
+import { readAppData, updateAppData } from "lib/store";
 
-export const runtime = 'nodejs';
+export const runtime = "nodejs";
 
 export async function GET() {
   const now = Date.now();
@@ -13,7 +13,8 @@ export async function GET() {
     for (const [code, room] of Object.entries(data.rooms)) {
       applyRoomAutoClose(room, now);
       const closedAt = room.closedAtMs ?? null;
-      if (closedAt !== null && now - closedAt > archivedTtlMs) delete data.rooms[code];
+      if (closedAt !== null && now - closedAt > archivedTtlMs)
+        delete data.rooms[code];
     }
   });
 

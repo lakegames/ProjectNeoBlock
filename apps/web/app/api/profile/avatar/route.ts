@@ -1,26 +1,28 @@
-import { mkdir, readFile, unlink, writeFile } from 'node:fs/promises';
-import path from 'node:path';
+import { mkdir, readFile, unlink, writeFile } from "node:fs/promises";
+import path from "node:path";
 
-import { getServerSession } from 'next-auth/next';
-import { NextResponse } from 'next/server';
+import { getServerSession } from "next-auth/next";
+import { NextResponse } from "next/server";
 
-import { authOptions } from 'lib/auth';
-import { readAppData, updateAppData } from 'lib/store';
+import { authOptions } from "lib/auth";
+import { readAppData, updateAppData } from "lib/store";
 
-export const runtime = 'nodejs';
+export const runtime = "nodejs";
 
-type SessionLike = { user?: { id?: string; name?: string | null; email?: string | null } } | null;
+type SessionLike = {
+  user?: { id?: string; name?: string | null; email?: string | null };
+} | null;
 
 function getUid(session: SessionLike) {
   return session?.user?.id;
 }
 
 function avatarDirPath() {
-  return path.join(process.cwd(), '.data', 'avatars');
+  return path.join(process.cwd(), ".data", "avatars");
 }
 
 function avatarFileName(userId: string) {
-  return userId.replace(/[^a-zA-Z0-9._-]/g, '_');
+  return userId.replace(/[^a-zA-Z0-9._-]/g, "_");
 }
 
 function avatarFilePath(userId: string, ext: string) {
@@ -38,16 +40,19 @@ function avatarInfoFor(profile: {
   avatarUpdatedAt?: string | null;
 }) {
   if (profile.customAvatarMime) {
-    const t = profile.avatarUpdatedAt || '';
+    const t = profile.avatarUpdatedAt || "";
     return {
-      avatarKind: 'custom' as const,
+      avatarKind: "custom" as const,
       avatarUrl: `/api/profile/avatar?userId=${encodeURIComponent(profile.id)}&t=${encodeURIComponent(t)}`,
     };
   }
   if (profile.githubAvatarUrl) {
-    return { avatarKind: 'github' as const, avatarUrl: profile.githubAvatarUrl };
+    return {
+      avatarKind: "github" as const,
+      avatarUrl: profile.githubAvatarUrl,
+    };
   }
-  return { avatarKind: 'none' as const, avatarUrl: null };
+  return { avatarKind: "none" as const, avatarUrl: null };
 }
 
 function validateUserId(input: string) {
@@ -58,28 +63,28 @@ function validateUserId(input: string) {
 
 function normalizeMime(input: string) {
   const v = input.trim().toLowerCase();
-  if (v === 'image/png') return 'image/png' as const;
-  if (v === 'image/webp') return 'image/webp' as const;
-  if (v === 'image/jpeg' || v === 'image/jpg') return 'image/jpeg' as const;
+  if (v === "image/png") return "image/png" as const;
+  if (v === "image/webp") return "image/webp" as const;
+  if (v === "image/jpeg" || v === "image/jpg") return "image/jpeg" as const;
   return null;
 }
 
-function extForMime(mime: 'image/png' | 'image/jpeg' | 'image/webp') {
-  if (mime === 'image/png') return 'png';
-  if (mime === 'image/webp') return 'webp';
-  return 'jpg';
+function extForMime(mime: "image/png" | "image/jpeg" | "image/webp") {
+  if (mime === "image/png") return "png";
+  if (mime === "image/webp") return "webp";
+  return "jpg";
 }
 
 function decodeImageDataUrl(dataUrl: string) {
   const m = /^data:([^;,]+);base64,(.*)$/i.exec(dataUrl.trim());
   if (!m) return null;
-  const mimeRaw = m[1] ?? '';
-  const base64 = (m[2] ?? '').trim();
+  const mimeRaw = m[1] ?? "";
+  const base64 = (m[2] ?? "").trim();
   if (!base64) return null;
-  if (mimeRaw.toLowerCase().includes('svg')) return null;
+  if (mimeRaw.toLowerCase().includes("svg")) return null;
   const mime = normalizeMime(mimeRaw);
   if (!mime) return null;
-  const buf = Buffer.from(base64, 'base64');
+  const buf = Buffer.from(base64, "base64");
   if (!buf.length) return null;
   if (buf.length > 150 * 1024) return null;
   return { mime, buf, ext: extForMime(mime) };
@@ -96,7 +101,7 @@ async function removeAllAvatarFiles(userId: string) {
 
 export async function GET(req: Request) {
   const url = new URL(req.url);
-  const userIdQuery = url.searchParams.get('userId');
+  const userIdQuery = url.searchParams.get("userId");
 
   let userId = userIdQuery ? validateUserId(userIdQuery) : null;
   if (!userId) {
@@ -104,46 +109,60 @@ export async function GET(req: Request) {
     const uid = getUid(session);
     userId = uid ? validateUserId(uid) : null;
   }
-  if (!userId) return NextResponse.json({ error: 'INVALID_USER_ID' }, { status: 400 });
+  if (!userId)
+    return NextResponse.json({ error: "INVALID_USER_ID" }, { status: 400 });
 
   const data = await readAppData();
   const profile = data.profiles[userId];
-  const legacyKey = (profile as unknown as { avatarKey?: unknown } | undefined)?.avatarKey;
+  const legacyKey = (profile as unknown as { avatarKey?: unknown } | undefined)
+    ?.avatarKey;
   const customMime =
-    (profile?.customAvatarMime as 'image/png' | 'image/jpeg' | 'image/webp' | null | undefined) ??
-    (typeof legacyKey === 'string' && legacyKey ? 'image/png' : null);
-  if (!customMime) return NextResponse.json({ error: 'NOT_FOUND' }, { status: 404 });
+    (profile?.customAvatarMime as
+      | "image/png"
+      | "image/jpeg"
+      | "image/webp"
+      | null
+      | undefined) ??
+    (typeof legacyKey === "string" && legacyKey ? "image/png" : null);
+  if (!customMime)
+    return NextResponse.json({ error: "NOT_FOUND" }, { status: 404 });
   const ext = extForMime(customMime);
 
   try {
     const raw = await readFile(avatarFilePath(userId, ext));
-    const t = url.searchParams.get('t');
-    const avatarUpdatedAt = (profile as { avatarUpdatedAt?: string | null } | undefined)?.avatarUpdatedAt ?? null;
+    const t = url.searchParams.get("t");
+    const avatarUpdatedAt =
+      (profile as { avatarUpdatedAt?: string | null } | undefined)
+        ?.avatarUpdatedAt ?? null;
     const cacheControl =
-      typeof t === 'string' && t && t === avatarUpdatedAt
-        ? 'public, max-age=31536000, immutable'
-        : 'no-store';
+      typeof t === "string" && t && t === avatarUpdatedAt
+        ? "public, max-age=31536000, immutable"
+        : "no-store";
     return new NextResponse(raw, {
       status: 200,
       headers: {
-        'content-type': customMime,
-        'cache-control': cacheControl,
+        "content-type": customMime,
+        "cache-control": cacheControl,
       },
     });
   } catch {
-    return NextResponse.json({ error: 'NOT_FOUND' }, { status: 404 });
+    return NextResponse.json({ error: "NOT_FOUND" }, { status: 404 });
   }
 }
 
 export async function POST(req: Request) {
   const session = await getServerSession(authOptions);
   const uid = getUid(session);
-  if (!uid) return NextResponse.json({ error: 'UNAUTHORIZED' }, { status: 401 });
+  if (!uid)
+    return NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 });
 
-  const body = (await req.json().catch(() => null)) as { dataUrl?: string } | null;
-  const dataUrl = typeof body?.dataUrl === 'string' ? body.dataUrl.trim() : '';
+  const body = (await req.json().catch(() => null)) as {
+    dataUrl?: string;
+  } | null;
+  const dataUrl = typeof body?.dataUrl === "string" ? body.dataUrl.trim() : "";
   const decoded = decodeImageDataUrl(dataUrl);
-  if (!decoded) return NextResponse.json({ error: 'INVALID_AVATAR' }, { status: 400 });
+  if (!decoded)
+    return NextResponse.json({ error: "INVALID_AVATAR" }, { status: 400 });
 
   await ensureAvatarDir();
   await removeAllAvatarFiles(uid);
@@ -154,7 +173,10 @@ export async function POST(req: Request) {
     const existing = data.profiles[uid];
     if (!existing) {
       const fallback =
-        session?.user?.name?.trim() || session?.user?.email?.trim() || uid.split(':').at(-1) || '玩家';
+        session?.user?.name?.trim() ||
+        session?.user?.email?.trim() ||
+        uid.split(":").at(-1) ||
+        "玩家";
       data.profiles[uid] = {
         id: uid,
         displayName: fallback,
@@ -166,12 +188,20 @@ export async function POST(req: Request) {
         updatedAt: now,
       };
     } else {
-      if (typeof existing.githubAvatarUrl === 'undefined') existing.githubAvatarUrl = null;
-      if (typeof (existing as { customAvatarDataUrl?: unknown }).customAvatarDataUrl === 'undefined') {
-        (existing as { customAvatarDataUrl?: string | null }).customAvatarDataUrl = null;
+      if (typeof existing.githubAvatarUrl === "undefined")
+        existing.githubAvatarUrl = null;
+      if (
+        typeof (existing as { customAvatarDataUrl?: unknown })
+          .customAvatarDataUrl === "undefined"
+      ) {
+        (
+          existing as { customAvatarDataUrl?: string | null }
+        ).customAvatarDataUrl = null;
       }
-      if (typeof existing.customAvatarMime === 'undefined') existing.customAvatarMime = null;
-      if (typeof existing.avatarUpdatedAt === 'undefined') existing.avatarUpdatedAt = null;
+      if (typeof existing.customAvatarMime === "undefined")
+        existing.customAvatarMime = null;
+      if (typeof existing.avatarUpdatedAt === "undefined")
+        existing.avatarUpdatedAt = null;
     }
 
     const profile = data.profiles[uid]!;
@@ -195,7 +225,8 @@ export async function POST(req: Request) {
 export async function DELETE() {
   const session = await getServerSession(authOptions);
   const uid = getUid(session);
-  if (!uid) return NextResponse.json({ error: 'UNAUTHORIZED' }, { status: 401 });
+  if (!uid)
+    return NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 });
 
   await ensureAvatarDir();
   await removeAllAvatarFiles(uid);
@@ -203,14 +234,22 @@ export async function DELETE() {
   const result = await updateAppData((data) => {
     const now = new Date().toISOString();
     const existing = data.profiles[uid];
-    if (!existing) return { error: 'PROFILE_NOT_FOUND' as const };
+    if (!existing) return { error: "PROFILE_NOT_FOUND" as const };
 
-    if (typeof existing.githubAvatarUrl === 'undefined') existing.githubAvatarUrl = null;
-    if (typeof (existing as { customAvatarDataUrl?: unknown }).customAvatarDataUrl === 'undefined') {
-      (existing as { customAvatarDataUrl?: string | null }).customAvatarDataUrl = null;
+    if (typeof existing.githubAvatarUrl === "undefined")
+      existing.githubAvatarUrl = null;
+    if (
+      typeof (existing as { customAvatarDataUrl?: unknown })
+        .customAvatarDataUrl === "undefined"
+    ) {
+      (
+        existing as { customAvatarDataUrl?: string | null }
+      ).customAvatarDataUrl = null;
     }
-    if (typeof existing.customAvatarMime === 'undefined') existing.customAvatarMime = null;
-    if (typeof existing.avatarUpdatedAt === 'undefined') existing.avatarUpdatedAt = null;
+    if (typeof existing.customAvatarMime === "undefined")
+      existing.customAvatarMime = null;
+    if (typeof existing.avatarUpdatedAt === "undefined")
+      existing.avatarUpdatedAt = null;
 
     existing.customAvatarDataUrl = null;
     existing.customAvatarMime = null;
@@ -226,6 +265,6 @@ export async function DELETE() {
     };
   });
 
-  if ('error' in result) return NextResponse.json(result, { status: 404 });
+  if ("error" in result) return NextResponse.json(result, { status: 404 });
   return NextResponse.json(result);
 }
